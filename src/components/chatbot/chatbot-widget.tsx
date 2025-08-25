@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, MessageSquareText, BrainCircuit } from 'lucide-react';
 import { chat } from '@/ai/flows/chatbot';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -21,11 +21,10 @@ interface Message {
 
 export default function ChatbotWidget() {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<Message[]>([
-        { sender: 'ai', text: "Halo! Saya asisten AI Baronda. Ada yang bisa saya bantu seputar aplikasi ini?" }
-    ]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [chatMode, setChatMode] = useState<'options' | 'ai' | 'live'>('options');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
 
@@ -63,17 +62,37 @@ export default function ChatbotWidget() {
             setIsLoading(false);
         }
     };
+
+    const startAIChat = () => {
+        setMessages([{ sender: 'ai', text: "Halo! Saya asisten AI Baronda. Ada yang bisa saya bantu seputar aplikasi ini?" }]);
+        setChatMode('ai');
+    }
+
+    const startLiveChat = () => {
+        // Placeholder for live chat logic
+        setMessages([{ sender: 'ai', text: "Anda berada di antrean ke-4. Mohon tunggu, seorang petugas akan segera melayani Anda." }]);
+        setChatMode('live');
+        // In a real implementation, you would create a chat session in Firestore here.
+    }
+    
+    const resetChat = () => {
+        setIsOpen(false);
+        setTimeout(() => {
+            setMessages([]);
+            setChatMode('options');
+        }, 300);
+    }
     
     return (
         <>
             {/* Chat bubble */}
             <div className="fixed bottom-6 right-6 z-50">
                 <Button
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => isOpen ? resetChat() : setIsOpen(true)}
                     className="rounded-full w-14 h-14 shadow-2xl animate-fade-in"
                 >
                     {isOpen ? <X className="h-7 w-7" /> : 
-                        <Image src="https://iili.io/KJ4aGxp.png" alt="Chat" width={36} height={36} />
+                        <Image src="https://iili.io/KJ4aGxp.png" alt="Chat" width={40} height={40} />
                     }
                 </Button>
             </div>
@@ -89,13 +108,31 @@ export default function ChatbotWidget() {
                             <Bot className="h-6 w-6 text-primary" />
                          </div>
                          <div>
-                            <CardTitle>Asisten AI Baronda</CardTitle>
+                            <CardTitle>Bantuan Baronda</CardTitle>
                          </div>
                     </CardHeader>
                     <CardContent className="flex-grow overflow-hidden p-0">
                         <ScrollArea className="h-full" ref={scrollAreaRef}>
                             <div className="p-6 space-y-4">
-                                {messages.map((message, index) => (
+                                {chatMode === 'options' && (
+                                    <div className="flex flex-col gap-4 items-center justify-center h-full">
+                                        <Button className="w-full h-auto py-4" onClick={startAIChat}>
+                                            <BrainCircuit className="h-6 w-6 mr-3"/>
+                                            <span className="flex flex-col items-start">
+                                                <span>Tanya Asisten AI</span>
+                                                <span className="text-xs font-normal opacity-80">Dapatkan jawaban cepat</span>
+                                            </span>
+                                        </Button>
+                                        <Button className="w-full h-auto py-4" variant="secondary" onClick={startLiveChat}>
+                                            <MessageSquareText className="h-6 w-6 mr-3"/>
+                                            <span className="flex flex-col items-start">
+                                                <span>Live Chat dengan Petugas</span>
+                                                <span className="text-xs font-normal opacity-80">Bicara dengan manusia</span>
+                                            </span>
+                                        </Button>
+                                    </div>
+                                )}
+                                {(chatMode === 'ai' || chatMode === 'live') && messages.map((message, index) => (
                                     <div key={index} className={cn("flex items-start gap-3", message.sender === 'user' ? 'justify-end' : '')}>
                                         {message.sender === 'ai' && (
                                            <Avatar className="h-8 w-8">
@@ -128,20 +165,22 @@ export default function ChatbotWidget() {
                             </div>
                         </ScrollArea>
                     </CardContent>
-                    <CardFooter className="pt-6">
-                        <form onSubmit={handleSendMessage} className="flex w-full items-center gap-2">
-                            <Input
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder="Tanya tentang Baronda..."
-                                disabled={isLoading}
-                                className="flex-grow"
-                            />
-                            <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-                                <Send className="h-4 w-4" />
-                            </Button>
-                        </form>
-                    </CardFooter>
+                     {chatMode !== 'options' && (
+                        <CardFooter className="pt-6">
+                            <form onSubmit={handleSendMessage} className="flex w-full items-center gap-2">
+                                <Input
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder={chatMode === 'ai' ? "Tanya tentang Baronda..." : "Ketik pesan Anda..."}
+                                    disabled={isLoading || chatMode === 'live'}
+                                    className="flex-grow"
+                                />
+                                <Button type="submit" size="icon" disabled={isLoading || !input.trim() || chatMode === 'live'}>
+                                    <Send className="h-4 w-4" />
+                                </Button>
+                            </form>
+                        </CardFooter>
+                     )}
                 </Card>
             </div>
         </>
