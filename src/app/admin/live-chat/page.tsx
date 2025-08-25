@@ -78,7 +78,7 @@ export default function LiveChatAdminPage() {
                 viewport.scrollTop = viewport.scrollHeight;
             }
         }
-    }, [messages]);
+    }, [messages, selectedChat]);
 
 
     const handleAcceptChat = async (chat: LiveChatSession) => {
@@ -295,5 +295,7 @@ export default function LiveChatAdminPage() {
         </div>
     );
 }
+
+    
 
     
