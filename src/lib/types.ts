@@ -28,6 +28,7 @@ export interface EmergencyContact {
 export interface Report {
   id: string;
   reporterName: string;
+  reporterEmail?: string;
   reportText: string;
   category: 'theft' | 'vandalism' | 'suspicious_person' | 'other';
   userId?: string;
@@ -35,5 +36,3 @@ export interface Report {
   triageResult: TriageReportOutput;
   status: 'new' | 'in_progress' | 'resolved';
 }
-
-    

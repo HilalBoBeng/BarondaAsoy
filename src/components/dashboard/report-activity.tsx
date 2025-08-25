@@ -92,6 +92,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
       
       await addDoc(collection(db, 'reports'), {
         ...data,
+        reporterEmail: user?.email, // Save user's email
         triageResult: result,
         userId: user?.uid,
         createdAt: serverTimestamp(),
@@ -230,5 +231,3 @@ export default function ReportActivity({ user }: { user: User | null }) {
     </Card>
   );
 }
-
-    

@@ -11,22 +11,36 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, CheckCircle, AlertTriangle, HelpCircle, Calendar, User } from 'lucide-react';
+import { Trash, CheckCircle, AlertTriangle, HelpCircle, Calendar, User, MessageSquare, Loader2 } from 'lucide-react';
 import type { Report } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { sendReply } from '@/ai/flows/send-reply';
 
 type ReportStatus = 'new' | 'in_progress' | 'resolved';
 
-const statusMap: Record<ReportStatus, string> = {
-  new: 'Baru',
-  in_progress: 'Ditangani',
-  resolved: 'Selesai',
-};
+const replySchema = z.object({
+  replyMessage: z.string().min(1, "Balasan tidak boleh kosong."),
+});
+type ReplyFormValues = z.infer<typeof replySchema>;
 
 export default function ReportsAdminPage() {
-  const [reports, setReports] = useState<(Report & { status: ReportStatus })[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const { toast } = useToast();
+
+  const replyForm = useForm<ReplyFormValues>({
+    resolver: zodResolver(replySchema),
+    defaultValues: { replyMessage: '' },
+  });
 
   useEffect(() => {
     const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
@@ -35,8 +49,7 @@ export default function ReportsAdminPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        status: doc.data().status || 'new',
-      })) as (Report & { status: ReportStatus })[];
+      })) as Report[];
       setReports(reportsData);
       setLoading(false);
     }, (error) => {
@@ -65,6 +78,39 @@ export default function ReportsAdminPage() {
     }
   };
   
+  const handleOpenReplyDialog = (report: Report) => {
+    setCurrentReport(report);
+    replyForm.reset({ replyMessage: '' });
+    setIsReplyDialogOpen(true);
+  };
+
+  const onReplySubmit = async (values: ReplyFormValues) => {
+    if (!currentReport || !currentReport.reporterEmail) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Email pelapor tidak ditemukan.' });
+        return;
+    }
+    setIsSubmittingReply(true);
+    try {
+        const result = await sendReply({
+            recipientEmail: currentReport.reporterEmail,
+            replyMessage: values.replyMessage,
+            originalReport: currentReport.reportText
+        });
+
+        if (result.success) {
+            toast({ title: 'Berhasil', description: 'Balasan berhasil dikirim.' });
+            setIsReplyDialogOpen(false);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak diketahui.';
+        toast({ variant: 'destructive', title: 'Gagal Mengirim Balasan', description: errorMessage });
+    } finally {
+        setIsSubmittingReply(false);
+    }
+  };
+
   const ThreatLevelIcon = ({ level }: {level: 'low' | 'medium' | 'high' | undefined}) => {
       if (!level) return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
       const config = {
@@ -76,55 +122,50 @@ export default function ReportsAdminPage() {
       return <Icon className={`h-4 w-4 ${className}`} />
   }
 
-  const renderStatusChanger = (report: Report & { status: ReportStatus }) => (
-     <Select value={report.status} onValueChange={(value) => handleStatusChange(report.id, value as ReportStatus)}>
-        <SelectTrigger className="w-full sm:w-[150px]">
-          <SelectValue placeholder="Ubah Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="new">
-            <Badge variant="destructive" className="w-full justify-center">Baru</Badge>
-          </SelectItem>
-          <SelectItem value="in_progress">
-            <Badge variant="default" className="w-full justify-center">Ditangani</Badge>
-          </SelectItem>
-           <SelectItem value="resolved">
-            <Badge variant="secondary" className="w-full justify-center">Selesai</Badge>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+  const renderActions = (report: Report) => (
+    <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
+        <Button variant="outline" size="sm" onClick={() => handleOpenReplyDialog(report)} disabled={!report.reporterEmail}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Balas
+        </Button>
+        <Select value={report.status} onValueChange={(value) => handleStatusChange(report.id, value as ReportStatus)}>
+            <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Ubah Status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="new">Baru</SelectItem>
+                <SelectItem value="in_progress">Ditangani</SelectItem>
+                <SelectItem value="resolved">Selesai</SelectItem>
+            </SelectContent>
+        </Select>
+        {report.status === 'resolved' && (
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                        <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        )}
+    </div>
   );
-
-  const renderDeleteButton = (report: Report & { status: ReportStatus }) => (
-      report.status === 'resolved' && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tindakan ini akan menghapus laporan secara permanen.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Batal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )
-  );
-
+  
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Manajemen Laporan Masuk</CardTitle>
         <CardDescription>Tanggapi, ubah status, dan kelola laporan dari warga.</CardDescription>
       </CardHeader>
       <CardContent>
-         {/* Mobile View */}
         <div className="sm:hidden space-y-4">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)
@@ -138,7 +179,7 @@ export default function ReportsAdminPage() {
                         <span className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(report.createdAt as Date).toLocaleString('id-ID')}</span>
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                     <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">Ancaman:</span>
                          <Badge variant={report.triageResult?.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
@@ -146,13 +187,9 @@ export default function ReportsAdminPage() {
                             <span className="ml-2">{report.triageResult?.threatLevel || 'N/A'}</span>
                         </Badge>
                     </div>
-                     <div className="space-y-2">
-                        <span className="font-semibold text-sm">Status:</span>
-                        {renderStatusChanger(report)}
-                    </div>
                 </CardContent>
-                <CardFooter className="justify-end">
-                  {renderDeleteButton(report)}
+                <CardFooter className="flex-col items-stretch">
+                  {renderActions(report)}
                 </CardFooter>
               </Card>
             ))
@@ -161,7 +198,6 @@ export default function ReportsAdminPage() {
           )}
         </div>
       
-        {/* Desktop View */}
         <div className="hidden sm:block rounded-lg border">
           <Table>
             <TableHeader>
@@ -170,8 +206,7 @@ export default function ReportsAdminPage() {
                 <TableHead>Pelapor</TableHead>
                 <TableHead>Laporan</TableHead>
                 <TableHead>Ancaman</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="w-[350px] text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -182,8 +217,7 @@ export default function ReportsAdminPage() {
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-10 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-[280px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : reports.length > 0 ? (
@@ -198,17 +232,16 @@ export default function ReportsAdminPage() {
                             <span className="ml-2">{report.triageResult?.threatLevel || 'N/A'}</span>
                         </Badge>
                     </TableCell>
-                    <TableCell>
-                      {renderStatusChanger(report)}
-                    </TableCell>
                     <TableCell className="text-right">
-                      {renderDeleteButton(report)}
+                        <div className="flex justify-end gap-2">
+                           {renderActions(report)}
+                        </div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">
+                  <TableCell colSpan={5} className="text-center h-24">
                     Belum ada laporan masuk.
                   </TableCell>
                 </TableRow>
@@ -218,7 +251,44 @@ export default function ReportsAdminPage() {
         </div>
       </CardContent>
     </Card>
+
+     <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
+        <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
+            <DialogHeader>
+                <DialogTitle>Balas Laporan</DialogTitle>
+            </DialogHeader>
+            <Form {...replyForm}>
+                <form onSubmit={replyForm.handleSubmit(onReplySubmit)} className="space-y-4">
+                    <div className="space-y-2 text-sm">
+                        <p><strong>Pelapor:</strong> {currentReport?.reporterName}</p>
+                        <p className="text-muted-foreground break-words"><strong>Laporan:</strong> {currentReport?.reportText}</p>
+                    </div>
+                    <FormField
+                        control={replyForm.control}
+                        name="replyMessage"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Pesan Balasan</FormLabel>
+                            <FormControl>
+                                <Textarea {...field} rows={5} placeholder="Tulis balasan Anda di sini..." />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Batal</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isSubmittingReply}>
+                            {isSubmittingReply && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Kirim Balasan
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
-
-    
