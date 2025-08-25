@@ -30,13 +30,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { app } from "@/lib/firebase/client";
 
 const staffLoginSchema = z.object({
   email: z.string().email("Email tidak valid."),
-  password: z.string().min(1, "Kata sandi tidak boleh kosong."),
-  accessCode: z.string().optional(),
+  accessCode: z.string().min(1, "Kode akses tidak boleh kosong."),
 });
 
 type StaffLoginFormValues = z.infer<typeof staffLoginSchema>;
@@ -46,7 +43,6 @@ export default function StaffLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginAsAdmin, setLoginAsAdmin] = useState(false);
   const router = useRouter();
-  const auth = getAuth(app);
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
@@ -59,7 +55,7 @@ export default function StaffLoginPage() {
 
   const form = useForm<StaffLoginFormValues>({
     resolver: zodResolver(staffLoginSchema),
-    defaultValues: { email: "", password: "", accessCode: "" },
+    defaultValues: { email: "", accessCode: "" },
   });
   
   const onSubmit = async (data: StaffLoginFormValues) => {
@@ -82,19 +78,20 @@ export default function StaffLoginPage() {
         return;
     }
 
-    // Petugas login with email and password
+    // Petugas login with email and access code
     try {
-        const staffQuery = query(collection(db, "staff"), where("email", "==", data.email));
+        const staffQuery = query(
+            collection(db, "staff"), 
+            where("email", "==", data.email),
+            where("accessCode", "==", data.accessCode)
+        );
         const staffSnapshot = await getDocs(staffQuery);
 
         if (staffSnapshot.empty) {
-            throw new Error("Akun petugas tidak ditemukan.");
+            throw new Error("Email atau kode akses salah.");
         }
 
         const staffData = staffSnapshot.docs[0].data();
-        if (staffData.password !== data.password) {
-            throw new Error("Kata sandi salah.");
-        }
 
         localStorage.setItem('userRole', 'petugas');
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffSnapshot.docs[0].id }));
@@ -151,9 +148,9 @@ export default function StaffLoginPage() {
                   <FormMessage />
               </FormItem>
           )} />
-          <FormField control={form.control} name="password" render={({ field }) => (
+          <FormField control={form.control} name="accessCode" render={({ field }) => (
               <FormItem>
-                  <FormLabel>Kata Sandi</FormLabel>
+                  <FormLabel>Kode Akses</FormLabel>
                   <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
                   <FormMessage />
               </FormItem>
@@ -166,7 +163,7 @@ export default function StaffLoginPage() {
             </Button>
             <div className="text-center text-sm text-muted-foreground w-full flex justify-between">
                 <Link href="/auth/staff-register" className="underline text-primary">Daftar Petugas</Link>
-                <Link href="/auth/staff-forgot-password" className="underline">Lupa Sandi?</Link>
+                <Link href="/auth/staff-forgot-password" className="underline">Lupa Kode Akses?</Link>
             </div>
             <hr className="w-full border-t" />
             <Button variant="link" onClick={() => setLoginAsAdmin(true)}>Masuk sebagai Admin</Button>
@@ -187,7 +184,7 @@ export default function StaffLoginPage() {
         <CardHeader>
           <CardTitle>Halaman Akses Staf</CardTitle>
           <CardDescription>
-             {loginAsAdmin ? "Masukkan kode akses super-admin." : "Masuk dengan akun petugas Anda."}
+             {loginAsAdmin ? "Masukkan kode akses super-admin." : "Masuk dengan email dan kode akses unik Anda."}
           </CardDescription>
         </CardHeader>
         <Form {...form}>

@@ -222,7 +222,6 @@ export default function VerifyOtpPage() {
                 phone: verificationContext.phone,
                 addressType: verificationContext.addressType,
                 addressDetail: verificationContext.addressDetail,
-                password: verificationContext.password, // IMPORTANT: In a real app, this should be hashed.
                 accessCode: accessCode
             });
             await sendStaffAccessCode({

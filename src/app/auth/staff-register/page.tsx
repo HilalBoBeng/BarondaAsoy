@@ -39,14 +39,6 @@ const staffRegisterSchema = z
     phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
     addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
     addressDetail: z.string().optional(),
-    password: z
-      .string()
-      .min(8, "Kata sandi minimal 8 karakter."),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Konfirmasi kata sandi tidak cocok.",
-    path: ["confirmPassword"],
   })
   .refine((data) => {
     if (data.addressType === 'luar_kilongan') {
@@ -67,7 +59,7 @@ export default function StaffRegisterPage() {
   const router = useRouter();
   const form = useForm<StaffRegisterFormValues>({
     resolver: zodResolver(staffRegisterSchema),
-    defaultValues: { name: "", email: "", phone: "", addressDetail: "", password: "", confirmPassword: "" },
+    defaultValues: { name: "", email: "", phone: "", addressDetail: "" },
   });
   
   const addressType = form.watch('addressType');
@@ -193,33 +185,6 @@ export default function StaffRegisterPage() {
                     )}
                 />
               )}
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kata Sandi</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Konfirmasi Kata Sandi</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>

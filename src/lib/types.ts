@@ -70,7 +70,6 @@ export interface Staff {
   addressType: 'kilongan' | 'luar_kilongan';
   addressDetail: string;
   accessCode: string;
-  password?: string;
 }
 
 export interface Notification {
