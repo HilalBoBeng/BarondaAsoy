@@ -104,6 +104,17 @@ export interface EquipmentStatus {
     checkedBy?: string;
 }
 
+export interface EquipmentLog {
+    id: string;
+    equipmentName: string;
+    status: 'good' | 'broken' | 'missing';
+    notes?: string;
+    checkedAt: Timestamp | Date;
+    checkedBy: string;
+    officerId: string;
+}
+
+
 // New type for Change Email Flow
 export interface ChangeEmailContext {
   flow: 'changeEmail';

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, getDocs, writeBatch, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, writeBatch, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -27,25 +27,16 @@ const logSchema = z.object({
 type LogFormValues = z.infer<typeof logSchema>;
 
 const equipmentUpdateSchema = z.object({
-    equipmentId: z.string().min(1, "Peralatan harus dipilih"),
+    equipmentName: z.string().min(1, "Nama peralatan harus diisi."),
     status: z.enum(['good', 'broken', 'missing'], { required_error: "Status harus dipilih"}),
     notes: z.string().optional(),
 });
 type EquipmentUpdateFormValues = z.infer<typeof equipmentUpdateSchema>;
 
 
-const initialEquipment: EquipmentStatus[] = [
-    { id: 'senter', name: 'Senter', status: 'good', lastChecked: new Date(), notes: '' },
-    { id: 'borgol', name: 'Borgol', status: 'good', lastChecked: new Date(), notes: '' },
-    { id: 'tongkat', name: 'Tongkat', status: 'good', lastChecked: new Date(), notes: '' },
-];
-
-
 export default function PatrolLogPage() {
     const [logs, setLogs] = useState<PatrolLog[]>([]);
-    const [equipment, setEquipment] = useState<EquipmentStatus[]>(initialEquipment);
     const [loadingLogs, setLoadingLogs] = useState(true);
-    const [loadingEquipment, setLoadingEquipment] = useState(true);
     const [isSubmittingLog, setIsSubmittingLog] = useState(false);
     const [isSubmittingEquipment, setIsSubmittingEquipment] = useState(false);
     const [staffInfo, setStaffInfo] = useState<{name: string, id: string} | null>(null);
@@ -58,7 +49,7 @@ export default function PatrolLogPage() {
     
     const equipmentForm = useForm<EquipmentUpdateFormValues>({
         resolver: zodResolver(equipmentUpdateSchema),
-        defaultValues: { notes: '' }
+        defaultValues: { notes: '', equipmentName: '' }
     });
 
     useEffect(() => {
@@ -69,42 +60,19 @@ export default function PatrolLogPage() {
             // Fetch logs
             const logsQuery = query(
                 collection(db, "patrol_logs"),
-                where("officerName", "==", info.name),
-                orderBy("createdAt", "desc")
+                where("officerName", "==", info.name)
             );
             const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-                const logsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PatrolLog));
+                const logsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PatrolLog))
+                  .sort((a, b) => (b.createdAt as any).toMillis() - (a.createdAt as any).toMillis());
                 setLogs(logsData);
                 setLoadingLogs(false);
             });
+            
+            return () => unsubLogs();
 
-            // Fetch or initialize equipment status
-            const equipmentRef = collection(db, 'equipment_status');
-            const unsubEquipment = onSnapshot(equipmentRef, (snapshot) => {
-                if (snapshot.empty) {
-                    // Initialize if not present
-                    const batch = writeBatch(db);
-                    initialEquipment.forEach(item => {
-                        const { id, ...dataToSet } = item;
-                        const docRef = doc(db, 'equipment_status', id);
-                        batch.set(docRef, { ...dataToSet, lastChecked: serverTimestamp() });
-                    });
-                    batch.commit();
-                    setEquipment(initialEquipment);
-                } else {
-                    const equipmentData = snapshot.docs.map(d => ({...d.data() as EquipmentStatus, id: d.id }));
-                    setEquipment(equipmentData);
-                }
-                setLoadingEquipment(false);
-            });
-
-            return () => {
-                unsubLogs();
-                unsubEquipment();
-            };
         } else {
             setLoadingLogs(false);
-            setLoadingEquipment(false);
         }
     }, []);
 
@@ -130,17 +98,18 @@ export default function PatrolLogPage() {
     const onEquipmentSubmit = async (values: EquipmentUpdateFormValues) => {
         setIsSubmittingEquipment(true);
         try {
-            const docRef = doc(db, 'equipment_status', values.equipmentId);
-            await updateDoc(docRef, { 
+            await addDoc(collection(db, 'equipment_logs'), { 
+                equipmentName: values.equipmentName,
                 status: values.status,
                 notes: values.notes || '',
-                lastChecked: serverTimestamp(),
-                checkedBy: staffInfo?.name || 'Unknown'
+                checkedAt: serverTimestamp(),
+                checkedBy: staffInfo?.name || 'Unknown',
+                officerId: staffInfo?.id || 'Unknown',
             });
-            toast({ title: 'Berhasil', description: 'Status peralatan berhasil diperbarui.' });
+            toast({ title: 'Berhasil', description: 'Status peralatan berhasil dilaporkan.' });
             equipmentForm.reset();
         } catch (error) {
-             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memperbarui status.' });
+             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal melaporkan status.' });
         } finally {
             setIsSubmittingEquipment(false);
         }
@@ -190,15 +159,10 @@ export default function PatrolLogPage() {
                 <Form {...equipmentForm}>
                     <form onSubmit={equipmentForm.handleSubmit(onEquipmentSubmit)}>
                         <CardContent className="space-y-4">
-                            <FormField control={equipmentForm.control} name="equipmentId" render={({ field }) => (
+                            <FormField control={equipmentForm.control} name="equipmentName" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Peralatan</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih peralatan..." /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            {equipment.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                    <FormLabel>Nama Peralatan</FormLabel>
+                                    <FormControl><Input {...field} placeholder="Contoh: Senter" /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -238,7 +202,7 @@ export default function PatrolLogPage() {
         {/* Right Column: History */}
         <Card>
             <CardHeader>
-                <CardTitle>Riwayat Laporan Patroli</CardTitle>
+                <CardTitle>Riwayat Laporan Patroli Saya</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
                 {loadingLogs ? (

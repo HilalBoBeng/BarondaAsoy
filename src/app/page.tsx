@@ -18,15 +18,15 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan } from "lucide-react";
+import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Notification, AppUser } from "@/lib/types";
+import type { Notification, AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,8 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [patrolLogs, setPatrolLogs] = useState<PatrolLog[]>([]);
+  const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -62,7 +64,23 @@ export default function Home() {
       setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Fetch patrol logs
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const logsQuery = query(
+      collection(db, 'patrol_logs'), 
+      where('createdAt', '>=', twentyFourHoursAgo), 
+      orderBy('createdAt', 'desc')
+    );
+    const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
+      const logs = snapshot.docs.map(d => d.data() as PatrolLog);
+      setPatrolLogs(logs);
+      setLoadingPatrolLogs(false);
+    });
+
+    return () => {
+      clearInterval(timer);
+      unsubLogs();
+    };
   }, []);
 
   useEffect(() => {
@@ -361,6 +379,30 @@ export default function Home() {
                             <EmergencyContacts />
                         </CardContent>
                     </Card>
+
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Log Patroli Terbaru</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 max-h-[400px] overflow-auto">
+                           {loadingPatrolLogs ? <Skeleton className="h-20 w-full" /> : 
+                           patrolLogs.length > 0 ? (
+                                patrolLogs.map(log => (
+                                    <div key={log.id} className="border-b pb-2">
+                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                            <span>Oleh: {log.officerName}</span>
+                                            <span>{formatDistanceToNow((log.createdAt as Timestamp).toDate(), { addSuffix: true, locale: id })}</span>
+                                        </div>
+                                        <p className="font-semibold text-sm mt-1">{log.title}</p>
+                                        <p className="text-xs text-muted-foreground">{log.description}</p>
+                                    </div>
+                                ))
+                           ) : (
+                               <p className="text-center text-sm text-muted-foreground py-4">Tidak ada log patroli dalam 24 jam terakhir.</p>
+                           )}
+                        </CardContent>
+                    </Card>
+
                 </div>
             </div>
           </div>

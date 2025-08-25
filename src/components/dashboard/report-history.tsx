@@ -113,20 +113,26 @@ export default function ReportHistory({ user }: { user: User | null }) {
             </Card>
         );
     }
+    
+    if (loading) {
+        return (
+            <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                    <CardContent className="p-4">
+                        <Skeleton className="h-4 w-1/3 mb-2" />
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardContent>
+                </Card>
+            ))}
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-4">
-            {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                    <Card key={i}>
-                        <CardContent className="p-4">
-                            <Skeleton className="h-4 w-1/3 mb-2" />
-                            <Skeleton className="h-4 w-full mb-2" />
-                            <Skeleton className="h-4 w-3/4" />
-                        </CardContent>
-                    </Card>
-                ))
-            ) : reports.length > 0 ? (
+            {reports.length > 0 ? (
                 reports.map((report) => (
                     <Card key={report.id}>
                        <CardContent className="p-4">

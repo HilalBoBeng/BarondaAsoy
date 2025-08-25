@@ -29,18 +29,14 @@ const replySchema = z.object({
 type ReplyFormValues = z.infer<typeof replySchema>;
 
 export default function PetugasReportsPage() {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [allReports, setAllReports] = useState<Report[]>([]);
+  const [displayedReports, setDisplayedReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [staffInfo, setStaffInfo] = useState<{name: string; id: string} | null>(null);
   const { toast } = useToast();
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [isLastPage, setIsLastPage] = useState(false);
   
   const [filter, setFilter] = useState('new');
 
@@ -53,91 +49,43 @@ export default function PetugasReportsPage() {
     }
   }, []);
   
-  const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
-    if (!staffInfo && filter !== 'new') return;
+  useEffect(() => {
     setLoading(true);
-    try {
-        const reportsRef = collection(db, "reports");
-        let constraints = [];
-        
-        if (filter === 'new') {
-            constraints.push(where('status', '==', 'new'));
-        } else if (filter === 'my_reports' && staffInfo) {
-            constraints.push(where('handlerId', '==', staffInfo.id));
-        } else {
-            setLoading(false);
-            setReports([]);
-            return;
-        }
-
-      let q;
-
-      if (direction === 'next' && lastVisible) {
-        q = query(reportsRef, ...constraints, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
-      } else if (direction === 'prev' && firstVisible) {
-        q = query(reportsRef, ...constraints, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
-      } else {
-        q = query(reportsRef, ...constraints, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
-      }
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (snapshot.empty && direction !== 'initial') {
-          setIsLastPage(true);
-          setReports([]);
-          setLoading(false);
-          if (direction === 'next') setCurrentPage(prev => prev > 1 ? prev -1 : 1);
-          return;
-        }
-
-        const reportsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          const repliesObject = data.replies || {};
-          const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate(),
-            replies: repliesArray,
-          } as Report;
-        });
-
-        setReports(reportsData);
-        setFirstVisible(snapshot.docs[0] || null);
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
-        setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching reports:", error);
-        toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
-        setLoading(false);
+    const reportsRef = collection(db, "reports");
+    const q = query(reportsRef, orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reportsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const repliesObject = data.replies || {};
+        const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate(),
+          replies: repliesArray,
+        } as Report;
       });
-      return unsubscribe;
-
-    } catch (error) {
+      setAllReports(reportsData);
+      setLoading(false);
+    }, (error) => {
       console.error("Error fetching reports:", error);
       toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   useEffect(() => {
-    const unsub = fetchReports(1);
-    return () => { unsub?.then(u => u && u()) };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, staffInfo]);
-
-  const goToNextPage = () => {
-    const newPage = currentPage + 1;
-    setCurrentPage(newPage);
-    fetchReports(newPage, 'next');
-  };
-
-  const goToPrevPage = () => {
-    if (currentPage === 1) return;
-    const newPage = currentPage - 1;
-    setCurrentPage(newPage);
-    fetchReports(newPage, 'prev');
-  };
+    let filtered = [];
+    if (filter === 'new') {
+      filtered = allReports.filter(r => r.status === 'new');
+    } else if (filter === 'my_reports' && staffInfo) {
+      filtered = allReports.filter(r => r.handlerId === staffInfo.id);
+    }
+    setDisplayedReports(filtered);
+  }, [filter, allReports, staffInfo]);
   
   const handleTakeReport = async (report: Report) => {
     if (!staffInfo) return;
@@ -248,8 +196,8 @@ export default function PetugasReportsPage() {
       <CardContent className="space-y-4">
         {loading ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)
-        ) : reports.length > 0 ? (
-            reports.map((report) => (
+        ) : displayedReports.length > 0 ? (
+            displayedReports.map((report) => (
                 <Card key={report.id}>
                     <CardHeader>
                         <CardTitle className="text-base break-words">{report.reportText}</CardTitle>
@@ -298,27 +246,6 @@ export default function PetugasReportsPage() {
             </div>
         )}
       </CardContent>
-      <CardFooter>
-        <div className="flex items-center justify-end space-x-2 w-full">
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={goToPrevPage}
-                disabled={currentPage === 1 || loading}
-            >
-                Sebelumnya
-            </Button>
-            <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={goToNextPage}
-                disabled={isLastPage || loading}
-            >
-                Berikutnya
-            </Button>
-        </div>
-      </CardFooter>
     </Card>
 
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
