@@ -54,8 +54,7 @@ export default function UsersAdminPage() {
   useEffect(() => {
     setLoading(true);
     const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    const activeStaffQuery = query(collection(db, "staff"), where("status", "==", "active"), orderBy("name"));
-    const pendingStaffQuery = query(collection(db, "staff"), where("status", "==", "pending"), orderBy("name"));
+    const staffQuery = query(collection(db, "staff"), orderBy("name"));
 
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({
@@ -64,25 +63,21 @@ export default function UsersAdminPage() {
             createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID') || 'N/A'
         })) as AppUser[];
         setUsers(usersData);
-        setLoading(false);
     }, (error) => console.error("Error fetching users:", error));
     
-    const unsubStaff = onSnapshot(activeStaffQuery, (snapshot) => {
-        const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
-        setStaff(staffData);
-         setLoading(false);
-    }, (error) => console.error("Error fetching staff:", error));
-
-     const unsubPendingStaff = onSnapshot(pendingStaffQuery, (snapshot) => {
-        const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
-        setPendingStaff(staffData);
-         setLoading(false);
-    }, (error) => console.error("Error fetching pending staff:", error));
+    const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
+        const allStaff = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+        setStaff(allStaff.filter(s => s.status === 'active'));
+        setPendingStaff(allStaff.filter(s => s.status === 'pending'));
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching staff:", error)
+        setLoading(false);
+    });
     
     return () => {
         unsubUsers();
         unsubStaff();
-        unsubPendingStaff();
     };
   }, []);
 
