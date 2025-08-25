@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -75,14 +75,15 @@ export default function PetugasPage() {
 
     const q = query(
       collection(db, "schedules"),
-      where("officer", "==", name),
-      orderBy("date", "desc")
+      where("officer", "==", name)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const todaySchedule = snapshot.docs
+      const allSchedules = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEntry))
-        .find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
+        .sort((a, b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
+        
+      const todaySchedule = allSchedules.find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
       
       setScheduleToday(todaySchedule || null);
       setLoading(false);
