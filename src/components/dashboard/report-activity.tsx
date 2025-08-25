@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,12 +32,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MapPin, Send, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Loader2, MapPin, Send, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import type { User } from 'firebase/auth';
+import Link from 'next/link';
+import { Input } from '../ui/input';
 
 const reportSchema = z.object({
+  reporterName: z.string().min(1, "Nama pelapor tidak boleh kosong."),
   reportText: z.string().min(10, 'Mohon berikan laporan yang lebih detail.'),
   category: z.enum(['theft', 'vandalism', 'suspicious_person', 'other'], {
       errorMap: () => ({ message: "Kategori harus dipilih." }),
@@ -59,7 +64,7 @@ const ThreatLevelBadge = ({ level }: { level: TriageReportOutput['threatLevel'] 
     </Badge>
 }
 
-export default function ReportActivity() {
+export default function ReportActivity({ user }: { user: User | null }) {
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageReportOutput | null>(null);
@@ -68,9 +73,16 @@ export default function ReportActivity() {
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
     defaultValues: {
+      reporterName: '',
       reportText: '',
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      form.setValue('reporterName', user.displayName || user.email || '');
+    }
+  }, [user, form]);
 
   const handleGetLocation = () => {
     setIsLocating(true);
@@ -107,6 +119,7 @@ export default function ReportActivity() {
       await addDoc(collection(db, 'reports'), {
         ...data,
         triageResult: result,
+        userId: user?.uid,
         createdAt: serverTimestamp(),
       });
 
@@ -114,7 +127,12 @@ export default function ReportActivity() {
         title: 'Laporan Berhasil Dikirim',
         description: 'Laporan Anda telah kami terima dan analisis.',
       });
-      form.reset();
+      form.reset({
+        reporterName: user?.displayName || user?.email || '',
+        reportText: '',
+        category: undefined,
+        location: '',
+      });
     } catch (error) {
       console.error('Pengiriman gagal', error);
       toast({
@@ -127,10 +145,27 @@ export default function ReportActivity() {
     }
   };
 
+  if (!user) {
+    return (
+        <div className="text-center p-8 border-2 border-dashed rounded-lg">
+            <p className="mb-4 text-muted-foreground">Anda harus masuk untuk membuat laporan.</p>
+            <Button asChild>
+                <Link href="/auth/login">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Masuk untuk Melapor
+                </Link>
+            </Button>
+            <p className="mt-4 text-sm text-muted-foreground">
+                Belum punya akun? <Link href="/auth/register" className="underline text-primary">Daftar di sini</Link>.
+            </p>
+        </div>
+    );
+  }
+
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-lg">Lapor Aktivitas Mencurigakan</CardTitle>
         <CardDescription>
           Laporan Anda akan dianalisis oleh AI kami untuk penilaian segera dan disimpan.
         </CardDescription>
@@ -138,6 +173,19 @@ export default function ReportActivity() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
+             <FormField
+                control={form.control}
+                name="reporterName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nama Pelapor</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-muted/50" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <FormField
               control={form.control}
               name="reportText"

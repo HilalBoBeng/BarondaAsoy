@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import ReportActivity from '@/components/dashboard/report-activity';
+import ReportHistory from "@/components/dashboard/report-history";
 import Schedule from '@/components/dashboard/schedule';
 import Announcements from "@/components/dashboard/announcements";
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
@@ -119,8 +120,17 @@ export default function Home() {
                 <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
               </CardHeader>
               <CardContent>
-                <ReportActivity />
+                <ReportActivity user={user} />
               </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Riwayat Laporan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ReportHistory />
+                </CardContent>
             </Card>
 
             <Card>

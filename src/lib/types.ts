@@ -1,4 +1,6 @@
+
 import { Timestamp } from "firebase/firestore";
+import type { TriageReportOutput } from "@/ai/flows/triage-report";
 
 export interface Announcement {
   id: string;
@@ -21,4 +23,15 @@ export interface EmergencyContact {
   name: string;
   number: string;
   type: 'police' | 'fire' | 'medical' | 'other';
+}
+
+export interface Report {
+  id: string;
+  reporterName: string;
+  reportText: string;
+  category: string;
+  location?: string;
+  userId?: string;
+  createdAt: string | Date | Timestamp;
+  triageResult: TriageReportOutput;
 }
