@@ -48,6 +48,7 @@ export default function VerifyOtpPage() {
   const [verificationContext, setVerificationContext] = useState<any>(null);
   const [otpVerified, setOtpVerified] = useState(false);
   const [isStaffFlow, setIsStaffFlow] = useState(false);
+  const [isStaffResetFlow, setIsStaffResetFlow] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -232,7 +233,7 @@ export default function VerifyOtpPage() {
         } else if (verificationContext.flow === 'staffResetPassword') {
             await resetStaffPassword({ email: verificationContext.email });
             setOtpVerified(true);
-            setIsStaffFlow(true);
+            setIsStaffResetFlow(true);
         }
 
       } else {
@@ -250,10 +251,16 @@ export default function VerifyOtpPage() {
   };
 
   if (otpVerified) {
-    const successTitle = isStaffFlow ? "Pendaftaran Sedang Ditinjau" : "Proses Selesai";
-    const successDescription = isStaffFlow 
-      ? "Pendaftaran Anda telah berhasil dikirim dan sedang menunggu persetujuan dari admin. PENTING: Kode akses unik Anda untuk login akan dikirimkan ke email Anda hanya setelah pendaftaran Anda disetujui oleh admin. Silakan periksa email Anda secara berkala."
-      : "Informasi akses Anda telah dikirim ke email. Silakan periksa kotak masuk Anda.";
+    let successTitle = "Proses Selesai";
+    let successDescription = "Proses telah selesai. Anda dapat kembali ke halaman utama.";
+
+    if (isStaffFlow) {
+      successTitle = "Pendaftaran Sedang Ditinjau";
+      successDescription = "Pendaftaran Anda telah berhasil dikirim dan sedang menunggu persetujuan dari admin. PENTING: Kode akses unik Anda untuk login akan dikirimkan ke email Anda hanya setelah pendaftaran Anda disetujui oleh admin. Silakan periksa email Anda secara berkala.";
+    } else if (isStaffResetFlow) {
+      successTitle = "Kode Akses Terkirim";
+      successDescription = "Kode akses Anda yang sudah ada telah dikirim ulang ke email Anda. Silakan periksa kotak masuk Anda.";
+    }
       
     return (
         <>

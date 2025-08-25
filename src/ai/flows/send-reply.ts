@@ -72,6 +72,10 @@ const sendReplyFlow = ai.defineFlow(
                 </blockquote>
                 <p>Terima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.</p>
                 <p>Hormat kami,<br/>Tim Baronda Siskamling</p>
+                 <div style="font-size: 12px; color: #999; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.
+                    <p style="margin-top: 10px;">Ini adalah email yang dibuat secara otomatis. Mohon untuk tidak membalas email ini.</p>
+                </div>
             </div>
           `,
       };

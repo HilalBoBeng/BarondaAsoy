@@ -96,6 +96,7 @@ const resetStaffPasswordFlow = ai.defineFlow(
                     </div>
                     <div class="footer">
                         © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.
+                        <p style="margin-top: 10px;">Ini adalah email yang dibuat secara otomatis. Mohon untuk tidak membalas email ini.</p>
                     </div>
                 </div>
             </body>
