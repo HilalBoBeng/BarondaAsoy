@@ -164,15 +164,14 @@ export default function LiveChatAdminPage() {
                     <CardContent className="p-2">
                     {loading ? <Skeleton className="h-20 w-full" /> : (
                         sortedChats.map(chat => (
-                             <Button
+                             <div
                                 key={chat.id}
-                                variant="ghost"
                                 className={cn(
-                                    "w-full h-auto justify-start p-3 text-left mb-2",
-                                    selectedChat?.id === chat.id && "bg-muted"
+                                    "w-full h-auto flex items-center justify-start p-3 text-left mb-2 rounded-lg cursor-pointer hover:bg-muted",
+                                    selectedChat?.id === chat.id && "bg-muted",
+                                    chat.status === 'pending' && "cursor-default hover:bg-transparent"
                                 )}
-                                onClick={() => setSelectedChat(chat)}
-                                disabled={chat.status === 'pending'}
+                                onClick={() => { if(chat.status !== 'pending') setSelectedChat(chat) }}
                              >
                                 <Avatar className="h-10 w-10 mr-3">
                                     <AvatarImage src={chat.userPhotoURL || undefined} />
@@ -189,7 +188,7 @@ export default function LiveChatAdminPage() {
                                         </div>
                                     )}
                                 </div>
-                             </Button>
+                             </div>
                         ))
                     )}
                     </CardContent>
