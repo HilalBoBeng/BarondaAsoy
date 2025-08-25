@@ -57,7 +57,8 @@ export default function ReportHistory({ user }: { user: User | null }) {
         }
 
         const reportsRef = collection(db, 'reports');
-        const q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), limit(10)); // Fetch last 10 reports
+        // The query requires an index. Removing orderBy and sorting on the client.
+        const q = query(reportsRef, where('userId', '==', user.uid), limit(25)); 
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             setLoading(true);
@@ -80,6 +81,9 @@ export default function ReportHistory({ user }: { user: User | null }) {
                 } as Report;
             });
             
+            // Sort client-side
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+
             setReports(reportsData);
             setLoading(false);
         }, (error) => {
