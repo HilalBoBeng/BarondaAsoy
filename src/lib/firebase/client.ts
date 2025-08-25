@@ -6,12 +6,13 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "TODO: YOUR_API_KEY",
-  authDomain: "TODO: YOUR_AUTH_DOMAIN",
-  projectId: "TODO: YOUR_PROJECT_ID",
-  storageBucket: "TODO: YOUR_STORAGE_BUCKET",
-  messagingSenderId: "TODO: YOUR_MESSAGING_SENDER_ID",
-  appId: "TODO: YOUR_APP_ID"
+  apiKey: "AIzaSyDljoxNYy89XKp6KRVsE4ZqG-vgB8mImMg",
+  authDomain: "siskamling-digital.firebaseapp.com",
+  databaseURL: "https://siskamling-digital-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "siskamling-digital",
+  storageBucket: "siskamling-digital.appspot.com",
+  messagingSenderId: "535657236086",
+  appId: "1:535657236086:web:be5551248f2cd826cf4157"
 };
 
 // Initialize Firebase
