@@ -28,15 +28,17 @@ const reasonSchema = z.object({
 type ReasonFormValues = z.infer<typeof reasonSchema>;
 type AbsenceType = 'Izin' | 'Sakit';
 
-const statusConfig: Record<ScheduleEntry['status'], {
+const statusConfig: Record<string, {
     variant: 'default' | 'secondary' | 'outline' | 'destructive';
     label: string;
+    className?: string;
 }> = {
   'Pending': { variant: 'outline', label: 'Menunggu' },
   'In Progress': { variant: 'default', label: 'Sedang Bertugas' },
   'Completed': { variant: 'secondary', label: 'Selesai' },
   'Izin': { variant: 'destructive', label: 'Izin' },
   'Sakit': { variant: 'destructive', label: 'Sakit' },
+  'Pending Review': { variant: 'default', className:'bg-yellow-500 hover:bg-yellow-600', label: 'Menunggu Persetujuan' },
 };
 
 
@@ -214,7 +216,9 @@ export default function PetugasPage() {
                             <CardTitle>Jadwal Anda Hari Ini</CardTitle>
                             <CardDescription>{format(new Date(), "EEEE, d MMMM yyyy", { locale: id })}</CardDescription>
                         </div>
-                        <Badge variant={statusConfig[scheduleToday.status].variant}>{statusConfig[scheduleToday.status].label}</Badge>
+                        <Badge variant={statusConfig[scheduleToday.status].variant} className={statusConfig[scheduleToday.status].className}>
+                            {statusConfig[scheduleToday.status].label}
+                        </Badge>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -234,8 +238,8 @@ export default function PetugasPage() {
                             <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog('Sakit')}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                         </>
                     )}
-                    {scheduleToday.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus('Completed')}><Check className="mr-2 h-4 w-4" /> Selesaikan Tugas</Button>}
-                    {(scheduleToday.status === 'Completed' || scheduleToday.status === 'Izin' || scheduleToday.status === 'Sakit') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
+                    {scheduleToday.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus('Pending Review')}><Check className="mr-2 h-4 w-4" /> Ajukan Penyelesaian</Button>}
+                    {(scheduleToday.status === 'Completed' || scheduleToday.status === 'Izin' || scheduleToday.status === 'Sakit' || scheduleToday.status === 'Pending Review') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
                 </CardFooter>
             </Card>
           )}

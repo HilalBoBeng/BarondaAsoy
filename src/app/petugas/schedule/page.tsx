@@ -12,15 +12,17 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, User, Clock, MapPin } from 'lucide-react';
 
-const statusConfig: Record<ScheduleEntry['status'], {
+const statusConfig: Record<string, {
     variant: 'default' | 'secondary' | 'outline' | 'destructive';
     label: string;
+    className?: string;
 }> = {
   'Pending': { variant: 'outline', label: 'Menunggu' },
   'In Progress': { variant: 'default', label: 'Bertugas' },
   'Completed': { variant: 'secondary', label: 'Selesai' },
   'Izin': { variant: 'destructive', label: 'Izin' },
   'Sakit': { variant: 'destructive', label: 'Sakit' },
+  'Pending Review': { variant: 'default', className:'bg-yellow-500 hover:bg-yellow-600', label: 'Menunggu Persetujuan' },
 };
 
 
@@ -63,6 +65,7 @@ export default function PetugasSchedulePage() {
   
   const ScheduleCard = ({ schedule }: { schedule: ScheduleEntry }) => {
     const { status, area, time, date, officer } = schedule;
+    const config = statusConfig[status] || statusConfig['Pending'];
 
     return (
       <Card>
@@ -71,7 +74,7 @@ export default function PetugasSchedulePage() {
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" /> {area}
             </CardTitle>
-            <Badge variant={statusConfig[status].variant}>{statusConfig[status].label}</Badge>
+            <Badge variant={config.variant} className={config.className}>{config.label}</Badge>
           </div>
           <CardDescription className="flex items-center gap-2 pt-1">
              <Calendar className="h-4 w-4" />

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -18,21 +18,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock } from 'lucide-react';
-import type { ScheduleEntry } from '@/lib/types';
+import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check } from 'lucide-react';
+import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
-interface Staff {
-  id: string;
-  name: string;
-}
 
 const scheduleSchema = z.object({
-  officer: z.string().min(1, "Nama petugas harus dipilih."),
+  officerId: z.string().min(1, "Petugas harus dipilih."),
   area: z.string().min(1, "Area tidak boleh kosong."),
   date: z.date({ required_error: "Tanggal patroli harus diisi." }),
   time: z.string().min(1, "Waktu patroli tidak boleh kosong.").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?-\s?([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format waktu salah. Contoh: 20:00 - 22:00"),
@@ -52,7 +48,7 @@ export default function ScheduleAdminPage() {
   const form = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
-      officer: '',
+      officerId: '',
       area: '',
       time: '',
     },
@@ -62,7 +58,7 @@ export default function ScheduleAdminPage() {
     const fetchStaff = async () => {
       const staffQuery = query(collection(db, "staff"), orderBy("name"));
       const staffSnapshot = await getDocs(staffQuery);
-      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })) as Staff[];
+      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
       setStaff(staffData);
     };
     fetchStaff();
@@ -91,9 +87,9 @@ export default function ScheduleAdminPage() {
             date: currentSchedule.date instanceof Timestamp ? currentSchedule.date.toDate() : (currentSchedule.date as Date),
         };
         delete (defaultValues as any).status; // remove status from form values
-        form.reset(defaultValues);
+        form.reset(defaultValues as any);
       } else {
-        form.reset({ officer: '', area: '', time: '', date: undefined });
+        form.reset({ officerId: '', area: '', time: '', date: undefined });
       }
     }
   }, [isDialogOpen, currentSchedule, form]);
@@ -105,22 +101,30 @@ export default function ScheduleAdminPage() {
 
   const onSubmit = async (values: ScheduleFormValues) => {
     setIsSubmitting(true);
+    const selectedStaff = staff.find(s => s.id === values.officerId);
+     if (!selectedStaff) {
+        toast({ variant: 'destructive', title: "Gagal", description: "Petugas tidak ditemukan." });
+        setIsSubmitting(false);
+        return;
+    }
     try {
+      const dataPayload = {
+        officer: selectedStaff.name,
+        officerId: selectedStaff.id,
+        area: values.area,
+        time: values.time,
+        date: Timestamp.fromDate(values.date),
+      };
+
       if (currentSchedule) {
-         const dataToUpdate = {
-            ...values,
-            date: Timestamp.fromDate(values.date)
-         };
         const docRef = doc(db, 'schedules', currentSchedule.id);
-        await updateDoc(docRef, dataToUpdate);
+        await updateDoc(docRef, dataPayload);
         toast({ title: "Berhasil", description: "Jadwal berhasil diperbarui." });
       } else {
-         const dataToSave = {
-            ...values,
-            date: Timestamp.fromDate(values.date),
+        await addDoc(collection(db, 'schedules'), {
+            ...dataPayload,
             status: 'Pending' as ScheduleEntry['status'],
-         };
-        await addDoc(collection(db, 'schedules'), dataToSave);
+         });
         toast({ title: "Berhasil", description: "Jadwal berhasil dibuat." });
       }
       setIsDialogOpen(false);
@@ -142,14 +146,37 @@ export default function ScheduleAdminPage() {
     }
   };
 
+  const handleApproveCompletion = async (scheduleItem: ScheduleEntry) => {
+    if (!scheduleItem.officerId) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'ID Petugas tidak ditemukan di jadwal ini.' });
+        return;
+    }
+    const scheduleRef = doc(db, 'schedules', scheduleItem.id);
+    const staffRef = doc(db, 'staff', scheduleItem.officerId);
+    try {
+        await updateDoc(scheduleRef, { status: 'Completed' });
+        await updateDoc(staffRef, { points: increment(10) }); // Give 10 points for completion
+        toast({ title: "Berhasil", description: `Patroli ${scheduleItem.officer} telah diselesaikan dan poin ditambahkan.` });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyetujui penyelesaian patroli.' });
+        console.error("Approval failed:", error);
+    }
+  };
+
   const renderActions = (item: ScheduleEntry) => (
-    <div className="flex gap-2 justify-end">
-      <Button variant="outline" size="sm" onClick={() => handleDialogOpen(item)}>
+    <div className="flex gap-2 justify-end items-center">
+        {item.status === 'Pending Review' && (
+            <Button size="sm" onClick={() => handleApproveCompletion(item)}>
+                <Check className="h-4 w-4 mr-2"/>
+                Setujui & Selesaikan
+            </Button>
+        )}
+      <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
         <Edit className="h-4 w-4" />
       </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
+          <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -165,9 +192,20 @@ export default function ScheduleAdminPage() {
     </div>
   );
 
-  const StatusBadge = ({ status }: { status: ScheduleEntry['status'] }) => (
-     <Badge variant={status === 'Completed' ? 'secondary' : status === 'In Progress' ? 'default' : 'outline'}>{status}</Badge>
-  );
+  const StatusBadge = ({ status }: { status: ScheduleEntry['status'] }) => {
+    const config = {
+        'Pending': { variant: 'outline', label: 'Menunggu' },
+        'In Progress': { variant: 'default', label: 'Bertugas' },
+        'Completed': { variant: 'secondary', label: 'Selesai' },
+        'Izin': { variant: 'destructive', label: 'Izin' },
+        'Sakit': { variant: 'destructive', label: 'Sakit' },
+        'Pending Review': { variant: 'default', className:'bg-yellow-500 hover:bg-yellow-600', label: 'Menunggu Persetujuan' },
+    } as const;
+
+    const { variant, label, className } = config[status] || config['Pending'];
+    return <Badge variant={variant} className={className}>{label}</Badge>
+  };
+
 
   return (
     <Card>
@@ -220,7 +258,7 @@ export default function ScheduleAdminPage() {
                 <TableHead>Petugas</TableHead>
                 <TableHead>Area</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right w-[100px]">Aksi</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -268,7 +306,7 @@ export default function ScheduleAdminPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="officer"
+                  name="officerId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nama Petugas</FormLabel>
@@ -280,7 +318,7 @@ export default function ScheduleAdminPage() {
                         </FormControl>
                         <SelectContent>
                           {staff.map(s => (
-                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

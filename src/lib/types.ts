@@ -19,8 +19,9 @@ export interface ScheduleEntry {
   date: string | Date | Timestamp;
   time: string;
   officer: string;
+  officerId: string;
   area: string;
-  status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit';
+  status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit' | 'Pending Review';
   reason?: string; // For Izin or Sakit
 }
 
