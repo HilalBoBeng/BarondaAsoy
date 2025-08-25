@@ -72,7 +72,7 @@ export default function Home() {
       orderBy('createdAt', 'desc')
     );
     const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-      const logs = snapshot.docs.map(d => d.data() as PatrolLog);
+      const logs = snapshot.docs.map(d => ({id: d.id, ...d.data()}) as PatrolLog);
       setPatrolLogs(logs);
       setLoadingPatrolLogs(false);
     });
@@ -382,7 +382,7 @@ export default function Home() {
 
                      <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Log Patroli Terbaru</CardTitle>
+                            <CardTitle className="text-lg">Log Patroli Terbaru (24 Jam Terakhir)</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 max-h-[400px] overflow-auto">
                            {loadingPatrolLogs ? <Skeleton className="h-20 w-full" /> : 
