@@ -92,7 +92,11 @@ export default function Home() {
             const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
             const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
                 const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-                const sortedNotifs = notifsData.sort((a, b) => (b.createdAt as any).toDate() - (a.createdAt as any).toDate());
+                const sortedNotifs = notifsData.sort((a, b) => {
+                    const dateA = a.createdAt ? (a.createdAt as any).toDate() : 0;
+                    const dateB = b.createdAt ? (b.createdAt as any).toDate() : 0;
+                    return dateB - dateA;
+                });
                 setNotifications(sortedNotifs);
             }, (error) => {
                 console.error("Error fetching notifications: ", error);
@@ -169,13 +173,13 @@ export default function Home() {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2"><ShieldBan className="h-6 w-6 text-destructive"/>Akun Anda Diblokir</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Akun Anda telah ditangguhkan oleh admin.
-                        {userInfo.blockReason && <p className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</p>}
-                        {userInfo.blockEnds && <p className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</p>}
+                    <AlertDialogDescription className="text-sm text-muted-foreground">
+                        <div>Akun Anda telah ditangguhkan oleh admin.</div>
+                        {userInfo.blockReason && <div className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</div>}
+                        {userInfo.blockEnds && <div className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</div>}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <p className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</p>
+                 <div className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</div>
                 <AlertDialogFooter>
                     <Button variant="destructive" onClick={handleLogout} className="w-full">
                         <LogOut className="mr-2 h-4 w-4" /> Keluar
