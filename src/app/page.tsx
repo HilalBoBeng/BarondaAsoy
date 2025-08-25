@@ -30,7 +30,7 @@ import type { Notification, AppUser } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -83,16 +83,17 @@ export default function Home() {
             if(userDocSnap.exists()) {
                 const userData = userDocSnap.data() as AppUser;
                 setUserInfo(userData);
-                if (userData.isBlocked) {
-                    // Don't setLoading(false) here, so the loading screen persists
+                 if (userData.isBlocked) {
+                    setLoading(false); // Stop loading to show the dialog
                     return; 
                 }
             }
 
-            const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
             const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
-                const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-                setNotifications(notifs);
+                const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+                const sortedNotifs = notifsData.sort((a, b) => (b.createdAt as any).toDate() - (a.createdAt as any).toDate());
+                setNotifications(sortedNotifs);
             }, (error) => {
                 console.error("Error fetching notifications: ", error);
             });
@@ -116,6 +117,8 @@ export default function Home() {
         title: "Berhasil Keluar",
         description: "Anda telah berhasil keluar dari akun Anda.",
       });
+      setUserInfo(null);
+      setUser(null);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -172,8 +175,11 @@ export default function Home() {
                         {userInfo.blockEnds && <p className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</p>}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
+                <p className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</p>
                 <AlertDialogFooter>
-                    <p className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</p>
+                    <Button variant="destructive" onClick={handleLogout} className="w-full">
+                        <LogOut className="mr-2 h-4 w-4" /> Keluar
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
