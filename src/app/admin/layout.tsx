@@ -21,12 +21,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BarondaLogo } from "@/components/icons";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  const navItems = [
+    { href: "/admin", icon: Home, label: "Dasbor" },
+    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: 6 },
+    { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
+    { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
+    { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
+  ];
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:block">
@@ -39,44 +51,24 @@ export default function AdminLayout({
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Home className="h-4 w-4" />
-                Dasbor
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <ShieldAlert className="h-4 w-4" />
-                Laporan Masuk
-                <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                  6
-                </Badge>
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-primary transition-all hover:text-primary"
-              >
-                <FileText className="h-4 w-4" />
-                Pengumuman
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Users className="h-4 w-4" />
-                Manajemen Warga
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Calendar className="h-4 w-4" />
-                Jadwal Patroli
-              </Link>
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                    pathname === item.href && "bg-muted text-primary"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                  {item.badge && (
+                     <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                        {item.badge}
+                     </Badge>
+                  )}
+                </Link>
+              ))}
             </nav>
           </div>
           <div className="mt-auto p-4">
@@ -90,7 +82,9 @@ export default function AdminLayout({
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold md:text-2xl">Dasbor Admin</h1>
+            <h1 className="text-lg font-semibold md:text-2xl">
+              {navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/'))?.label || 'Dasbor Admin'}
+            </h1>
           </div>
           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
               <Bell className="h-4 w-4" />
