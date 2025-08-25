@@ -109,9 +109,10 @@ export default function PetugasPage() {
       getCountFromServer(completedQuery).then(snap => setStats(prev => ({ ...prev, completedReports: snap.data().count })));
       
       // Fetch Notifications
-      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", staffInfo.id), orderBy("createdAt", "desc"));
+      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", staffInfo.id));
       const unsubNotifs = onSnapshot(notifsQuery, (snapshot) => {
         const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Notification}));
+        notifs.sort((a, b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis());
         const unreadNotifs = notifs.filter(n => !n.read);
         setNotifications(unreadNotifs);
         setLoadingNotifications(false);
@@ -233,3 +234,5 @@ export default function PetugasPage() {
     </div>
   );
 }
+
+    

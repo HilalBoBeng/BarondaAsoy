@@ -107,9 +107,10 @@ export default function Home() {
           setLoading(false);
         });
 
-        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
           const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+          notifsData.sort((a,b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis())
           setNotifications(notifsData);
         }, (error) => {
           console.error("Error fetching notifications: ", error);
@@ -138,6 +139,7 @@ export default function Home() {
       });
       setUserInfo(null);
       setUser(null);
+      router.push('/');
     } catch (error) {
       toast({
         variant: "destructive",
@@ -451,3 +453,5 @@ export default function Home() {
     </>
   );
 }
+
+    
