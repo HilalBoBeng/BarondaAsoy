@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -156,7 +157,7 @@ export default function RegisterPage() {
                 {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Daftar & Kirim OTP
+                Daftar
               </Button>
               <div className="text-center text-sm text-muted-foreground">
                   Sudah punya akun?{" "}

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Notification, Announcement } from '@/lib/types';
@@ -42,12 +42,16 @@ export default function PetugasNotificationsPage() {
      const annsQuery = query(
         collection(db, "announcements"),
         where("target", "in", ["all", "staff"]),
-        orderBy("date", "desc"),
         limit(10)
     );
      const unsubAnns = onSnapshot(annsQuery, (snapshot) => {
         const annsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
+        // Sort client-side
+        annsData.sort((a,b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
         setAnnouncements(annsData);
+        setLoadingAnns(false);
+    }, (error) => {
+        console.error("Error fetching announcements:", error);
         setLoadingAnns(false);
     });
 

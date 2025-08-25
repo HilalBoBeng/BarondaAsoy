@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -22,13 +23,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { verifyOtp } from '@/ai/flows/verify-otp';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { app } from '@/lib/firebase/client';
+import { app, db } from '@/lib/firebase/client';
+import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import Image from 'next/image';
 
 const verifyOtpSchema = z.object({
@@ -43,13 +45,13 @@ export default function VerifyOtpPage() {
   const [verificationContext, setVerificationContext] = useState<any>(null);
   const router = useRouter();
   const auth = getAuth(app);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     const contextStr = localStorage.getItem('verificationContext');
     if (contextStr) {
       setVerificationContext(JSON.parse(contextStr));
     } else {
-      // If no context, redirect to register
       router.replace('/auth/register');
     }
   }, [router]);
@@ -58,6 +60,26 @@ export default function VerifyOtpPage() {
     resolver: zodResolver(verifyOtpSchema),
     defaultValues: { otp: '' },
   });
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const { value } = e.target;
+    if (value.length > 1) return;
+    
+    let currentOtp = form.getValues('otp');
+    let otpArray = currentOtp.split('');
+    otpArray[index] = value;
+    form.setValue('otp', otpArray.join(''));
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && !form.getValues('otp')[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
 
   const onSubmit = async (data: VerifyOtpFormValues) => {
     if (!verificationContext) {
@@ -71,23 +93,31 @@ export default function VerifyOtpPage() {
 
       if (result.success) {
         toast({ title: 'Berhasil', description: 'Verifikasi OTP berhasil.' });
-        localStorage.removeItem('verificationContext'); // Clean up
+        localStorage.removeItem('verificationContext');
 
         if (verificationContext.flow === 'register') {
-          // Create user in Firebase Auth
           const userCredential = await createUserWithEmailAndPassword(
             auth,
             verificationContext.email,
             verificationContext.password
           );
+
           await updateProfile(userCredential.user, {
             displayName: verificationContext.name,
           });
+
+          await setDoc(doc(db, "users", userCredential.user.uid), {
+            displayName: verificationContext.name,
+            email: verificationContext.email,
+            photoURL: '',
+            createdAt: serverTimestamp(),
+            isBlocked: false,
+          });
+          
           toast({ title: 'Pendaftaran Berhasil', description: 'Akun Anda telah dibuat. Silakan masuk.' });
           router.push('/auth/login');
 
         } else if (verificationContext.flow === 'resetPassword') {
-          // Redirect to reset password page
           localStorage.setItem('resetPasswordEmail', verificationContext.email);
           router.push('/auth/reset-password');
         }
@@ -126,17 +156,27 @@ export default function VerifyOtpPage() {
               <FormField
                 control={form.control}
                 name="otp"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
-                    <FormLabel>Kode OTP</FormLabel>
+                    <FormLabel className="sr-only">Kode OTP</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="••••••"
-                        maxLength={6}
-                        {...field}
-                      />
+                       <div className="flex justify-center gap-2">
+                        {Array.from({ length: 6 }).map((_, index) => (
+                           <Input
+                            key={index}
+                            ref={(el) => (inputRefs.current[index] = el)}
+                            type="text"
+                            maxLength={1}
+                            pattern="\d*"
+                            className="w-12 h-14 text-center text-2xl font-bold"
+                            value={form.watch('otp')[index] || ''}
+                            onChange={(e) => handleInputChange(e, index)}
+                            onKeyDown={(e) => handleKeyDown(e, index)}
+                            />
+                        ))}
+                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-center pt-2" />
                   </FormItem>
                 )}
               />
