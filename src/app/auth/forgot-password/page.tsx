@@ -27,6 +27,7 @@ import { sendOtp } from "@/ai/flows/send-otp";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 
 const forgotPasswordSchema = z.object({
@@ -38,6 +39,7 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
   
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -53,7 +55,9 @@ export default function ForgotPasswordPage() {
           title: "Berhasil",
           description: "Kode OTP telah dikirim ke email Anda.",
         });
-        // TODO: Redirect to OTP verification page
+        // Store email and redirect to OTP verification page
+        localStorage.setItem('verificationContext', JSON.stringify({ email: data.email, flow: 'resetPassword' }));
+        router.push('/auth/verify-otp');
       } else {
         throw new Error(result.message);
       }

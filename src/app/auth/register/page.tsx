@@ -27,6 +27,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+
 
 const registerSchema = z
   .object({
@@ -47,6 +49,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
@@ -61,8 +64,9 @@ export default function RegisterPage() {
           title: "Berhasil",
           description: "Kode OTP telah dikirim ke email Anda. Silakan periksa.",
         });
-        // TODO: Store registration data temporarily (e.g., localStorage)
-        // and redirect to OTP verification page.
+        // Store registration data temporarily and redirect to OTP verification page.
+        localStorage.setItem('verificationContext', JSON.stringify({ ...data, flow: 'register' }));
+        router.push('/auth/verify-otp');
       } else {
         throw new Error(result.message);
       }

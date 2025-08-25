@@ -1,0 +1,161 @@
+"use client";
+
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { BarondaLogo } from "@/components/icons";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { getAuth, confirmPasswordReset, sendPasswordResetEmail } from "firebase/auth";
+import { app } from "@/lib/firebase/client";
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Kata sandi minimal 8 karakter."),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Konfirmasi kata sandi tidak cocok.",
+    path: ["confirmPassword"],
+  });
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
+export default function ResetPasswordPage() {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+  const router = useRouter();
+  const auth = getAuth(app);
+
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('resetPasswordEmail');
+    if (storedEmail) {
+      setEmail(storedEmail);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Akses Ditolak',
+        description: 'Verifikasi email diperlukan untuk mengatur ulang kata sandi.',
+      });
+      router.replace('/auth/forgot-password');
+    }
+  }, [router, toast]);
+  
+  const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
+  });
+
+  const onSubmit = async (data: ResetPasswordFormValues) => {
+    if (!email) return;
+
+    setIsSubmitting(true);
+    try {
+        // Firebase doesn't directly support reset after OTP.
+        // The common flow is to send a reset link. We'll trigger that here.
+        // The user would have already verified their identity via OTP.
+        await sendPasswordResetEmail(auth, email);
+        
+        toast({
+          title: "Tautan Terkirim",
+          description: "Tautan untuk mengatur ulang kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk.",
+        });
+        
+        localStorage.removeItem('resetPasswordEmail');
+        router.push('/auth/login');
+      
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Gagal Mengatur Ulang",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan.",
+      });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex justify-center mb-6">
+          <BarondaLogo className="h-16 w-auto" />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Atur Ulang Kata Sandi</CardTitle>
+          <CardDescription>
+            Masukkan kata sandi baru Anda untuk akun {email}.
+          </CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kata Sandi Baru</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+              <Button type="submit" className="w-full" disabled={isSubmitting || !email}>
+                 {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Kirim Tautan Atur Ulang Sandi
+              </Button>
+              <div className="text-center text-sm">
+                <Link href="/auth/login" className="underline">
+                  Kembali ke Halaman Masuk
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </>
+  );
+}
+
