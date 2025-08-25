@@ -1,13 +1,15 @@
+import { Timestamp } from "firebase/firestore";
+
 export interface Announcement {
   id: string;
   title: string;
   content: string;
-  date: string;
+  date: string | Date | Timestamp;
 }
 
 export interface ScheduleEntry {
   id: string;
-  date: string;
+  date: string | Date | Timestamp;
   time: string;
   officer: string;
   area: string;

@@ -33,6 +33,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, MapPin, Send, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
 
 const reportSchema = z.object({
   reportText: z.string().min(10, 'Please provide a more detailed report.'),
@@ -99,13 +101,20 @@ export default function ReportActivity() {
     try {
       const result = await triageReport(data);
       setTriageResult(result);
+      
+      await addDoc(collection(db, 'reports'), {
+        ...data,
+        triageResult: result,
+        createdAt: serverTimestamp(),
+      });
+
       toast({
         title: 'Report Submitted Successfully',
         description: 'Your report has been received and triaged.',
       });
       form.reset();
     } catch (error) {
-      console.error('Triage failed', error);
+      console.error('Submission failed', error);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
@@ -121,7 +130,7 @@ export default function ReportActivity() {
       <CardHeader>
         <CardTitle>Report Suspicious Activity</CardTitle>
         <CardDescription>
-          Your report will be triaged by our AI for immediate assessment.
+          Your report will be triaged by our AI for immediate assessment and stored.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
