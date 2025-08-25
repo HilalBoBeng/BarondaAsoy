@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from 'next/link';
 import {
   Home as HomeIcon,
   Megaphone,
@@ -9,6 +10,7 @@ import {
   CalendarDays,
   Phone,
   User,
+  LogOut,
 } from "lucide-react";
 
 import {
@@ -35,11 +37,11 @@ import { BarondaLogo } from "@/components/icons";
 type View = "dashboard" | "announcements" | "report" | "schedule" | "contacts";
 
 const viewConfig: Record<View, { title: string; icon: React.ElementType }> = {
-  dashboard: { title: "Dashboard", icon: HomeIcon },
-  announcements: { title: "Announcements", icon: Megaphone },
-  report: { title: "Report Activity", icon: ShieldAlert },
-  schedule: { title: "Patrol Schedule", icon: CalendarDays },
-  contacts: { title: "Emergency Contacts", icon: Phone },
+  dashboard: { title: "Dasbor", icon: HomeIcon },
+  announcements: { title: "Pengumuman", icon: Megaphone },
+  report: { title: "Lapor Aktivitas", icon: ShieldAlert },
+  schedule: { title: "Jadwal Patroli", icon: CalendarDays },
+  contacts: { title: "Kontak Darurat", icon: Phone },
 };
 
 function AppLayout() {
@@ -106,8 +108,16 @@ function AppLayout() {
                         <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="person portrait" />
                         <AvatarFallback>U</AvatarFallback>
                     </Avatar>
-                    <span>User Profile</span>
+                    <span>Profil Pengguna</span>
                 </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+                <Link href="/auth/login">
+                    <SidebarMenuButton>
+                        <LogOut />
+                        <span>Keluar</span>
+                    </SidebarMenuButton>
+                </Link>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

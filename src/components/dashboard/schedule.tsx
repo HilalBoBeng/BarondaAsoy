@@ -15,6 +15,12 @@ import { db } from '@/lib/firebase/client';
 import type { ScheduleEntry } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
+const statusMap: Record<ScheduleEntry['status'], string> = {
+  Completed: 'Selesai',
+  Pending: 'Tertunda',
+  'In Progress': 'Berlangsung',
+};
+
 const statusVariant: Record<
   ScheduleEntry['status'],
   'default' | 'secondary' | 'outline'
@@ -37,7 +43,7 @@ export default function Schedule() {
         scheduleData.push({ 
             id: doc.id,
              ...data,
-            date: data.date.toDate ? data.date.toDate().toLocaleDateString('en-CA') : data.date
+            date: data.date.toDate ? data.date.toDate().toLocaleDateString('id-ID') : data.date
         } as ScheduleEntry);
       });
       setSchedule(scheduleData);
@@ -52,9 +58,9 @@ export default function Schedule() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Time</TableHead>
-            <TableHead>Officer</TableHead>
+            <TableHead>Tanggal</TableHead>
+            <TableHead>Waktu</TableHead>
+            <TableHead>Petugas</TableHead>
             <TableHead>Area</TableHead>
             <TableHead className="text-right">Status</TableHead>
           </TableRow>
@@ -73,13 +79,13 @@ export default function Schedule() {
           ) : (
             schedule.map((entry) => (
                 <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.date}</TableCell>
+                <TableCell className="font-medium">{entry.date as string}</TableCell>
                 <TableCell>{entry.time}</TableCell>
                 <TableCell>{entry.officer}</TableCell>
                 <TableCell>{entry.area}</TableCell>
                 <TableCell className="text-right">
                     <Badge variant={statusVariant[entry.status]}>
-                    {entry.status}
+                    {statusMap[entry.status]}
                     </Badge>
                 </TableCell>
                 </TableRow>

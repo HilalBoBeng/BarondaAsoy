@@ -55,17 +55,17 @@ export default function MainDashboardView() {
     }, []);
 
     const statCards = [
-        { title: "Active Reports", value: stats.activeReports, icon: Shield },
-        { title: "Announcements", value: stats.announcements, icon: Megaphone },
-        { title: "Officers on Duty", value: stats.officersOnDuty, icon: Users },
-        { title: "Patrols Today", value: stats.patrolsToday, icon: CalendarCheck },
+        { title: "Laporan Aktif", value: stats.activeReports, icon: Shield },
+        { title: "Total Pengumuman", value: stats.announcements, icon: Megaphone },
+        { title: "Petugas Bertugas", value: stats.officersOnDuty, icon: Users },
+        { title: "Patroli Hari Ini", value: stats.patrolsToday, icon: CalendarCheck },
     ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Welcome, User!</h1>
-        <p className="text-muted-foreground">Here's what's happening in your neighborhood today.</p>
+        <h1 className="text-3xl font-bold">Selamat Datang, Pengguna!</h1>
+        <p className="text-muted-foreground">Inilah yang terjadi di lingkungan Anda hari ini.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -98,11 +98,11 @@ export default function MainDashboardView() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <h2 className="mb-4 text-2xl font-bold">Submit a Report</h2>
+          <h2 className="mb-4 text-2xl font-bold">Kirim Laporan</h2>
           <ReportActivity />
         </div>
         <div className="lg:col-span-2">
-          <h2 className="mb-4 text-2xl font-bold">Today's Patrols</h2>
+          <h2 className="mb-4 text-2xl font-bold">Patroli Hari Ini</h2>
           <div className="max-h-[500px] overflow-auto">
             <Schedule />
           </div>

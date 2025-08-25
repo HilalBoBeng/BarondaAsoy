@@ -43,7 +43,7 @@ export default function EmergencyContacts() {
   return (
     <div className="grid gap-6">
        <div className="flex items-center">
-        <h1 className="text-2xl font-bold">Emergency Contacts</h1>
+        <h1 className="text-2xl font-bold">Kontak Darurat</h1>
       </div>
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -75,7 +75,7 @@ export default function EmergencyContacts() {
                     <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
                         <a href={`tel:${contact.number}`}>
                         <Phone className="mr-2 h-4 w-4" />
-                        Call Now
+                        Telepon Sekarang
                         </a>
                     </Button>
                     </CardContent>

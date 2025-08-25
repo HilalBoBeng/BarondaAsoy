@@ -37,8 +37,10 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 
 const reportSchema = z.object({
-  reportText: z.string().min(10, 'Please provide a more detailed report.'),
-  category: z.enum(['theft', 'vandalism', 'suspicious_person', 'other']),
+  reportText: z.string().min(10, 'Mohon berikan laporan yang lebih detail.'),
+  category: z.enum(['theft', 'vandalism', 'suspicious_person', 'other'], {
+      errorMap: () => ({ message: "Kategori harus dipilih." }),
+  }),
   location: z.string().optional(),
 });
 
@@ -46,14 +48,14 @@ type ReportFormValues = z.infer<typeof reportSchema>;
 
 const ThreatLevelBadge = ({ level }: { level: TriageReportOutput['threatLevel'] }) => {
     const config = {
-        low: { icon: CheckCircle, variant: 'secondary', className: 'bg-green-100 text-green-800' },
-        medium: { icon: AlertTriangle, variant: 'secondary', className: 'bg-yellow-100 text-yellow-800' },
-        high: { icon: AlertTriangle, variant: 'destructive', className: '' },
+        low: { icon: CheckCircle, variant: 'secondary', className: 'bg-green-100 text-green-800', label: 'Rendah' },
+        medium: { icon: AlertTriangle, variant: 'secondary', className: 'bg-yellow-100 text-yellow-800', label: 'Sedang' },
+        high: { icon: AlertTriangle, variant: 'destructive', className: '', label: 'Tinggi' },
     } as const;
-    const { icon: Icon, variant, className } = config[level];
+    const { icon: Icon, variant, className, label } = config[level];
     return <Badge variant={variant} className={`capitalize ${className}`}>
         <Icon className="mr-1 h-3 w-3" />
-        {level}
+        {label}
     </Badge>
 }
 
@@ -78,17 +80,17 @@ export default function ReportActivity() {
         const locationString = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
         form.setValue('location', locationString);
         toast({
-          title: 'Location Acquired',
-          description: `Coordinates: ${locationString}`,
+          title: 'Lokasi Diperoleh',
+          description: `Koordinat: ${locationString}`,
         });
         setIsLocating(false);
       },
       (error) => {
-        console.error('Error getting location', error);
+        console.error('Gagal mendapatkan lokasi', error);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'Could not get location. Please enable location services.',
+          title: 'Gagal',
+          description: 'Tidak dapat memperoleh lokasi. Mohon aktifkan layanan lokasi.',
         });
         setIsLocating(false);
       }
@@ -109,16 +111,16 @@ export default function ReportActivity() {
       });
 
       toast({
-        title: 'Report Submitted Successfully',
-        description: 'Your report has been received and triaged.',
+        title: 'Laporan Berhasil Dikirim',
+        description: 'Laporan Anda telah kami terima dan analisis.',
       });
       form.reset();
     } catch (error) {
-      console.error('Submission failed', error);
+      console.error('Pengiriman gagal', error);
       toast({
         variant: 'destructive',
-        title: 'Submission Failed',
-        description: 'There was an error submitting your report. Please try again.',
+        title: 'Pengiriman Gagal',
+        description: 'Terjadi kesalahan saat mengirim laporan Anda. Silakan coba lagi.',
       });
     } finally {
       setIsSubmitting(false);
@@ -128,9 +130,9 @@ export default function ReportActivity() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Report Suspicious Activity</CardTitle>
+        <CardTitle>Lapor Aktivitas Mencurigakan</CardTitle>
         <CardDescription>
-          Your report will be triaged by our AI for immediate assessment and stored.
+          Laporan Anda akan dianalisis oleh AI kami untuk penilaian segera dan disimpan.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -141,10 +143,10 @@ export default function ReportActivity() {
               name="reportText"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Describe the activity</FormLabel>
+                  <FormLabel>Jelaskan aktivitasnya</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., I saw a person looking into car windows on Main St."
+                      placeholder="Contoh: Saya melihat seseorang melihat ke dalam jendela mobil di Jalan Utama."
                       rows={5}
                       {...field}
                     />
@@ -159,18 +161,18 @@ export default function ReportActivity() {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>Kategori</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder="Pilih kategori" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="theft">Theft</SelectItem>
-                        <SelectItem value="vandalism">Vandalism</SelectItem>
-                        <SelectItem value="suspicious_person">Suspicious Person</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="theft">Pencurian</SelectItem>
+                        <SelectItem value="vandalism">Vandalisme</SelectItem>
+                        <SelectItem value="suspicious_person">Orang Mencurigakan</SelectItem>
+                        <SelectItem value="other">Lainnya</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -178,7 +180,7 @@ export default function ReportActivity() {
                 )}
               />
               <FormItem>
-                <FormLabel>Location (Optional)</FormLabel>
+                <FormLabel>Lokasi (Opsional)</FormLabel>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -192,7 +194,7 @@ export default function ReportActivity() {
                     ) : (
                       <MapPin className="mr-2 h-4 w-4" />
                     )}
-                    Get Current Location
+                    Dapatkan Lokasi Saat Ini
                   </Button>
                 </div>
                  {form.watch('location') && <p className="text-sm text-muted-foreground mt-2">📍 {form.watch('location')}</p>}
@@ -202,11 +204,11 @@ export default function ReportActivity() {
                 <Card className="bg-secondary/50">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
-                            AI Triage Result: <ThreatLevelBadge level={triageResult.threatLevel} />
+                            Hasil Analisis AI: <ThreatLevelBadge level={triageResult.threatLevel} />
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground"><span className='font-semibold text-foreground'>Reason:</span> {triageResult.reason}</p>
+                        <p className="text-sm text-muted-foreground"><span className='font-semibold text-foreground'>Alasan:</span> {triageResult.reason}</p>
                     </CardContent>
                 </Card>
             )}
@@ -218,7 +220,7 @@ export default function ReportActivity() {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Submit Report
+              Kirim Laporan
             </Button>
           </CardFooter>
         </form>

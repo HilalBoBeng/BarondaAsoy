@@ -28,7 +28,7 @@ export default function Announcements() {
           id: doc.id,
           title: data.title,
           content: data.content,
-          date: data.date.toDate ? data.date.toDate().toLocaleDateString('en-US', {
+          date: data.date.toDate ? data.date.toDate().toLocaleDateString('id-ID', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -45,7 +45,7 @@ export default function Announcements() {
   return (
     <div className="grid gap-6">
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold">Community Announcements</h1>
+        <h1 className="text-2xl font-bold">Pengumuman Komunitas</h1>
       </div>
        {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -73,7 +73,7 @@ export default function Announcements() {
                     <CardTitle className="text-xl">{announcement.title}</CardTitle>
                     <CardDescription className="mt-1 flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>{announcement.date}</span>
+                        <span>{announcement.date as string}</span>
                     </CardDescription>
                     </div>
                     <div className="rounded-lg bg-primary/10 p-2 text-primary">
