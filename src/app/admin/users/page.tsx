@@ -30,14 +30,6 @@ import { sendStaffAccessCode } from '@/ai/flows/send-staff-access-code';
 import { Badge } from '@/components/ui/badge';
 
 
-const blockUserSchema = z.object({
-  blockStarts: z.date({ required_error: "Tanggal mulai blokir harus diisi." }),
-  blockEnds: z.date({ required_error: "Tanggal berakhir blokir harus diisi." }),
-  blockReason: z.string().min(5, "Alasan blokir harus diisi (minimal 5 karakter)."),
-});
-type BlockUserFormValues = z.infer<typeof blockUserSchema>;
-
-
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -45,18 +37,7 @@ export default function UsersAdminPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-
-  const blockForm = useForm<BlockUserFormValues>({ 
-    resolver: zodResolver(blockUserSchema),
-    defaultValues: {
-        blockReason: '',
-        blockStarts: new Date(),
-        blockEnds: new Date(),
-    }
-  });
 
   useEffect(() => {
     setLoading(true);
@@ -87,51 +68,6 @@ export default function UsersAdminPage() {
         unsubStaff();
     };
   }, []);
-
-  const handleOpenBlockDialog = (user: AppUser) => {
-    setCurrentUser(user);
-    blockForm.reset({
-        blockReason: '',
-        blockStarts: new Date(),
-        blockEnds: new Date(),
-    });
-    setIsBlockDialogOpen(true);
-  };
-  
-  const handleBlockUser = async (data: BlockUserFormValues) => {
-    if (!currentUser) return;
-    setIsSubmitting(true);
-    try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        await updateDoc(userRef, {
-            isBlocked: true,
-            blockReason: data.blockReason,
-            blockStarts: format(data.blockStarts, 'PPP', { locale: id }),
-            blockEnds: format(data.blockEnds, 'PPP', { locale: id }),
-        });
-        toast({ title: "Berhasil", description: `${currentUser.displayName} telah diblokir.` });
-        setIsBlockDialogOpen(false);
-    } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: "Gagal memblokir pengguna." });
-    } finally {
-        setIsSubmitting(false);
-    }
-  };
-
-  const handleUnblockUser = async (uid: string) => {
-     try {
-        const userRef = doc(db, 'users', uid);
-        await updateDoc(userRef, {
-            isBlocked: false,
-            blockReason: null,
-            blockStarts: null,
-            blockEnds: null,
-        });
-        toast({ title: "Berhasil", description: `Blokir telah dibuka.` });
-    } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: "Gagal membuka blokir pengguna." });
-    }
-  };
   
   const handleDeleteUser = async (uid: string) => {
     try {
@@ -203,7 +139,7 @@ export default function UsersAdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Pengguna</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -212,53 +148,38 @@ export default function UsersAdminPage() {
                     Array.from({ length: 3 }).map((_, i) => (
                       <TableRow key={i}>
                         <TableCell><div className="flex items-center gap-4"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-40" /></div></TableCell>
-                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                         <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                       </TableRow>
                     ))
                   ) : users.length > 0 ? (
                     users.map((user) => (
-                      <TableRow key={user.uid} className={cn(user.isBlocked && "bg-destructive/10")}>
+                      <TableRow key={user.uid}>
                         <TableCell>
                           <div className="flex items-center gap-4">
                             <Avatar><AvatarImage src={user.photoURL || undefined} /><AvatarFallback><UserIcon /></AvatarFallback></Avatar>
                             <div>
                               <p className="font-medium">{user.displayName || 'Tanpa Nama'}</p>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {user.isBlocked ? (
-                             <div className="flex flex-col">
-                                <span className="font-bold text-destructive">Diblokir</span>
-                                <span className="text-xs text-muted-foreground">{user.blockEnds}</span>
-                              </div>
-                          ): <span className="text-green-600 font-medium">Aktif</span>}
-                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
                         <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                                {user.isBlocked ? (
-                                    <Button variant="secondary" size="sm" onClick={() => handleUnblockUser(user.uid)}>Buka Blokir</Button>
-                                ) : (
-                                    <Button variant="outline" size="sm" onClick={() => handleOpenBlockDialog(user)}><ShieldX className="h-4 w-4 mr-2" /> Blokir</Button>
-                                )}
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
-                                            <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
+                                        <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))
@@ -393,57 +314,6 @@ export default function UsersAdminPage() {
         </Tabs>
       </CardContent>
     </Card>
-
-    <Dialog open={isBlockDialogOpen} onOpenChange={setIsBlockDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Blokir Pengguna: {currentUser?.displayName}</DialogTitle>
-            </DialogHeader>
-            <Form {...blockForm}>
-                <form onSubmit={blockForm.handleSubmit(handleBlockUser)} className="space-y-4">
-                    <FormField control={blockForm.control} name="blockStarts" render={({ field }) => (
-                      <FormItem className="flex flex-col"><FormLabel>Mulai Blokir</FormLabel>
-                        <Popover><PopoverTrigger asChild>
-                            <FormControl>
-                              <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                        </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={id} />
-                        </PopoverContent></Popover><FormMessage />
-                      </FormItem>
-                    )} />
-                     <FormField control={blockForm.control} name="blockEnds" render={({ field }) => (
-                      <FormItem className="flex flex-col"><FormLabel>Berakhir Blokir</FormLabel>
-                        <Popover><PopoverTrigger asChild>
-                            <FormControl>
-                              <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                        </PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={id} />
-                        </PopoverContent></Popover><FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={blockForm.control} name="blockReason" render={({ field }) => (
-                        <FormItem><FormLabel>Alasan Pemblokiran</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <p className="text-xs text-muted-foreground">Pengguna yang diblokir akan diminta menghubungi petugas untuk informasi lebih lanjut.</p>
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                        <Button type="submit" variant="destructive" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Blokir Pengguna
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
     </>
   );
 }

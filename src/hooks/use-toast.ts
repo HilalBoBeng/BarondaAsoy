@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -151,7 +152,7 @@ function toast({ ...props }: Toast) {
       toast: { ...props, id },
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
+  
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -162,7 +163,11 @@ function toast({ ...props }: Toast) {
         if (!open) dismiss()
       },
     },
-  })
+  });
+
+  setTimeout(() => {
+    dismiss();
+  }, props.duration || TOAST_REMOVE_DELAY);
 
   return {
     id: id,

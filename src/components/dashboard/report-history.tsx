@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, limit, startAfter, getDocs, type QueryDocumentSnapshot, type DocumentData, type Timestamp, where, deleteDoc, doc, endBefore, limitToLast, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, deleteDoc, doc, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -10,11 +10,12 @@ import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { MessageSquare, Trash } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, type format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import type { Timestamp } from 'firebase/firestore';
 
 const REPORTS_PER_PAGE = 5;
 
@@ -55,33 +56,18 @@ export default function ReportHistory({ user }: { user: User | null }) {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    
-    const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
+    useEffect(() => {
         if (!user) {
             setLoading(false);
             return;
         }
         setLoading(true);
 
-        try {
-            const reportsRef = collection(db, 'reports');
-            let q;
-            
-            const baseQuery = where('userId', '==', user.uid);
-
-            if (direction === 'next' && lastVisible) {
-                // To go to the next page, we need to order by creation time to know where to start from
-                q = query(reportsRef, baseQuery, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
-            } else {
-                // For initial load or any other case
-                q = query(reportsRef, baseQuery, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
-            }
-
-            const documentSnapshots = await getDocs(q);
-
-            const reportsData = documentSnapshots.docs.map(doc => {
+        const reportsRef = collection(db, 'reports');
+        const q = query(reportsRef, where('userId', '==', user.uid));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const reportsData = snapshot.docs.map(doc => {
                 const data = doc.data();
                 const repliesObject = data.replies || {};
                 const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
@@ -94,47 +80,23 @@ export default function ReportHistory({ user }: { user: User | null }) {
                 } as Report;
             });
             
-            // Client-side sort as a fallback and for initial load without pagination
             reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
             setReports(reportsData);
-            setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
             setLoading(false);
-        } catch (error) {
+        }, (error) => {
              console.error("Error fetching reports:", error);
              toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
              setLoading(false);
-        }
-    };
-    
-    useEffect(() => {
-        if (user) {
-            fetchReports(1);
-        } else {
-            setLoading(false);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+        });
 
-    const goToNextPage = () => {
-        const newPage = currentPage + 1;
-        setCurrentPage(newPage);
-        fetchReports(newPage, 'next');
-    };
-
-    const goToPrevPage = () => {
-        // Simple prev page is hard with firestore cursors without ordering, so just reload first page
-        setCurrentPage(1);
-        fetchReports(1, 'initial');
-    };
-
+        return () => unsubscribe();
+    }, [user, toast]);
 
     const handleDelete = async (reportId: string) => {
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
-            // Re-fetch to update the view
-            fetchReports(currentPage, 'initial');
         } catch (error) {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
@@ -232,28 +194,6 @@ export default function ReportHistory({ user }: { user: User | null }) {
                         Anda belum pernah membuat laporan.
                     </CardContent>
                 </Card>
-            )}
-
-            {reports.length > 0 && (
-                <div className="flex items-center justify-end space-x-2 w-full">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={goToPrevPage}
-                        disabled={currentPage === 1 || loading}
-                    >
-                        Sebelumnya
-                    </Button>
-                    <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={goToNextPage}
-                        disabled={!lastVisible || loading}
-                    >
-                        Berikutnya
-                    </Button>
-                </div>
             )}
         </div>
     );

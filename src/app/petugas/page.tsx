@@ -47,9 +47,6 @@ export default function PetugasPage() {
   const [loading, setLoading] = useState(true);
   const [petugasId, setPetugasId] = useState<string | null>(null);
   const [petugasName, setPetugasName] = useState<string | null>(null);
-  const [isAbsenceDialogOpen, setIsAbsenceDialogOpen] = useState(false);
-  const [absenceType, setAbsenceType] = useState<AbsenceType>('Izin');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const [greeting, setGreeting] = useState("Selamat Datang");
   const [currentTime, setCurrentTime] = useState("");
@@ -57,8 +54,6 @@ export default function PetugasPage() {
   const [stats, setStats] = useState({ assignedReports: 0, completedReports: 0, points: 0 });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
-
-  const reasonForm = useForm<ReasonFormValues>({ resolver: zodResolver(reasonSchema) });
 
   useEffect(() => {
     const getGreeting = () => {
@@ -130,35 +125,6 @@ export default function PetugasPage() {
         return () => clearInterval(timer);
     }
   }, [toast]);
-  
-  const handleUpdateStatus = async (status: ScheduleEntry['status'], reason?: string) => {
-    if (!scheduleToday) return;
-    setIsSubmitting(true);
-    try {
-        const docRef = doc(db, 'schedules', scheduleToday.id);
-        const updateData: Partial<ScheduleEntry> = { status };
-        if (reason) {
-            updateData.reason = reason.toUpperCase();
-        }
-        await updateDoc(docRef, updateData);
-        toast({ title: 'Berhasil', description: `Status tugas berhasil diperbarui menjadi ${status}.` });
-        if(isAbsenceDialogOpen) setIsAbsenceDialogOpen(false);
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memperbarui status tugas.' });
-    } finally {
-        setIsSubmitting(false);
-    }
-  }
-
-  const onAbsenceSubmit = (values: ReasonFormValues) => {
-    handleUpdateStatus(absenceType, values.reason);
-  };
-  
-  const handleOpenAbsenceDialog = (type: AbsenceType) => {
-      setAbsenceType(type);
-      reasonForm.reset({ reason: '' });
-      setIsAbsenceDialogOpen(true);
-  }
 
   const statCards = [
     { title: "Laporan Ditugaskan", value: stats.assignedReports, icon: Shield },
@@ -179,6 +145,37 @@ export default function PetugasPage() {
               {currentDate} | {currentTime}
           </p>
       </div>
+      
+        {loading ? <Skeleton className="h-56 w-full" /> :
+          !scheduleToday ? (
+            <Card>
+              <CardHeader><CardTitle>Tidak Ada Jadwal Hari Ini</CardTitle></CardHeader>
+              <CardContent><p className="text-muted-foreground">Anda tidak memiliki jadwal patroli untuk hari ini.</p></CardContent>
+            </Card>
+          ) : (
+            <Card className="w-full">
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Jadwal Anda Hari Ini</CardTitle>
+                            <CardDescription>{format(new Date(), "EEEE, d MMMM yyyy", { locale: id })}</CardDescription>
+                        </div>
+                        <Badge variant={statusConfig[scheduleToday.status].variant} className={statusConfig[scheduleToday.status].className}>
+                            {statusConfig[scheduleToday.status].label}
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <div className="flex items-center gap-3 text-muted-foreground"><Clock className="h-5 w-5" /><span className="font-semibold text-foreground">{scheduleToday.time}</span></div>
+                    <div className="flex items-center gap-3 text-muted-foreground"><Calendar className="h-5 w-5" /><span className="font-semibold text-foreground">{scheduleToday.area}</span></div>
+                    {(scheduleToday.status === 'Izin' || scheduleToday.status === 'Sakit') && scheduleToday.reason && (
+                        <div className="flex items-start gap-3 text-muted-foreground border-t pt-3 mt-3">
+                            <Info className="h-5 w-5 mt-1" /><div className="flex-1"><span className="font-semibold text-foreground">Alasan:</span><p className="text-sm text-foreground/80">{scheduleToday.reason}</p></div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        )}
 
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {loading ? (
@@ -201,51 +198,8 @@ export default function PetugasPage() {
       </div>
       
       <div className="grid gap-6 md:grid-cols-2 items-start">
-        {/* Schedule Card */}
-         {loading ? <Skeleton className="h-56 w-full max-w-md" /> :
-          !scheduleToday ? (
-            <Card className="max-w-md w-full">
-              <CardHeader><CardTitle>Tidak Ada Jadwal Hari Ini</CardTitle></CardHeader>
-              <CardContent><p className="text-muted-foreground">Anda tidak memiliki jadwal patroli untuk hari ini.</p></CardContent>
-            </Card>
-          ) : (
-            <Card className="max-w-md w-full">
-                <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle>Jadwal Anda Hari Ini</CardTitle>
-                            <CardDescription>{format(new Date(), "EEEE, d MMMM yyyy", { locale: id })}</CardDescription>
-                        </div>
-                        <Badge variant={statusConfig[scheduleToday.status].variant} className={statusConfig[scheduleToday.status].className}>
-                            {statusConfig[scheduleToday.status].label}
-                        </Badge>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <div className="flex items-center gap-3 text-muted-foreground"><Clock className="h-5 w-5" /><span className="font-semibold text-foreground">{scheduleToday.time}</span></div>
-                    <div className="flex items-center gap-3 text-muted-foreground"><Calendar className="h-5 w-5" /><span className="font-semibold text-foreground">{scheduleToday.area}</span></div>
-                    {(scheduleToday.status === 'Izin' || scheduleToday.status === 'Sakit') && scheduleToday.reason && (
-                        <div className="flex items-start gap-3 text-muted-foreground border-t pt-3 mt-3">
-                            <Info className="h-5 w-5 mt-1" /><div className="flex-1"><span className="font-semibold text-foreground">Alasan:</span><p className="text-sm text-foreground/80">{scheduleToday.reason}</p></div>
-                        </div>
-                    )}
-                </CardContent>
-                <CardFooter className="flex-col sm:flex-row gap-2">
-                    {scheduleToday.status === 'Pending' && (
-                        <>
-                            <Button className="w-full sm:w-auto" onClick={() => handleUpdateStatus('In Progress')}><Check className="mr-2 h-4 w-4" /> Konfirmasi Hadir</Button>
-                            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog('Izin')}><FileText className="mr-2 h-4 w-4" /> Ajukan Izin</Button>
-                            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog('Sakit')}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
-                        </>
-                    )}
-                    {scheduleToday.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus('Pending Review')}><Check className="mr-2 h-4 w-4" /> Ajukan Penyelesaian</Button>}
-                    {(scheduleToday.status === 'Completed' || scheduleToday.status === 'Izin' || scheduleToday.status === 'Sakit' || scheduleToday.status === 'Pending Review') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
-                </CardFooter>
-            </Card>
-          )}
-
         {/* Notifications Card */}
-        <Card className="max-w-md w-full">
+        <Card className="w-full">
             <CardHeader><CardTitle>Pemberitahuan Terbaru</CardTitle></CardHeader>
             <CardContent className="space-y-3 max-h-56 overflow-auto">
                 {loadingNotifications ? <Skeleton className="h-24 w-full" /> : 
@@ -263,38 +217,6 @@ export default function PetugasPage() {
             </CardContent>
         </Card>
       </div>
-
-       <Dialog open={isAbsenceDialogOpen} onOpenChange={setIsAbsenceDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Formulir Pengajuan {absenceType}</DialogTitle>
-            </DialogHeader>
-            <Form {...reasonForm}>
-                <form onSubmit={reasonForm.handleSubmit(onAbsenceSubmit)} className="space-y-4">
-                    <FormField
-                        control={reasonForm.control}
-                        name="reason"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Alasan {absenceType}</FormLabel>
-                            <FormControl>
-                                <Textarea {...field} rows={4} placeholder={`Tulis alasan Anda ${absenceType.toLowerCase()} di sini...`} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Kirim
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
     </div>
   );
 }

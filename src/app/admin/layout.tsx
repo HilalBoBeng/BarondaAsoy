@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import Image from "next/image";
 
 export default function AdminLayout({
   children,
@@ -69,6 +70,7 @@ export default function AdminLayout({
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+    { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
   ];
   
@@ -165,6 +167,19 @@ export default function AdminLayout({
             <h1 className="text-lg font-semibold md:text-2xl truncate">
               {getPageTitle()}
             </h1>
+          </div>
+          <div className="flex items-center gap-2 text-right">
+              <div className="flex flex-col">
+                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8"
+              />
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">

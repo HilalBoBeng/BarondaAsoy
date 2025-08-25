@@ -78,7 +78,6 @@ export default function Home() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Real-time listener for user data
         const userDocRef = doc(db, 'users', currentUser.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
@@ -87,10 +86,9 @@ export default function Home() {
           } else {
             setUserInfo(null);
           }
-          setLoading(false); // Stop loading once we have user info (or know it doesn't exist)
+          setLoading(false);
         });
 
-        // Real-time listener for notifications
         const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
           const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
@@ -116,7 +114,6 @@ export default function Home() {
     });
 
     return () => unsubscribeAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, router]);
 
   const handleLogout = async () => {
@@ -171,32 +168,6 @@ export default function Home() {
       </div>
     );
   }
-  
-  if (userInfo?.isBlocked) {
-    return (
-        <AlertDialog open={true}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2"><ShieldBan className="h-6 w-6 text-destructive"/>Akun Anda Diblokir</AlertDialogTitle>
-                     <AlertDialogDescription>
-                       <div className="text-sm text-muted-foreground">
-                            Akun Anda telah ditangguhkan oleh admin.
-                            {userInfo.blockReason && <div className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</div>}
-                            {userInfo.blockEnds && <div className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</div>}
-                       </div>
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                 <div className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</div>
-                <AlertDialogFooter>
-                    <Button variant="destructive" onClick={handleLogout} className="w-full">
-                        <LogOut className="mr-2 h-4 w-4" /> Keluar
-                    </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-  }
-
 
   return (
     <>
