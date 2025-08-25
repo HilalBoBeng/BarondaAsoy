@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MapPin, Send, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
+import { Loader2, Send, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -46,7 +46,6 @@ const reportSchema = z.object({
   category: z.enum(['theft', 'vandalism', 'suspicious_person', 'other'], {
       errorMap: () => ({ message: "Kategori harus dipilih." }),
   }),
-  location: z.string().optional(),
 });
 
 type ReportFormValues = z.infer<typeof reportSchema>;
@@ -65,7 +64,6 @@ const ThreatLevelBadge = ({ level }: { level: TriageReportOutput['threatLevel'] 
 }
 
 export default function ReportActivity({ user }: { user: User | null }) {
-  const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageReportOutput | null>(null);
   const { toast } = useToast();
@@ -84,36 +82,14 @@ export default function ReportActivity({ user }: { user: User | null }) {
     }
   }, [user, form]);
 
-  const handleGetLocation = () => {
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const locationString = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-        form.setValue('location', locationString);
-        toast({
-          title: 'Lokasi Diperoleh',
-          description: `Koordinat: ${locationString}`,
-        });
-        setIsLocating(false);
-      },
-      (error) => {
-        console.error('Gagal mendapatkan lokasi', error);
-        toast({
-          variant: 'destructive',
-          title: 'Gagal',
-          description: 'Tidak dapat memperoleh lokasi. Mohon aktifkan layanan lokasi.',
-        });
-        setIsLocating(false);
-      }
-    );
-  };
 
   const onSubmit = async (data: ReportFormValues) => {
     setIsSubmitting(true);
     setTriageResult(null);
     try {
-      const result = await triageReport(data);
+      // Omit location from the data sent to triageReport
+      const { ...dataForTriage } = data;
+      const result = await triageReport(dataForTriage);
       setTriageResult(result);
       
       await addDoc(collection(db, 'reports'), {
@@ -131,7 +107,6 @@ export default function ReportActivity({ user }: { user: User | null }) {
         reporterName: user?.displayName || user?.email || '',
         reportText: '',
         category: undefined,
-        location: '',
       });
     } catch (error) {
       console.error('Pengiriman gagal', error);
@@ -203,7 +178,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            
               <FormField
                 control={form.control}
                 name="category"
@@ -227,27 +202,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
                   </FormItem>
                 )}
               />
-              <FormItem>
-                <FormLabel>Lokasi (Opsional)</FormLabel>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGetLocation}
-                    disabled={isLocating}
-                    className="w-full"
-                  >
-                    {isLocating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <MapPin className="mr-2 h-4 w-4" />
-                    )}
-                    Dapatkan Lokasi Saat Ini
-                  </Button>
-                </div>
-                 {form.watch('location') && <p className="text-sm text-muted-foreground mt-2">📍 {form.watch('location')}</p>}
-              </FormItem>
-            </div>
+           
             {triageResult && (
                 <Card className="bg-secondary/50">
                     <CardHeader>

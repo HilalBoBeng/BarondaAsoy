@@ -18,8 +18,11 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
-import { LogOut } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -71,30 +74,54 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
            {!loading && (
-            user ? (
-                <>
-                    <span className="text-sm text-muted-foreground hidden sm:inline">
-                      Halo, {user.displayName || user.email}!
-                    </span>
-                    <Button variant="outline" onClick={handleLogout}>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar>
+                        <AvatarImage src={user?.photoURL || ''} alt="User profile" />
+                        <AvatarFallback>
+                            <UserCircle className="h-8 w-8" />
+                        </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                   {user ? (
+                    <>
+                     <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {user.displayName || "Pengguna"}
+                          </p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        Keluar
-                    </Button>
-                </>
-            ) : (
-                 <>
-                    <Button variant="outline" asChild>
-                        <Link href="/auth/login">
-                            Masuk
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/auth/register">
-                            Daftar
-                        </Link>
-                    </Button>
-                 </>
-            )
+                        <span>Keluar</span>
+                      </DropdownMenuItem>
+                    </>
+                   ) : (
+                    <>
+                       <DropdownMenuItem asChild>
+                         <Link href="/auth/login">
+                           <LogIn className="mr-2 h-4 w-4" />
+                           <span>Masuk</span>
+                         </Link>
+                      </DropdownMenuItem>
+                       <DropdownMenuItem asChild>
+                         <Link href="/auth/register">
+                            <UserPlus className="mr-2 h-4 w-4" />
+                           <span>Daftar</span>
+                         </Link>
+                      </DropdownMenuItem>
+                    </>
+                   )}
+                </DropdownMenuContent>
+             </DropdownMenu>
            )}
         </div>
       </header>

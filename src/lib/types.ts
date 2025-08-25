@@ -30,7 +30,6 @@ export interface Report {
   reporterName: string;
   reportText: string;
   category: string;
-  location?: string;
   userId?: string;
   createdAt: string | Date | Timestamp;
   triageResult: TriageReportOutput;
