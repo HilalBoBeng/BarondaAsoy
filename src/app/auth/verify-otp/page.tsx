@@ -212,6 +212,8 @@ export default function VerifyOtpPage() {
           toast({ title: 'Pendaftaran Berhasil', description: 'Akun Anda telah dibuat. Silakan masuk.' });
           router.push('/auth/login');
         } else if (verificationContext.flow === 'resetPassword') {
+          // This path might need re-authentication before password reset.
+          // For now, let's assume the user is "logged in" by the OTP verification.
           localStorage.setItem('resetPasswordEmail', verificationContext.email);
           router.push('/auth/reset-password');
         } else if (verificationContext.flow === 'staffRegister') {
@@ -250,7 +252,7 @@ export default function VerifyOtpPage() {
   if (otpVerified) {
     const successTitle = isStaffFlow ? "Pendaftaran Sedang Ditinjau" : "Proses Selesai";
     const successDescription = isStaffFlow 
-      ? "Pendaftaran Anda telah berhasil dikirim dan sedang menunggu persetujuan dari admin. Anda akan menerima kode akses melalui email setelah disetujui."
+      ? "Pendaftaran Anda telah berhasil dikirim dan sedang menunggu persetujuan dari admin. PENTING: Kode akses unik Anda untuk login akan dikirimkan ke email Anda hanya setelah pendaftaran Anda disetujui oleh admin. Silakan periksa email Anda secara berkala."
       : "Informasi akses Anda telah dikirim ke email. Silakan periksa kotak masuk Anda.";
       
     return (
