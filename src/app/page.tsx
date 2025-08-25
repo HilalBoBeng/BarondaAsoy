@@ -370,11 +370,6 @@ export default function Home() {
             <div className="py-4 whitespace-pre-wrap break-words">
                 <p>{selectedNotification?.message}</p>
             </div>
-             <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="secondary">Tutup</Button>
-                </DialogClose>
-            </DialogFooter>
         </DialogContent>
     </Dialog>
     </>
