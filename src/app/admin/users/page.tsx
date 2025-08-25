@@ -132,6 +132,17 @@ export default function UsersAdminPage() {
         toast({ variant: "destructive", title: "Gagal", description: "Gagal membuka blokir pengguna." });
     }
   };
+  
+  const handleDeleteUser = async (uid: string) => {
+    try {
+        await deleteDoc(doc(db, 'users', uid));
+        toast({ title: "Berhasil", description: "Akun warga berhasil dihapus." });
+    } catch (error) {
+        toast({ variant: "destructive", title: "Gagal", description: "Gagal menghapus akun warga." });
+        console.error("Error deleting user: ", error);
+    }
+  }
+
 
   const handleStaffApproval = async (staffMember: Staff, approved: boolean) => {
     setIsSubmitting(true);
@@ -226,11 +237,28 @@ export default function UsersAdminPage() {
                           ): <span className="text-green-600 font-medium">Aktif</span>}
                         </TableCell>
                         <TableCell className="text-right">
-                            {user.isBlocked ? (
-                                <Button variant="secondary" size="sm" onClick={() => handleUnblockUser(user.uid)}>Buka Blokir</Button>
-                            ) : (
-                                <Button variant="outline" size="sm" onClick={() => handleOpenBlockDialog(user)}><ShieldX className="h-4 w-4 mr-2" /> Blokir</Button>
-                            )}
+                            <div className="flex justify-end gap-2">
+                                {user.isBlocked ? (
+                                    <Button variant="secondary" size="sm" onClick={() => handleUnblockUser(user.uid)}>Buka Blokir</Button>
+                                ) : (
+                                    <Button variant="outline" size="sm" onClick={() => handleOpenBlockDialog(user)}><ShieldX className="h-4 w-4 mr-2" /> Blokir</Button>
+                                )}
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
+                                            <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -419,5 +447,3 @@ export default function UsersAdminPage() {
     </>
   );
 }
-
-    

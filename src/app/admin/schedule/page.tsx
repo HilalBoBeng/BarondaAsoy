@@ -36,6 +36,9 @@ const scheduleSchema = z.object({
 
 type ScheduleFormValues = z.infer<typeof scheduleSchema>;
 
+const daysOfWeek = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+
+
 export default function ScheduleAdminPage() {
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -43,6 +46,7 @@ export default function ScheduleAdminPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSchedule, setCurrentSchedule] = useState<ScheduleEntry | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>('all');
   const { toast } = useToast();
 
   const form = useForm<ScheduleFormValues>({
@@ -205,6 +209,13 @@ export default function ScheduleAdminPage() {
     const { variant, label, className } = config[status] || config['Pending'];
     return <Badge variant={variant} className={className}>{label}</Badge>
   };
+  
+  const filteredSchedule = schedule.filter(item => {
+    if (selectedDay === 'all') return true;
+    const itemDayIndex = item.date instanceof Date ? item.date.getDay() : -1;
+    const selectedDayIndex = daysOfWeek.indexOf(selectedDay);
+    return itemDayIndex === selectedDayIndex;
+  });
 
 
   return (
@@ -214,18 +225,35 @@ export default function ScheduleAdminPage() {
           <CardTitle>Manajemen Jadwal Patroli</CardTitle>
           <CardDescription>Buat, edit, atau hapus jadwal patroli petugas.</CardDescription>
         </div>
-        <Button onClick={() => handleDialogOpen()}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Buat Jadwal
-        </Button>
+         <div className="flex items-center gap-2">
+            <Select value={selectedDay} onValueChange={setSelectedDay}>
+                <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter hari" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Semua Hari</SelectItem>
+                    <SelectItem value="senin">Senin</SelectItem>
+                    <SelectItem value="selasa">Selasa</SelectItem>
+                    <SelectItem value="rabu">Rabu</SelectItem>
+                    <SelectItem value="kamis">Kamis</SelectItem>
+                    <SelectItem value="jumat">Jumat</SelectItem>
+                    <SelectItem value="sabtu">Sabtu</SelectItem>
+                    <SelectItem value="minggu">Minggu</SelectItem>
+                </SelectContent>
+            </Select>
+            <Button onClick={() => handleDialogOpen()}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Buat Jadwal
+            </Button>
+         </div>
       </CardHeader>
       <CardContent>
          {/* Mobile View */}
         <div className="sm:hidden space-y-4">
            {loading ? (
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)
-          ) : schedule.length > 0 ? (
-            schedule.map((item) => (
+          ) : filteredSchedule.length > 0 ? (
+            filteredSchedule.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -244,7 +272,7 @@ export default function ScheduleAdminPage() {
               </Card>
             ))
            ) : (
-            <div className="text-center py-12 text-muted-foreground">Belum ada jadwal.</div>
+            <div className="text-center py-12 text-muted-foreground">Belum ada jadwal untuk hari yang dipilih.</div>
           )}
         </div>
 
@@ -273,8 +301,8 @@ export default function ScheduleAdminPage() {
                     <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : schedule.length > 0 ? (
-                schedule.map((item) => (
+              ) : filteredSchedule.length > 0 ? (
+                filteredSchedule.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</TableCell>
                     <TableCell>{item.time}</TableCell>
@@ -289,7 +317,7 @@ export default function ScheduleAdminPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center h-24">
-                    Belum ada jadwal.
+                    Belum ada jadwal untuk hari yang dipilih.
                   </TableCell>
                 </TableRow>
               )}
