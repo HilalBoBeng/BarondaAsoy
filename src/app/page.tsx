@@ -140,7 +140,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <div className="flex items-center gap-3">
-           <Link href="/" className="flex items-center gap-2 sm:gap-3">
+           <Link href="/auth/staff-login" className="flex items-center gap-2 sm:gap-3">
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
