@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, increment, where, endBefore, limitToLast } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, increment, where, endBefore, limitToLast, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -78,7 +78,7 @@ export default function ReportsAdminPage() {
       }
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
+        if (snapshot.empty && direction !== 'initial') {
             setIsLastPage(true);
             setReports([]);
             setLoading(false);
@@ -99,8 +99,8 @@ export default function ReportsAdminPage() {
         });
 
         setReports(reportsData);
-        setFirstVisible(snapshot.docs[0]);
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setFirstVisible(snapshot.docs[0] || null);
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
         setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
         setLoading(false);
       }, (error) => {
@@ -138,15 +138,15 @@ export default function ReportsAdminPage() {
 
 
   const handleStatusChange = async (id: string, status: ReportStatus) => {
-    if (status === 'in_progress') {
-      const reportToAssign = reports.find(r => r.id === id);
-      if (reportToAssign) {
-        setCurrentReport(reportToAssign);
-        assignForm.reset();
+    const reportToUpdate = reports.find(r => r.id === id);
+    if (!reportToUpdate) return;
+
+    if (status === 'in_progress' && reportToUpdate.status === 'new') {
+        setCurrentReport(reportToUpdate);
+        assignForm.reset({ handlerId: '' });
         setIsAssignDialogOpen(true);
-      }
-    } else {
-      try {
+    } else if (status === 'resolved' && reportToUpdate.status === 'in_progress') {
+       try {
         const docRef = doc(db, 'reports', id);
         await updateDoc(docRef, { status });
         toast({ title: "Berhasil", description: "Status laporan berhasil diperbarui." });
@@ -177,6 +177,17 @@ export default function ReportsAdminPage() {
       const staffRef = doc(db, 'staff', selectedStaff.id);
       await updateDoc(staffRef, {
         points: increment(1)
+      });
+      
+       // Send notification to the assigned staff
+      const notifRef = collection(db, 'notifications');
+      await addDoc(notifRef, {
+          userId: selectedStaff.id,
+          title: "Tugas Laporan Baru",
+          message: `Anda ditugaskan untuk menangani laporan baru: "${currentReport.reportText.substring(0, 50)}..."`,
+          read: false,
+          createdAt: serverTimestamp(),
+          link: `/petugas/reports?reportId=${currentReport.id}`
       });
       
       toast({ title: "Berhasil", description: `Laporan ditugaskan kepada ${selectedStaff.name}.` });
@@ -266,7 +277,7 @@ export default function ReportsAdminPage() {
   
   const statusOptions: {value: ReportStatus; label: string; disabled?: (currentStatus: ReportStatus) => boolean}[] = [
     { value: 'new', label: 'Baru', disabled: (currentStatus) => currentStatus !== 'new' },
-    { value: 'in_progress', label: 'Ditangani', disabled: (currentStatus) => currentStatus === 'resolved' },
+    { value: 'in_progress', label: 'Ditangani', disabled: (currentStatus) => currentStatus === 'resolved' || currentStatus === 'in_progress' },
     { value: 'resolved', label: 'Selesai', disabled: (currentStatus) => currentStatus === 'new' },
   ];
 

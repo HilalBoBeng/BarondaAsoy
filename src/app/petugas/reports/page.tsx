@@ -30,19 +30,13 @@ const replySchema = z.object({
 });
 type ReplyFormValues = z.infer<typeof replySchema>;
 
-const assignSchema = z.object({
-  handlerId: z.string().min(1, "Petugas harus dipilih."),
-});
-type AssignFormValues = z.infer<typeof assignSchema>;
-
 export default function PetugasReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
+  const [staffInfo, setStaffInfo] = useState<{name: string; id: string} | null>(null);
   const { toast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,14 +45,13 @@ export default function PetugasReportsPage() {
   const [isLastPage, setIsLastPage] = useState(false);
 
   const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
-  const assignForm = useForm<AssignFormValues>({ resolver: zodResolver(assignSchema) });
 
-  const fetchStaff = async () => {
-    const staffQuery = query(collection(db, "staff"), where("status", "==", "active"));
-    const staffSnapshot = await getDocs(staffQuery);
-    const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
-    setStaffList(staffData);
-  };
+  useEffect(() => {
+    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (info.id && info.name) {
+        setStaffInfo(info);
+    }
+  }, []);
   
   const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
     setLoading(true);
@@ -66,6 +59,8 @@ export default function PetugasReportsPage() {
       let q;
       const reportsRef = collection(db, "reports");
 
+      // Petugas can see all reports, or only those assigned to them. Let's show all for now.
+      // Can be changed later with a filter.
       if (direction === 'next' && lastVisible) {
         q = query(reportsRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
       } else if (direction === 'prev' && firstVisible) {
@@ -75,7 +70,7 @@ export default function PetugasReportsPage() {
       }
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
+        if (snapshot.empty && direction !== 'initial') {
           setIsLastPage(true);
           setReports([]);
           setLoading(false);
@@ -96,8 +91,8 @@ export default function PetugasReportsPage() {
         });
 
         setReports(reportsData);
-        setFirstVisible(snapshot.docs[0]);
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setFirstVisible(snapshot.docs[0] || null);
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
         setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
         setLoading(false);
       }, (error) => {
@@ -115,7 +110,6 @@ export default function PetugasReportsPage() {
   };
 
   useEffect(() => {
-    fetchStaff();
     const unsub = fetchReports(1);
     return () => { unsub.then(u => u && u()) };
   }, []);
@@ -134,56 +128,33 @@ export default function PetugasReportsPage() {
   };
 
   const handleStatusChange = async (id: string, status: ReportStatus) => {
-    if (status === 'in_progress') {
-      const reportToAssign = reports.find(r => r.id === id);
-      if (reportToAssign) {
-        setCurrentReport(reportToAssign);
-        assignForm.reset();
-        setIsAssignDialogOpen(true);
-      }
-    } else {
-      try {
+    const reportToUpdate = reports.find(r => r.id === id);
+    if (!reportToUpdate) return;
+    if (!staffInfo) {
+        toast({ variant: 'destructive', title: "Gagal", description: "Informasi petugas tidak ditemukan." });
+        return;
+    }
+
+    try {
         const docRef = doc(db, 'reports', id);
-        await updateDoc(docRef, { status });
-        toast({ title: "Berhasil", description: "Status laporan diperbarui." });
-      } catch (error) {
+        if (status === 'in_progress' && reportToUpdate.status === 'new') {
+            await updateDoc(docRef, { 
+                status: 'in_progress',
+                handlerId: staffInfo.id,
+                handlerName: staffInfo.name,
+            });
+            const staffRef = doc(db, 'staff', staffInfo.id);
+            await updateDoc(staffRef, { points: increment(1) });
+            toast({ title: "Berhasil", description: "Anda telah mengambil alih laporan ini." });
+        } else if (status === 'resolved' && reportToUpdate.status === 'in_progress') {
+            await updateDoc(docRef, { status });
+            toast({ title: "Berhasil", description: "Laporan ditandai sebagai selesai." });
+        }
+    } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui status." });
-      }
     }
   };
 
-   const onAssignSubmit = async (values: AssignFormValues) => {
-    if (!currentReport) return;
-    setIsSubmitting(true);
-    const selectedStaff = staffList.find(s => s.id === values.handlerId);
-    if (!selectedStaff) {
-      toast({ variant: 'destructive', title: 'Gagal', description: 'Petugas tidak ditemukan.' });
-      setIsSubmitting(false);
-      return;
-    }
-    
-    try {
-      const reportRef = doc(db, 'reports', currentReport.id);
-      await updateDoc(reportRef, { 
-        status: 'in_progress',
-        handlerId: selectedStaff.id,
-        handlerName: selectedStaff.name,
-      });
-
-      const staffRef = doc(db, 'staff', selectedStaff.id);
-      await updateDoc(staffRef, {
-        points: increment(1)
-      });
-      
-      toast({ title: "Berhasil", description: `Laporan ditugaskan kepada ${selectedStaff.name}.` });
-      setIsAssignDialogOpen(false);
-      setCurrentReport(null);
-    } catch(error) {
-       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menugaskan laporan.' });
-    } finally {
-        setIsSubmitting(false);
-    }
-  }
 
   const handleOpenReplyDialog = (report: Report) => {
     setCurrentReport(report);
@@ -250,9 +221,9 @@ export default function PetugasReportsPage() {
   );
   
   const statusOptions: {value: ReportStatus; label: string; disabled?: (currentStatus: ReportStatus) => boolean}[] = [
-    { value: 'new', label: 'Baru', disabled: (currentStatus) => currentStatus !== 'new' },
-    { value: 'in_progress', label: 'Ditangani', disabled: (currentStatus) => currentStatus === 'resolved' },
-    { value: 'resolved', label: 'Selesai', disabled: (currentStatus) => currentStatus === 'new' },
+    { value: 'new', label: 'Baru', disabled: (currentStatus) => true }, // Staff cannot revert to new
+    { value: 'in_progress', label: 'Tangani', disabled: (currentStatus) => currentStatus !== 'new' },
+    { value: 'resolved', label: 'Selesai', disabled: (currentStatus) => currentStatus !== 'in_progress' },
   ];
 
 
@@ -392,49 +363,6 @@ export default function PetugasReportsPage() {
         </DialogContent>
     </Dialog>
     
-    <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="sm:max-w-md w-[90%] rounded-lg">
-            <DialogHeader>
-                <DialogTitle>Tugaskan Laporan</DialogTitle>
-                <CardDescription>Pilih petugas yang akan menangani laporan ini.</CardDescription>
-            </DialogHeader>
-            <Form {...assignForm}>
-                <form onSubmit={assignForm.handleSubmit(onAssignSubmit)} className="space-y-4 pt-4">
-                     <FormField
-                        control={assignForm.control}
-                        name="handlerId"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Petugas</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih petugas" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {staffList.map(s => (
-                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Batal</Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Tugaskan
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
     </>
   );
 }

@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import {
-  Bell,
   Home,
   LogOut,
   ShieldAlert,
@@ -63,7 +62,6 @@ export default function PetugasLayout({
     { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga" },
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya" },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
   ];
 
   if (!isClient) {
@@ -160,12 +158,6 @@ export default function PetugasLayout({
               {getPageTitle()}
             </h1>
           </div>
-           <Button variant="outline" size="icon" className="ml-auto h-8 w-8 asChild">
-              <Link href="/petugas/notifications">
-                <Bell className="h-4 w-4" />
-                <span className="sr-only">Toggle notifications</span>
-              </Link>
-            </Button>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
           {children}

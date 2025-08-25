@@ -65,7 +65,6 @@ export default function AdminLayout({
   const navItems = [
     { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-    { href: "/admin/notifications", icon: MessageSquare, label: "Pemberitahuan" },
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
@@ -165,10 +164,6 @@ export default function AdminLayout({
               {getPageTitle()}
             </h1>
           </div>
-          <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
-              <Bell className="h-4 w-4" />
-              <span className="sr-only">Toggle notifications</span>
-            </Button>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
           {children}

@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Send, PlusCircle, Trash, User } from 'lucide-react';
-import type { AppUser, Notification } from '@/lib/types';
+import type { AppUser, Notification, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -23,9 +23,11 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
 
 const notificationSchema = z.object({
-  userIds: z.array(z.string()).min(1, "Minimal satu warga harus dipilih."),
+  recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong."),
   message: z.string().min(1, "Pesan tidak boleh kosong."),
 });
@@ -36,6 +38,7 @@ const NOTIFICATIONS_PER_PAGE = 10;
 
 export default function NotificationsAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,22 +49,33 @@ export default function NotificationsAdminPage() {
   const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [isLastPage, setIsLastPage] = useState(false);
-  const [userMap, setUserMap] = useState<Map<string, AppUser>>(new Map());
+  const [userMap, setUserMap] = useState<Map<string, AppUser | Staff>>(new Map());
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
-    defaultValues: { userIds: [], title: '', message: '' },
+    defaultValues: { recipientIds: [], title: '', message: '' },
   });
 
-  const fetchUsers = async () => {
+  const fetchRecipients = async () => {
     try {
       const usersQuery = query(collection(db, "users"), orderBy("displayName"));
-      const usersSnapshot = await getDocs(usersQuery);
+      const staffQuery = query(collection(db, "staff"), orderBy("name"));
+
+      const [usersSnapshot, staffSnapshot] = await Promise.all([getDocs(usersQuery), getDocs(staffQuery)]);
+      
       const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as AppUser[];
+      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+      
       setUsers(usersData);
-      setUserMap(new Map(usersData.map(u => [u.uid, u])));
+      setStaff(staffData);
+
+      const newMap = new Map<string, AppUser | Staff>();
+      usersData.forEach(u => newMap.set(u.uid, u));
+      staffData.forEach(s => newMap.set(s.id, s));
+      setUserMap(newMap);
+
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Gagal Memuat Warga', description: 'Tidak dapat mengambil daftar warga.' });
+      toast({ variant: 'destructive', title: 'Gagal Memuat Penerima', description: 'Tidak dapat mengambil daftar warga atau staf.' });
     }
   };
 
@@ -90,13 +104,13 @@ export default function NotificationsAdminPage() {
       
       const newNotifs = documentSnapshots.docs.map(docSnap => {
         const data = docSnap.data();
-        const recipient = userMap.get(data.userId) || { displayName: data.userId === 'all' ? 'Semua Warga' : 'Pengguna Dihapus', email: '' };
+        const recipient = userMap.get(data.userId);
         return {
           id: docSnap.id,
           ...data,
           createdAt: data.createdAt?.toDate(),
-          recipientName: recipient.displayName,
-          recipientEmail: recipient.email,
+          recipientName: recipient?.displayName || recipient?.name || data.userId,
+          recipientEmail: recipient?.email,
         } as Notification;
       });
 
@@ -114,8 +128,9 @@ export default function NotificationsAdminPage() {
   };
 
   useEffect(() => {
-    fetchUsers().then(() => fetchNotifications(1));
-  }, [userMap.size]); // Re-fetch notifications if userMap changes
+    fetchRecipients().then(() => fetchNotifications(1));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userMap.size]); 
   
   const goToNextPage = () => {
     const newPage = currentPage + 1;
@@ -133,8 +148,8 @@ export default function NotificationsAdminPage() {
   const onSubmit = async (values: NotificationFormValues) => {
     setIsSubmitting(true);
     try {
-        if (values.userIds.length === 0) {
-          toast({ variant: 'destructive', title: "Gagal", description: "Tidak ada warga dipilih untuk dikirimi notifikasi." });
+        if (values.recipientIds.length === 0) {
+          toast({ variant: 'destructive', title: "Gagal", description: "Tidak ada penerima dipilih." });
           setIsSubmitting(false);
           return;
         }
@@ -143,7 +158,7 @@ export default function NotificationsAdminPage() {
         const title = values.title.toUpperCase();
         const message = values.message.toUpperCase();
 
-        values.userIds.forEach(userId => {
+        values.recipientIds.forEach(userId => {
           const newNotifRef = doc(collection(db, 'notifications'));
           batch.set(newNotifRef, {
             userId: userId,
@@ -155,9 +170,9 @@ export default function NotificationsAdminPage() {
         });
         await batch.commit();
 
-        toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${values.userIds.length} warga.` });
+        toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${values.recipientIds.length} penerima.` });
       
-        form.reset({ userIds: [], title: '', message: '' });
+        form.reset({ recipientIds: [], title: '', message: '' });
         setIsDialogOpen(false);
         await fetchNotifications(1); // Refresh list
     } catch (error) {
@@ -177,6 +192,47 @@ export default function NotificationsAdminPage() {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal menghapus notifikasi." });
     }
   }
+  
+  type Recipient = AppUser | Staff;
+
+  const RecipientList = ({ recipients, field }: { recipients: Recipient[], field: any }) => (
+    <ScrollArea className="h-48 rounded-md border">
+      <div className="p-4">
+        {recipients.map((recipient: Recipient) => {
+          const recipientId = (recipient as AppUser).uid || (recipient as Staff).id;
+          const recipientName = (recipient as AppUser).displayName || (recipient as Staff).name;
+          return (
+            <FormField
+              key={recipientId}
+              control={form.control}
+              name="recipientIds"
+              render={({ field }) => (
+                <FormItem key={recipientId} className="flex flex-row items-start space-x-3 space-y-0 py-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(recipientId)}
+                      onCheckedChange={(checked) => {
+                        return checked
+                          ? field.onChange([...field.value, recipientId])
+                          : field.onChange(field.value?.filter((value) => value !== recipientId));
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal w-full">
+                    <div className="flex justify-between">
+                      <span>{recipientName}</span>
+                      <span className="text-muted-foreground text-xs">{recipient.email}</span>
+                    </div>
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+          );
+        })}
+      </div>
+    </ScrollArea>
+  );
+
 
   return (
     <>
@@ -282,81 +338,34 @@ export default function NotificationsAdminPage() {
         <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
             <DialogHeader>
                 <DialogTitle>Kirim Pemberitahuan</DialogTitle>
-                <CardDescription>Kirim pesan ke warga tertentu atau ke semua warga.</CardDescription>
+                <CardDescription>Kirim pesan ke warga atau staf tertentu.</CardDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-                <FormField
+                 <FormField
                   control={form.control}
-                  name="userIds"
-                  render={() => (
+                  name="recipientIds"
+                  render={({ field }) => (
                     <FormItem>
-                      <div className="mb-4">
+                       <div className="mb-4">
                         <FormLabel className="text-base">Pilih Penerima</FormLabel>
-                        <p className="text-sm text-muted-foreground">Tandai warga yang akan menerima pemberitahuan.</p>
-                      </div>
-                      <div className="flex items-center space-x-2 border-b pb-2 mb-2">
-                        <Checkbox
-                          id="select-all"
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              form.setValue('userIds', users.map(u => u.uid));
-                            } else {
-                              form.setValue('userIds', []);
-                            }
-                          }}
-                          checked={form.watch('userIds').length === users.length && users.length > 0}
-                          disabled={users.length === 0}
-                        />
-                        <label htmlFor="select-all" className="text-sm font-medium leading-none">
-                            Pilih Semua Warga
-                        </label>
-                      </div>
-
-                      <ScrollArea className="h-48 rounded-md border">
-                         <div className="p-4">
-                           {users.map((user) => (
-                            <FormField
-                              key={user.uid}
-                              control={form.control}
-                              name="userIds"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={user.uid}
-                                    className="flex flex-row items-start space-x-3 space-y-0 py-2"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(user.uid)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...field.value, user.uid])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) => value !== user.uid
-                                                )
-                                              )
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal w-full">
-                                      <div className="flex justify-between">
-                                        <span>{user.displayName}</span>
-                                        <span className="text-muted-foreground text-xs">{user.email}</span>
-                                      </div>
-                                    </FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                         </div>
-                      </ScrollArea>
-                      <FormMessage />
+                       </div>
+                       <Tabs defaultValue="users">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="users">Warga</TabsTrigger>
+                                <TabsTrigger value="staff">Staf</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="users" className="mt-4">
+                                <RecipientList recipients={users} field={field} />
+                            </TabsContent>
+                             <TabsContent value="staff" className="mt-4">
+                                <RecipientList recipients={staff} field={field} />
+                            </TabsContent>
+                       </Tabs>
+                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                 />
                 <FormField
                   control={form.control}
                   name="title"
