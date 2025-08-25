@@ -14,8 +14,42 @@ import EmergencyContacts from "@/components/dashboard/emergency-contacts";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { app } from "@/lib/firebase/client";
+import { LogOut } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const auth = getAuth(app);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [auth]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Berhasil Keluar",
+        description: "Anda telah berhasil keluar dari akun Anda.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Gagal Keluar",
+        description: "Terjadi kesalahan saat mencoba keluar.",
+      });
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
@@ -35,16 +69,32 @@ export default function Home() {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" asChild>
-                <Link href="/auth/login">
-                    Masuk
-                </Link>
-           </Button>
-           <Button asChild>
-                <Link href="/auth/register">
-                    Daftar
-                </Link>
-           </Button>
+           {!loading && (
+            user ? (
+                <>
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                      Halo, {user.displayName || user.email}!
+                    </span>
+                    <Button variant="outline" onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Keluar
+                    </Button>
+                </>
+            ) : (
+                 <>
+                    <Button variant="outline" asChild>
+                        <Link href="/auth/login">
+                            Masuk
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/auth/register">
+                            Daftar
+                        </Link>
+                    </Button>
+                 </>
+            )
+           )}
         </div>
       </header>
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
@@ -57,7 +107,7 @@ export default function Home() {
           <div className="space-y-6">
              <Card>
                 <CardHeader>
-                    <CardTitle>Pengumuman</CardTitle>
+                    <CardTitle className="text-lg">Pengumuman</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Announcements />
@@ -66,7 +116,7 @@ export default function Home() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Lapor Aktivitas</CardTitle>
+                <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
               </CardHeader>
               <CardContent>
                 <ReportActivity />
@@ -75,7 +125,7 @@ export default function Home() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Jadwal Patroli</CardTitle>
+                    <CardTitle className="text-lg">Jadwal Patroli</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="max-h-[500px] overflow-auto">
@@ -86,7 +136,7 @@ export default function Home() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Kontak Darurat</CardTitle>
+                    <CardTitle className="text-lg">Kontak Darurat</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <EmergencyContacts />
