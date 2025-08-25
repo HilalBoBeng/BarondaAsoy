@@ -95,6 +95,14 @@ export default {
             opacity: '0.8',
           },
         },
+        'fade-in': {
+            '0%': {
+                opacity: '0',
+            },
+            '100%': {
+                opacity: '1',
+            },
+        },
         'fade-in-up': {
             '0%': {
                 opacity: '0',
@@ -114,6 +122,7 @@ export default {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'logo-pulse': 'logo-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fade-in 0.5s ease-out forwards',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
         'slide-in-up': 'slide-in-up 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
       },

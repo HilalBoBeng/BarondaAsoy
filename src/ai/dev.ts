@@ -10,3 +10,4 @@ import '@/ai/flows/send-staff-access-code.ts';
 import '@/ai/flows/reset-staff-password.ts';
 import '@/ai/flows/change-email.ts';
 import '@/ai/flows/change-staff-email.ts';
+import '@/ai/flows/chatbot.ts';
