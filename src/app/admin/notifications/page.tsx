@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Send, PlusCircle, Trash, User } from 'lucide-react';
 import type { AppUser, Notification } from '@/lib/types';
@@ -22,9 +21,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const notificationSchema = z.object({
-  userId: z.string().min(1, "Tujuan (warga atau 'Semua Warga') harus dipilih."),
+  userIds: z.array(z.string()).min(1, "Minimal satu warga harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong."),
   message: z.string().min(1, "Pesan tidak boleh kosong."),
 });
@@ -46,7 +47,7 @@ export default function NotificationsAdminPage() {
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
-    defaultValues: { userId: '', title: '', message: '' },
+    defaultValues: { userIds: [], title: '', message: '' },
   });
 
   const fetchInitialData = async () => {
@@ -132,17 +133,17 @@ export default function NotificationsAdminPage() {
   const onSubmit = async (values: NotificationFormValues) => {
     setIsSubmitting(true);
     try {
-      if (values.userId === 'all') {
-        if (users.length === 0) {
-          toast({ variant: 'destructive', title: "Gagal", description: "Tidak ada warga terdaftar untuk dikirimi notifikasi." });
+        if (values.userIds.length === 0) {
+          toast({ variant: 'destructive', title: "Gagal", description: "Tidak ada warga dipilih untuk dikirimi notifikasi." });
           setIsSubmitting(false);
           return;
         }
+
         const batch = writeBatch(db);
-        users.forEach(user => {
+        values.userIds.forEach(userId => {
           const newNotifRef = doc(collection(db, 'notifications'));
           batch.set(newNotifRef, {
-            userId: user.uid,
+            userId: userId,
             title: values.title,
             message: values.message,
             read: false,
@@ -150,20 +151,12 @@ export default function NotificationsAdminPage() {
           });
         });
         await batch.commit();
-        toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${users.length} warga.` });
-      } else {
-        await addDoc(collection(db, 'notifications'), {
-          userId: values.userId,
-          title: values.title,
-          message: values.message,
-          read: false,
-          createdAt: serverTimestamp(),
-        });
-        toast({ title: "Berhasil", description: "Pemberitahuan berhasil dikirim." });
-      }
-      form.reset({ userId: '', title: '', message: '' });
-      setIsDialogOpen(false);
-      await fetchInitialData(); // Refresh list
+
+        toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${values.userIds.length} warga.` });
+      
+        form.reset({ userIds: [], title: '', message: '' });
+        setIsDialogOpen(false);
+        await fetchInitialData(); // Refresh list
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mengirim pemberitahuan." });
       console.error(error);
@@ -279,25 +272,71 @@ export default function NotificationsAdminPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
                 <FormField
                   control={form.control}
-                  name="userId"
-                  render={({ field }) => (
+                  name="userIds"
+                  render={() => (
                     <FormItem>
-                      <FormLabel>Kirim Ke</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih tujuan..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">Semua Warga</SelectItem>
-                          {users.map(user => (
-                            <SelectItem key={user.uid} value={user.uid}>
-                              {user.displayName} ({user.email})
-                            </SelectItem>
+                      <div className="mb-4">
+                        <FormLabel className="text-base">Pilih Penerima</FormLabel>
+                        <p className="text-sm text-muted-foreground">Tandai warga yang akan menerima pemberitahuan.</p>
+                      </div>
+                      <div className="flex items-center space-x-2 border-b pb-2 mb-2">
+                        <Checkbox
+                          id="select-all"
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              form.setValue('userIds', users.map(u => u.uid));
+                            } else {
+                              form.setValue('userIds', []);
+                            }
+                          }}
+                          checked={form.watch('userIds').length === users.length && users.length > 0}
+                          disabled={users.length === 0}
+                        />
+                        <label htmlFor="select-all" className="text-sm font-medium leading-none">
+                            Pilih Semua Warga
+                        </label>
+                      </div>
+
+                      <ScrollArea className="h-48 rounded-md border">
+                         <div className="p-4">
+                           {users.map((user) => (
+                            <FormField
+                              key={user.uid}
+                              control={form.control}
+                              name="userIds"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={user.uid}
+                                    className="flex flex-row items-start space-x-3 space-y-0 py-2"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(user.uid)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([...field.value, user.uid])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== user.uid
+                                                )
+                                              )
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal w-full">
+                                      <div className="flex justify-between">
+                                        <span>{user.displayName}</span>
+                                        <span className="text-muted-foreground text-xs">{user.email}</span>
+                                      </div>
+                                    </FormLabel>
+                                  </FormItem>
+                                )
+                              }}
+                            />
                           ))}
-                        </SelectContent>
-                      </Select>
+                         </div>
+                      </ScrollArea>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -338,3 +377,5 @@ export default function NotificationsAdminPage() {
     </>
   );
 }
+
+    
