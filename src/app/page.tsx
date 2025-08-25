@@ -18,8 +18,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy, updateDoc, getDoc } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail, Trash, ShieldBan } from "lucide-react";
+import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -75,39 +75,44 @@ export default function Home() {
       return;
     }
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        setUser(currentUser);
-        if (currentUser) {
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if(userDocSnap.exists()) {
-                const userData = userDocSnap.data() as AppUser;
-                setUserInfo(userData);
-                 if (userData.isBlocked) {
-                    setLoading(false); // Stop loading to show the dialog
-                    return; 
-                }
-            }
-
-            const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
-            const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
-                const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-                const sortedNotifs = notifsData.sort((a, b) => {
-                    const dateA = a.createdAt ? (a.createdAt as any).toDate() : 0;
-                    const dateB = b.createdAt ? (b.createdAt as any).toDate() : 0;
-                    return dateB - dateA;
-                });
-                setNotifications(sortedNotifs);
-            }, (error) => {
-                console.error("Error fetching notifications: ", error);
-            });
-             setLoading(false);
-            return () => unsubscribeNotifications();
-        } else {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        // Real-time listener for user data
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data() as AppUser;
+            setUserInfo(userData);
+          } else {
             setUserInfo(null);
-            setNotifications([]);
-            setLoading(false);
-        }
+          }
+          setLoading(false); // Stop loading once we have user info (or know it doesn't exist)
+        });
+
+        // Real-time listener for notifications
+        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+        const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+          const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+          const sortedNotifs = notifsData.sort((a, b) => {
+            const dateA = a.createdAt ? (a.createdAt as any).toDate() : 0;
+            const dateB = b.createdAt ? (b.createdAt as any).toDate() : 0;
+            return dateB - dateA;
+          });
+          setNotifications(sortedNotifs);
+        }, (error) => {
+          console.error("Error fetching notifications: ", error);
+        });
+
+        return () => {
+          unsubscribeUser();
+          unsubscribeNotifications();
+        };
+      } else {
+        setUserInfo(null);
+        setNotifications([]);
+        setLoading(false);
+      }
     });
 
     return () => unsubscribeAuth();
@@ -173,10 +178,12 @@ export default function Home() {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2"><ShieldBan className="h-6 w-6 text-destructive"/>Akun Anda Diblokir</AlertDialogTitle>
-                    <AlertDialogDescription className="text-sm text-muted-foreground">
-                        <div>Akun Anda telah ditangguhkan oleh admin.</div>
-                        {userInfo.blockReason && <div className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</div>}
-                        {userInfo.blockEnds && <div className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</div>}
+                    <AlertDialogDescription>
+                       <div className="text-sm text-muted-foreground">
+                            Akun Anda telah ditangguhkan oleh admin.
+                            {userInfo.blockReason && <div className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</div>}
+                            {userInfo.blockEnds && <div className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</div>}
+                       </div>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                  <div className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</div>
@@ -430,3 +437,5 @@ export default function Home() {
     </>
   );
 }
+
+    

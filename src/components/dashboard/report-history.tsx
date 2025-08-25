@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc, endBefore, limitToLast } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc, endBefore, limitToLast, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -272,3 +272,5 @@ export default function ReportHistory({ user }: { user: User | null }) {
         </div>
     );
 }
+
+    
