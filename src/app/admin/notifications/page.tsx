@@ -36,8 +36,7 @@ const NOTIFICATIONS_PER_PAGE = 10;
 export default function NotificationsAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -50,46 +49,63 @@ export default function NotificationsAdminPage() {
     defaultValues: { userId: '', title: '', message: '' },
   });
 
-  const fetchUsers = async () => {
+  const fetchInitialData = async () => {
+    setLoading(true);
     try {
+      // Fetch users first
       const usersQuery = query(collection(db, "users"), orderBy("displayName"));
       const usersSnapshot = await getDocs(usersQuery);
       const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as AppUser[];
       setUsers(usersData);
+      const userMap = new Map(usersData.map(u => [u.uid, u]));
+      
+      // Then fetch initial notifications
+      const notifsRef = collection(db, 'notifications');
+      const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATIONS_PER_PAGE));
+      const documentSnapshots = await getDocs(q);
+      
+      const newNotifs = documentSnapshots.docs.map(docSnap => {
+          const data = docSnap.data();
+          const recipient = userMap.get(data.userId) || { displayName: data.userId === 'all' ? 'Semua Warga' : 'Pengguna Dihapus', email: '' };
+          return {
+              id: docSnap.id,
+              ...data,
+              createdAt: data.createdAt?.toDate(),
+              recipientName: recipient.displayName,
+              recipientEmail: recipient.email,
+          } as Notification;
+      });
+
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setLastVisible(lastDoc || null);
+      setNotifications(newNotifs);
+      setHasMore(documentSnapshots.docs.length >= NOTIFICATIONS_PER_PAGE);
+
     } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({ variant: 'destructive', title: 'Gagal Memuat', description: 'Tidak dapat mengambil daftar warga.' });
+      console.error("Error fetching initial data:", error);
+      toast({ variant: 'destructive', title: 'Gagal Memuat Data', description: 'Tidak dapat mengambil daftar warga atau notifikasi.' });
     } finally {
-      setLoadingUsers(false);
+      setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
 
-  const fetchNotifications = async (initial = false) => {
-    if (initial) setLoadingNotifs(true);
-    else setLoadingMore(true);
+  const fetchMoreNotifications = async () => {
+    if (!lastVisible || !hasMore || loadingMore) return;
+    setLoadingMore(true);
 
     try {
         const notifsRef = collection(db, 'notifications');
-        let q;
-        const constraints = [orderBy('createdAt', 'desc'), limit(NOTIFICATIONS_PER_PAGE)];
-        
-        if (initial) {
-            q = query(notifsRef, ...constraints);
-        } else if (lastVisible) {
-            q = query(notifsRef, ...constraints, startAfter(lastVisible));
-        } else {
-             if (initial) setLoadingNotifs(false); else setLoadingMore(false);
-             setHasMore(false);
-             return;
-        }
-        
+        const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATIONS_PER_PAGE), startAfter(lastVisible));
         const documentSnapshots = await getDocs(q);
-        
         const userMap = new Map(users.map(u => [u.uid, u]));
 
         const newNotifs = documentSnapshots.docs.map(docSnap => {
             const data = docSnap.data();
-            const recipient = userMap.get(data.userId) || { displayName: 'Semua Warga', email: '' };
+            const recipient = userMap.get(data.userId) || { displayName: data.userId === 'all' ? 'Semua Warga' : 'Pengguna Dihapus', email: '' };
             return {
                 id: docSnap.id,
                 ...data,
@@ -101,29 +117,16 @@ export default function NotificationsAdminPage() {
 
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
         setLastVisible(lastDoc || null);
-
-        if (initial) setNotifications(newNotifs);
-        else setNotifications(prev => [...prev, ...newNotifs]);
-
-        if (documentSnapshots.docs.length < NOTIFICATIONS_PER_PAGE) setHasMore(false);
+        setNotifications(prev => [...prev, ...newNotifs]);
+        setHasMore(documentSnapshots.docs.length >= NOTIFICATIONS_PER_PAGE);
 
     } catch (error) {
-        console.error("Error fetching notifications:", error);
-        toast({ variant: 'destructive', title: 'Gagal Memuat Notifikasi' });
+        console.error("Error fetching more notifications:", error);
+        toast({ variant: 'destructive', title: 'Gagal Memuat Notifikasi Tambahan' });
     } finally {
-        if (initial) setLoadingNotifs(false); else setLoadingMore(false);
+        setLoadingMore(false);
     }
   };
-  
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-  
-  useEffect(() => {
-    if (!loadingUsers) {
-        fetchNotifications(true);
-    }
-  }, [loadingUsers]);
 
 
   const onSubmit = async (values: NotificationFormValues) => {
@@ -160,7 +163,7 @@ export default function NotificationsAdminPage() {
       }
       form.reset({ userId: '', title: '', message: '' });
       setIsDialogOpen(false);
-      await fetchNotifications(true); // Refresh list
+      await fetchInitialData(); // Refresh list
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mengirim pemberitahuan." });
       console.error(error);
@@ -187,7 +190,7 @@ export default function NotificationsAdminPage() {
             <CardTitle>Riwayat Pemberitahuan</CardTitle>
             <CardDescription>Kelola pemberitahuan yang telah dikirim ke warga.</CardDescription>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} disabled={loadingUsers}>
+        <Button onClick={() => setIsDialogOpen(true)} disabled={loading}>
             <PlusCircle className="mr-2 h-4 w-4" /> Kirim Pemberitahuan
         </Button>
       </CardHeader>
@@ -204,7 +207,7 @@ export default function NotificationsAdminPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loadingNotifs ? (
+                  {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
                         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
@@ -255,9 +258,9 @@ export default function NotificationsAdminPage() {
                 </TableBody>
             </Table>
           </div>
-        {hasMore && !loadingNotifs && (
+        {hasMore && !loading && (
             <div className="text-center mt-6">
-                <Button onClick={() => fetchNotifications(false)} disabled={loadingMore}>
+                <Button onClick={fetchMoreNotifications} disabled={loadingMore}>
                     {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Muat Lebih Banyak
                 </Button>
