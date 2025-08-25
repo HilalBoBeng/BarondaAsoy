@@ -109,7 +109,10 @@ export default function Home() {
 
         const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
-          const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+          const notifsData: Notification[] = [];
+           snapshot.forEach(doc => {
+            notifsData.push({ id: doc.id, ...doc.data() } as Notification)
+           });
           notifsData.sort((a,b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis())
           setNotifications(notifsData);
         }, (error) => {
@@ -351,16 +354,14 @@ export default function Home() {
                         </CardContent>
                     </Card>
                     
-                    {user && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Riwayat Laporan Anda</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ReportHistory user={user} />
-                            </CardContent>
-                        </Card>
-                    )}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Riwayat Laporan Komunitas</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ReportHistory />
+                        </CardContent>
+                    </Card>
                 </div>
                 <div className="lg:col-span-1 space-y-6">
                     <Card>
@@ -453,5 +454,3 @@ export default function Home() {
     </>
   );
 }
-
-    

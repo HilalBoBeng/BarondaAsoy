@@ -49,20 +49,19 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
 );
 
 
-export default function ReportHistory({ user }: { user: User | null }) {
+export default function ReportHistory({ user }: { user?: User | null }) {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
     useEffect(() => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
         setLoading(true);
 
         const reportsRef = collection(db, 'reports');
-        const q = query(reportsRef, where('userId', '==', user.uid));
+        // If a user is passed, filter by their UID. Otherwise, fetch all reports.
+        const q = user 
+            ? query(reportsRef, where('userId', '==', user.uid))
+            : query(reportsRef);
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const reportsData = snapshot.docs.map(doc => {
@@ -101,17 +100,6 @@ export default function ReportHistory({ user }: { user: User | null }) {
         }
     };
 
-
-    if (!user) {
-        return (
-             <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                    Silakan masuk untuk melihat riwayat laporan Anda.
-                </CardContent>
-            </Card>
-        );
-    }
-    
     if (loading) {
         return (
             <div className="space-y-4">
@@ -127,46 +115,68 @@ export default function ReportHistory({ user }: { user: User | null }) {
             </div>
         )
     }
+    
+    if (user && reports.length === 0) {
+        return (
+             <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                    Anda belum pernah membuat laporan.
+                </CardContent>
+            </Card>
+        );
+    }
+    
+     if (!user && reports.length === 0) {
+        return (
+             <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                    Belum ada laporan dari komunitas.
+                </CardContent>
+            </Card>
+        );
+    }
+
 
     return (
         <div className="space-y-4">
-            {reports.length > 0 ? (
-                reports.map((report) => (
-                    <Card key={report.id}>
-                       <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2 gap-2">
-                                <div className="flex-grow">
-                                    <p className="text-sm text-foreground/90 break-words">
-                                        {report.reportText}
-                                    </p>
-                                     <p className="text-xs text-muted-foreground mt-2">
-                                        {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
-                                    </p>
-                                </div>
-                                <div className="flex flex-col gap-2 items-end flex-shrink-0">
-                                    <Badge variant={statusDisplay[report.status]?.variant || 'secondary'}>
-                                        {statusDisplay[report.status]?.text || report.status}
-                                    </Badge>
-                                    <Badge variant="outline">
-                                        {categoryDisplay[report.category] || report.category}
-                                    </Badge>
-                                </div>
+            {reports.map((report) => (
+                <Card key={report.id}>
+                    <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2 gap-2">
+                            <div className="flex-grow">
+                                {!user && <p className="text-xs font-bold">{report.reporterName}</p>}
+                                <p className="text-sm text-foreground/90 break-words">
+                                    {report.reportText}
+                                </p>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                    {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
+                                </p>
                             </div>
-                        </CardContent>
-                        
-                        <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
-                            {report.replies && report.replies.length > 0 && (
-                                <div className="w-full">
-                                    <h4 className="text-xs font-semibold flex items-center gap-1 mb-2">
-                                        <MessageSquare className="h-3 w-3" />
-                                        Balasan:
-                                    </h4>
-                                    {report.replies.map((reply, index) => (
-                                        <ReplyCard key={index} reply={reply} />
-                                    ))}
-                                </div>
-                            )}
+                            <div className="flex flex-col gap-2 items-end flex-shrink-0">
+                                <Badge variant={statusDisplay[report.status]?.variant || 'secondary'}>
+                                    {statusDisplay[report.status]?.text || report.status}
+                                </Badge>
+                                <Badge variant="outline">
+                                    {categoryDisplay[report.category] || report.category}
+                                </Badge>
+                            </div>
+                        </div>
+                    </CardContent>
+                    
+                    <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
+                        {report.replies && report.replies.length > 0 && (
+                            <div className="w-full">
+                                <h4 className="text-xs font-semibold flex items-center gap-1 mb-2">
+                                    <MessageSquare className="h-3 w-3" />
+                                    Balasan:
+                                </h4>
+                                {report.replies.map((reply, index) => (
+                                    <ReplyCard key={index} reply={reply} />
+                                ))}
+                            </div>
+                        )}
 
+                        {user && ( // Show delete button only if it's the user's own history view
                             <div className="w-full flex justify-end mt-2">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -189,16 +199,10 @@ export default function ReportHistory({ user }: { user: User | null }) {
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </div>
-                        </CardFooter>
-                    </Card>
-                ))
-            ) : (
-                <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
-                        Anda belum pernah membuat laporan.
-                    </CardContent>
+                        )}
+                    </CardFooter>
                 </Card>
-            )}
+            ))}
         </div>
     );
 }
