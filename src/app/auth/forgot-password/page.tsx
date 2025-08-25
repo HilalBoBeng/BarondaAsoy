@@ -74,8 +74,10 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <div className="flex justify-center mb-6">
-          <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={80} height={80} className="h-20 w-auto" />
+      <div className="flex flex-col items-center justify-center mb-6 text-center">
+        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
+        <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
+        <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
       <Card>
         <CardHeader>
