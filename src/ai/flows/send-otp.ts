@@ -10,12 +10,13 @@
 
 import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
+  context: z.enum(['register', 'resetPassword']).optional().describe("The context for the OTP request."),
 });
 export type SendOtpInput = z.infer<typeof SendOtpInputSchema>;
 
@@ -35,8 +36,20 @@ const sendOtpFlow = ai.defineFlow(
     inputSchema: SendOtpInputSchema,
     outputSchema: SendOtpOutputSchema,
   },
-  async ({ email }) => {
+  async ({ email, context }) => {
     try {
+      // If the context is for resetting a password, check if the user exists first.
+      if (context === 'resetPassword') {
+        const userQuery = query(collection(db, 'users'), where('email', '==', email));
+        const userSnapshot = await getDocs(userQuery);
+        if (userSnapshot.empty) {
+          return {
+            success: false,
+            message: 'Email tidak terdaftar.',
+          };
+        }
+      }
+
       const batch = writeBatch(db);
 
       // 1. Invalidate all previous active OTPs for this email

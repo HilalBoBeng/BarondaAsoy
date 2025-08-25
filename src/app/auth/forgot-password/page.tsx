@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -49,7 +50,7 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsSubmitting(true);
     try {
-      const result = await sendOtp({ email: data.email });
+      const result = await sendOtp({ email: data.email, context: 'resetPassword' });
       if (result.success) {
         toast({
           title: "Berhasil",
