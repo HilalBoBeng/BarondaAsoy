@@ -74,14 +74,12 @@ export default function ReportHistory({ user }: { user: User | null }) {
                  q = query(
                     reportsRef, 
                     where('userId', '==', user.uid), 
-                    orderBy('createdAt', 'desc'), 
                     limit(REPORTS_PER_PAGE)
                 );
             } else if(lastVisible) {
                 q = query(
                     reportsRef,
                     where('userId', '==', user.uid),
-                    orderBy('createdAt', 'desc'),
                     startAfter(lastVisible),
                     limit(REPORTS_PER_PAGE)
                 );
@@ -92,7 +90,11 @@ export default function ReportHistory({ user }: { user: User | null }) {
             }
 
             const documentSnapshots = await getDocs(q);
-            const newReports = documentSnapshots.docs.map(doc => {
+            
+            // Sort client-side
+            const sortedDocs = documentSnapshots.docs.sort((a,b) => b.data().createdAt.toDate().getTime() - a.data().createdAt.toDate().getTime());
+            
+            const newReports = sortedDocs.map(doc => {
                  const data = doc.data();
                  return {
                     id: doc.id,
@@ -246,6 +248,3 @@ export default function ReportHistory({ user }: { user: User | null }) {
         </div>
     );
 }
-
-
-    

@@ -79,13 +79,18 @@ export default function AnnouncementsAdminPage() {
   const onSubmit = async (values: AnnouncementFormValues) => {
     setIsSubmitting(true);
     try {
+      const dataToSave = {
+        ...values,
+        content: values.content.toUpperCase(),
+      };
+
       if (currentAnnouncement) {
         const docRef = doc(db, 'announcements', currentAnnouncement.id);
-        await updateDoc(docRef, { ...values });
+        await updateDoc(docRef, dataToSave);
         toast({ title: "Berhasil", description: "Pengumuman berhasil diperbarui." });
       } else {
         await addDoc(collection(db, 'announcements'), {
-          ...values,
+          ...dataToSave,
           date: serverTimestamp(),
           likes: 0,
           dislikes: 0,
