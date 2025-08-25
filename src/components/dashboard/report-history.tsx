@@ -130,7 +130,9 @@ export default function ReportHistory() {
                                     <TableCell>{report.reporterName}</TableCell>
                                     <TableCell className="max-w-xs truncate">{report.reportText}</TableCell>
                                     <TableCell className="text-right">
-                                        <ThreatLevelBadge level={report.triageResult.threatLevel} />
+                                        {report.triageResult && (
+                                            <ThreatLevelBadge level={report.triageResult.threatLevel} />
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -160,4 +162,3 @@ export default function ReportHistory() {
         </div>
     );
 }
-
