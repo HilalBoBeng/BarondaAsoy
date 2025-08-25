@@ -12,17 +12,14 @@ import {
   ShieldAlert,
   Phone,
   Menu,
-  UserCircle,
   MessageSquare,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function AdminLayout({
   children,
@@ -33,6 +30,7 @@ export default function AdminLayout({
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [adminName, setAdminName] = useState("Admin");
 
   useEffect(() => {
     setIsClient(true);
@@ -44,11 +42,17 @@ export default function AdminLayout({
         title: "Akses Ditolak",
         description: "Anda harus masuk sebagai admin untuk mengakses halaman ini.",
       });
+    } else {
+        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        if (staffInfo.name) {
+            setAdminName(staffInfo.name);
+        }
     }
   }, [router, toast]);
 
   const handleLogout = () => {
     localStorage.removeItem('userRole');
+    localStorage.removeItem('staffInfo');
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
     router.push('/');
   };
@@ -70,14 +74,15 @@ export default function AdminLayout({
   const NavHeader = () => (
     <div className="flex items-center gap-3 p-4">
         <div>
-            <p className="font-bold text-base">Nama Admin</p>
-            <p className="text-sm text-muted-foreground">Role: Admin</p>
+            <p className="font-bold text-base">{adminName}</p>
+            <p className="text-sm text-muted-foreground">admin@baronda.app</p>
+            <p className="text-xs text-muted-foreground mt-1">Role: Admin</p>
         </div>
     </div>
   );
 
   const NavContent = () => (
-    <>
+    <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
         {navItems.map((item) => (
           <Link
@@ -94,12 +99,12 @@ export default function AdminLayout({
         ))}
       </nav>
       <div className="mt-auto p-4">
-          <Button size="sm" className="w-full" onClick={handleLogout}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar
-          </Button>
+        </Button>
       </div>
-    </>
+    </div>
   );
 
   return (

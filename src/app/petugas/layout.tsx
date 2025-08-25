@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   Calendar,
   Menu,
-  UserCircle,
   FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function PetugasLayout({
   children,
@@ -30,6 +28,7 @@ export default function PetugasLayout({
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [staffName, setStaffName] = useState("Petugas");
+  const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
 
   useEffect(() => {
     setIsClient(true);
@@ -45,6 +44,9 @@ export default function PetugasLayout({
         const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
         if (staffInfo.name) {
             setStaffName(staffInfo.name);
+        }
+        if (staffInfo.email) {
+            setStaffEmail(staffInfo.email);
         }
     }
   }, [router, toast]);
@@ -72,14 +74,15 @@ export default function PetugasLayout({
     <div className="flex items-center gap-3 p-4">
         <div>
             <p className="font-bold text-base">{staffName}</p>
-            <p className="text-sm text-muted-foreground">Role: Petugas</p>
+            <p className="text-sm text-muted-foreground">{staffEmail}</p>
+            <p className="text-xs text-muted-foreground mt-1">Role: Petugas</p>
         </div>
     </div>
   );
 
 
   const NavContent = () => (
-    <>
+    <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
         {navItems.map((item) => (
           <Link
@@ -96,12 +99,12 @@ export default function PetugasLayout({
         ))}
       </nav>
       <div className="mt-auto p-4">
-         <Button size="sm" className="w-full" onClick={handleLogout}>
+         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar
           </Button>
       </div>
-    </>
+    </div>
   );
 
   return (

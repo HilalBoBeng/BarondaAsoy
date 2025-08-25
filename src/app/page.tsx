@@ -22,7 +22,7 @@ import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy, updateDo
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -78,10 +78,9 @@ export default function Home() {
       setLoading(false);
       
       if (currentUser) {
-          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
           const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
               const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-              notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
               setNotifications(notifs);
           });
           return () => unsubscribeNotifications();
@@ -121,6 +120,7 @@ export default function Home() {
       try {
           await deleteDoc(doc(db, "notifications", notifId));
           toast({ title: 'Berhasil', description: 'Notifikasi telah dihapus.' });
+          setSelectedNotification(null);
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus notifikasi.' });
       }
@@ -181,14 +181,14 @@ export default function Home() {
                         <DropdownMenuSeparator />
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className="flex items-start gap-2 cursor-pointer">
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif)}} className="flex items-start gap-2 cursor-pointer">
                                    <div className="flex-grow">
                                         <div className="font-semibold flex items-center gap-2">
                                             {notif.title}
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
                                         </div>
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
                                 </DropdownMenuItem>
                             ))
@@ -273,9 +273,12 @@ export default function Home() {
                 {greeting}, {user?.displayName || 'Warga'}!
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base mt-1">
-                Selamat datang di Baronda Kelurahan Kilongan
+                Selamat datang di Baronda Kelurahan Kilongan.
             </p>
-             <p className="text-muted-foreground text-sm sm:text-base">
+             <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
+                Baronda adalah platform siskamling digital yang dirancang untuk meningkatkan keamanan dan komunikasi di lingkungan kita.
+            </p>
+             <p className="text-muted-foreground text-sm sm:text-base mt-2">
                 {currentDate} | {currentTime}
             </p>
           </div>
@@ -353,19 +356,20 @@ export default function Home() {
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>{selectedNotification?.title}</DialogTitle>
-                <DialogDescription>
-                    {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt.toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
-                </DialogDescription>
-                 <Button type="button" variant="ghost" size="icon" className="absolute right-6 top-6" onClick={() => {
-                     if(selectedNotification) {
-                        handleNotificationDelete(selectedNotification.id)
-                        setSelectedNotification(null)
-                     }
-                 }}>
-                    <Trash className="h-4 w-4" />
-                    <span className="sr-only">Hapus</span>
-                 </Button>
+                 <div className="flex justify-between items-start">
+                    <div className="flex-grow pr-10">
+                        <DialogTitle>{selectedNotification?.title}</DialogTitle>
+                        <DialogDescription>
+                            {selectedNotification?.createdAt ? new Date((selectedNotification.createdAt as any).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
+                        </DialogDescription>
+                    </div>
+                     <Button type="button" variant="ghost" size="icon" className="flex-shrink-0" onClick={() => {
+                        if(selectedNotification) handleNotificationDelete(selectedNotification.id)
+                    }}>
+                        <Trash className="h-4 w-4" />
+                        <span className="sr-only">Hapus</span>
+                    </Button>
+                 </div>
             </DialogHeader>
             <div className="py-4 whitespace-pre-wrap break-words">
                 <p>{selectedNotification?.message}</p>
