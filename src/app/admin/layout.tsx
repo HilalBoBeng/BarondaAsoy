@@ -14,7 +14,6 @@ import {
   Menu,
   MessageSquare,
   Settings,
-  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -41,7 +40,6 @@ export default function AdminLayout({
   const [badgeCounts, setBadgeCounts] = useState({
     newReports: 0,
     pendingStaff: 0,
-    pendingChats: 0
   });
 
   useEffect(() => {
@@ -67,16 +65,13 @@ export default function AdminLayout({
         // Setup badge listeners
         const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
         const staffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
-        const chatsQuery = query(collection(db, 'live_chats'), where('status', '==', 'pending'));
         
         const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
         const unsubStaff = onSnapshot(staffQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingStaff: snap.size})));
-        const unsubChats = onSnapshot(chatsQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingChats: snap.size})));
         
         return () => {
           unsubReports();
           unsubStaff();
-          unsubChats();
         }
     }
   }, [router, toast]);
@@ -94,7 +89,6 @@ export default function AdminLayout({
     { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-    { href: "/admin/live-chat", icon: MessageCircle, label: "Live Chat", badge: badgeCounts.pendingChats },
     { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
   ];

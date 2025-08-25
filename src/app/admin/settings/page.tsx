@@ -50,15 +50,15 @@ export default function AdminSettingsPage() {
   const onSubmit = async (data: PasswordFormValues) => {
     setIsSubmitting(true);
     // This is a simplified logic. In a real app, you would validate the current password
-    // against a stored value and then update it.
+    // against a stored value and then update it. For now, we assume the default admin password.
+    // In a real app, you'd use a secure backend flow to change this.
     if (data.currentPassword === "Admin123") {
-      // In a real app, you'd securely store this new password.
       console.log("Admin password changed to:", data.newPassword);
       toast({
         title: "Berhasil",
-        description: "Kata sandi admin berhasil diubah (simulasi).",
+        description: "Kata sandi admin berhasil diubah (simulasi). Anda akan dikeluarkan.",
       });
-      // Optionally, log out the admin to force re-login with the new password.
+      // For security, log out the admin to force re-login with the new password.
       localStorage.removeItem('userRole');
       localStorage.removeItem('staffInfo');
       router.push('/auth/staff-login');
@@ -84,6 +84,9 @@ export default function AdminSettingsPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md space-y-6">
             <h3 className="text-lg font-medium">Ubah Kata Sandi Admin</h3>
+            <p className="text-sm text-muted-foreground">
+                Kata sandi admin saat ini adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
+            </p>
             <FormField
               control={form.control}
               name="currentPassword"

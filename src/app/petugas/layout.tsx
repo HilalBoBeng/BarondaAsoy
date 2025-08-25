@@ -20,6 +20,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/co
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 export default function PetugasLayout({
   children,
@@ -178,6 +179,19 @@ export default function PetugasLayout({
              <h1 className="text-lg font-semibold md:text-2xl truncate">
               {getPageTitle()}
             </h1>
+          </div>
+            <div className="flex items-center gap-2 text-right">
+              <div className="flex flex-col">
+                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8"
+              />
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">

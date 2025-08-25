@@ -31,7 +31,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
-import ChatbotWidget from "@/components/chatbot/chatbot-widget";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -380,8 +379,6 @@ export default function Home() {
       </footer>
     </div>
     
-    {!loading && <ChatbotWidget />}
-
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
         <DialogContent>
             <DialogHeader>

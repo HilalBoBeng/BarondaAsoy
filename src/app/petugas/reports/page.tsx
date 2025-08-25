@@ -3,14 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, query, orderBy, where, getDocs, increment, limit, startAfter, endBefore, limitToLast, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, orderBy, where, getDocs, increment, limit, startAfter, endBefore, limitToLast, type QueryDocumentSnapshot, type DocumentData, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Calendar, User, CheckCircle, AlertTriangle, HelpCircle, Loader2, UserCheck } from 'lucide-react';
-import type { Report, Reply, Staff } from '@/lib/types';
+import { MessageSquare, Calendar, User, CheckCircle, AlertTriangle, Loader2, UserCheck } from 'lucide-react';
+import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -23,7 +22,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 const REPORTS_PER_PAGE = 5;
-type ReportStatus = 'new' | 'in_progress' | 'resolved';
 
 const replySchema = z.object({
   replyMessage: z.string().min(1, "Balasan tidak boleh kosong."),
@@ -43,6 +41,8 @@ export default function PetugasReportsPage() {
   const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [isLastPage, setIsLastPage] = useState(false);
+  
+  const [filter, setFilter] = useState('new');
 
   const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
 
@@ -54,17 +54,30 @@ export default function PetugasReportsPage() {
   }, []);
   
   const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
+    if (!staffInfo && filter !== 'new') return;
     setLoading(true);
     try {
+        const reportsRef = collection(db, "reports");
+        let constraints = [];
+        
+        if (filter === 'new') {
+            constraints.push(where('status', '==', 'new'));
+        } else if (filter === 'my_reports' && staffInfo) {
+            constraints.push(where('handlerId', '==', staffInfo.id));
+        } else {
+            setLoading(false);
+            setReports([]);
+            return;
+        }
+
       let q;
-      const reportsRef = collection(db, "reports");
 
       if (direction === 'next' && lastVisible) {
-        q = query(reportsRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+        q = query(reportsRef, ...constraints, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
       } else if (direction === 'prev' && firstVisible) {
-        q = query(reportsRef, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+        q = query(reportsRef, ...constraints, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
       } else {
-        q = query(reportsRef, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
+        q = query(reportsRef, ...constraints, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
       }
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -109,8 +122,9 @@ export default function PetugasReportsPage() {
 
   useEffect(() => {
     const unsub = fetchReports(1);
-    return () => { unsub.then(u => u && u()) };
-  }, []);
+    return () => { unsub?.then(u => u && u()) };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, staffInfo]);
 
   const goToNextPage = () => {
     const newPage = currentPage + 1;
@@ -124,40 +138,27 @@ export default function PetugasReportsPage() {
     setCurrentPage(newPage);
     fetchReports(newPage, 'prev');
   };
-
-  const handleStatusChange = async (id: string, status: ReportStatus) => {
-    const reportToUpdate = reports.find(r => r.id === id);
-    if (!reportToUpdate) return;
-    if (!staffInfo) {
-        toast({ variant: 'destructive', title: "Gagal", description: "Informasi petugas tidak ditemukan." });
-        return;
-    }
-
+  
+  const handleTakeReport = async (report: Report) => {
+    if (!staffInfo) return;
     try {
-        const docRef = doc(db, 'reports', id);
-        if (status === 'in_progress' && reportToUpdate.status === 'new') {
-            await updateDoc(docRef, { 
-                status: 'in_progress',
-                handlerId: staffInfo.id,
-                handlerName: staffInfo.name,
-            });
-            const staffRef = doc(db, 'staff', staffInfo.id);
-            await updateDoc(staffRef, { points: increment(1) });
-            toast({ title: "Berhasil", description: "Anda telah mengambil alih laporan ini." });
-        } else if (status === 'resolved' && reportToUpdate.status === 'in_progress') {
-             // Only the assigned staff or an admin can resolve it. This logic can be refined with security rules.
-            if(reportToUpdate.handlerId === staffInfo.id) {
-                await updateDoc(docRef, { status });
-                toast({ title: "Berhasil", description: "Laporan ditandai sebagai selesai." });
-            } else {
-                toast({ variant: 'destructive', title: "Akses Ditolak", description: "Hanya petugas yang ditugaskan yang dapat menyelesaikan laporan ini." });
-            }
-        }
-    } catch (error) {
-        toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui status." });
+        const batch = writeBatch(db);
+        const reportRef = doc(db, 'reports', report.id);
+        batch.update(reportRef, {
+            status: 'in_progress',
+            handlerId: staffInfo.id,
+            handlerName: staffInfo.name,
+        });
+
+        const staffRef = doc(db, 'staff', staffInfo.id);
+        batch.update(staffRef, { points: increment(1) });
+        
+        await batch.commit();
+        toast({ title: 'Berhasil', description: 'Anda telah mengambil alih laporan ini.' });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mengambil laporan.' });
     }
   };
-
 
   const handleOpenReplyDialog = (report: Report) => {
     setCurrentReport(report);
@@ -172,6 +173,7 @@ export default function PetugasReportsPage() {
     }
     setIsSubmitting(true);
     try {
+        // Send reply via Genkit flow
         const result = await sendReply({
             reportId: currentReport.id,
             recipientEmail: currentReport.reporterEmail,
@@ -179,16 +181,18 @@ export default function PetugasReportsPage() {
             originalReport: currentReport.reportText,
             replierRole: 'Petugas'
         });
+        
+        if (!result.success) throw new Error(result.message);
 
-        if (result.success) {
-            toast({ title: 'Berhasil', description: 'Balasan berhasil dikirim.' });
-            setIsReplyDialogOpen(false);
-        } else {
-            throw new Error(result.message);
-        }
+        // Update report status to resolved
+        const reportRef = doc(db, 'reports', currentReport.id);
+        await updateDoc(reportRef, { status: 'resolved' });
+
+        toast({ title: 'Berhasil', description: 'Laporan telah diselesaikan dan balasan telah dikirim.' });
+        setIsReplyDialogOpen(false);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan.';
-        toast({ variant: 'destructive', title: 'Gagal Mengirim Balasan', description: errorMessage });
+        toast({ variant: 'destructive', title: 'Gagal Menyelesaikan Laporan', description: errorMessage });
     } finally {
         setIsSubmitting(false);
     }
@@ -225,44 +229,21 @@ export default function PetugasReportsPage() {
         </CardContent>
     </Card>
   );
-  
-  const statusOptions: {value: ReportStatus; label: string; disabled?: (report: Report) => boolean}[] = [
-    { value: 'new', label: 'Baru', disabled: (report) => true }, // Staff cannot revert to new
-    { value: 'in_progress', label: 'Tangani', disabled: (report) => report.status !== 'new' },
-    { value: 'resolved', label: 'Selesai', disabled: (report) => report.status !== 'in_progress' || report.handlerId !== staffInfo?.id },
-  ];
-
-
-  const renderActions = (report: Report) => {
-    const hasReplies = report.replies && report.replies.length > 0;
-    return (
-        <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
-            <Button variant="outline" size="sm" onClick={() => handleOpenReplyDialog(report)} disabled={!report.reporterEmail || hasReplies}>
-                <MessageSquare className="h-4 w-4 mr-0 sm:mr-2" />
-                <span className="hidden sm:inline">{hasReplies ? 'Sudah Dibalas' : 'Balas'}</span>
-            </Button>
-            <Select value={report.status} onValueChange={(value) => handleStatusChange(report.id, value as ReportStatus)}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                    <SelectValue placeholder="Ubah Status" />
-                </SelectTrigger>
-                <SelectContent>
-                    {statusOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value} disabled={option.disabled && option.disabled(report)}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
-  }
 
   return (
     <>
     <Card>
       <CardHeader>
-        <CardTitle>Laporan Warga</CardTitle>
-        <CardDescription>Tinjau dan tanggapi laporan yang masuk dari warga.</CardDescription>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                 <CardTitle>Laporan Warga</CardTitle>
+                <CardDescription>Tinjau dan tanggapi laporan yang masuk dari warga.</CardDescription>
+            </div>
+             <div className="flex gap-2">
+                <Button variant={filter === 'new' ? 'default' : 'outline'} onClick={() => setFilter('new')}>Laporan Baru</Button>
+                <Button variant={filter === 'my_reports' ? 'default' : 'outline'} onClick={() => setFilter('my_reports')}>Laporan Saya</Button>
+             </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -297,12 +278,24 @@ export default function PetugasReportsPage() {
                         )}
                     </CardContent>
                     <CardFooter className="flex-col items-stretch sm:items-center sm:flex-row sm:justify-end">
-                      {renderActions(report)}
+                       <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
+                           {report.status === 'new' && (
+                                <Button size="sm" onClick={() => handleTakeReport(report)}>Ambil Laporan</Button>
+                           )}
+                           {report.status === 'in_progress' && report.handlerId === staffInfo?.id && (
+                                <Button size="sm" onClick={() => handleOpenReplyDialog(report)}>Selesaikan & Balas Laporan</Button>
+                           )}
+                           {report.status === 'resolved' && (
+                                <Badge variant="secondary">Selesai</Badge>
+                           )}
+                        </div>
                     </CardFooter>
                 </Card>
             ))
         ) : (
-            <div className="text-center py-12 text-muted-foreground">Belum ada laporan masuk.</div>
+            <div className="text-center py-12 text-muted-foreground">
+                {filter === 'new' ? 'Tidak ada laporan baru saat ini.' : 'Anda belum menangani laporan apapun.'}
+            </div>
         )}
       </CardContent>
       <CardFooter>
@@ -331,10 +324,11 @@ export default function PetugasReportsPage() {
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
         <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
             <DialogHeader>
-                <DialogTitle>Balas Laporan</DialogTitle>
+                <DialogTitle>Selesaikan & Balas Laporan</DialogTitle>
+                <CardDescription>Anda harus mengirim balasan untuk menyelesaikan laporan ini.</CardDescription>
             </DialogHeader>
             <Form {...replyForm}>
-                <form onSubmit={replyForm.handleSubmit(onReplySubmit)} className="space-y-4">
+                <form onSubmit={replyForm.handleSubmit(onReplySubmit)} className="space-y-4 pt-4">
                     <div className="space-y-2 text-sm">
                         <p><strong>Pelapor:</strong> {currentReport?.reporterName}</p>
                         <p className="text-muted-foreground break-words"><strong>Laporan:</strong> {currentReport?.reportText}</p>
@@ -346,7 +340,7 @@ export default function PetugasReportsPage() {
                         <FormItem>
                             <FormLabel>Pesan Balasan</FormLabel>
                             <FormControl>
-                                <Textarea {...field} rows={5} placeholder="Tulis balasan Anda di sini..." />
+                                <Textarea {...field} rows={5} placeholder="Contoh: Terima kasih atas laporannya. Kami telah menindaklanjuti dan situasi sudah aman terkendali." />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -358,7 +352,7 @@ export default function PetugasReportsPage() {
                         </DialogClose>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Kirim Balasan
+                            Kirim Balasan & Selesaikan
                         </Button>
                     </DialogFooter>
                 </form>

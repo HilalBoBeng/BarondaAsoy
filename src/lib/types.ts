@@ -119,26 +119,3 @@ export interface ChangeStaffEmailContext {
   newEmail: string;
   accessCode: string;
 }
-
-export interface LiveChatMessage {
-    id: string;
-    text: string;
-    timestamp: Timestamp;
-    senderId: string; // 'user' or agent's ID
-    senderName: string;
-}
-
-export interface LiveChatSession {
-    id: string;
-    userId: string;
-    userName: string;
-    userEmail: string;
-    userPhotoURL?: string;
-    status: 'pending' | 'active' | 'closed';
-    createdAt: Timestamp;
-    acceptedAt?: Timestamp;
-    closedAt?: Timestamp;
-    agentId?: string;
-    agentName?: string;
-    messages?: LiveChatMessage[];
-}

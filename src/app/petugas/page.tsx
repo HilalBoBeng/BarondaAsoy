@@ -14,12 +14,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Loader2, Info, Check, X, FileText, Shield, Star, ClipboardCheck } from 'lucide-react';
+import { Calendar, Clock, Loader2, Info, Check, X, FileText, Shield, Star, ClipboardCheck, Bell } from 'lucide-react';
 import type { ScheduleEntry, Notification } from '@/lib/types';
 import { isToday, format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const reasonSchema = z.object({
   reason: z.string().min(5, "Alasan harus diisi (minimal 5 karakter)."),
@@ -54,6 +55,8 @@ export default function PetugasPage() {
   const [stats, setStats] = useState({ assignedReports: 0, completedReports: 0, points: 0 });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const router = useRouter();
+
 
   useEffect(() => {
     const getGreeting = () => {
@@ -106,7 +109,7 @@ export default function PetugasPage() {
       getCountFromServer(completedQuery).then(snap => setStats(prev => ({ ...prev, completedReports: snap.data().count })));
       
       // Fetch Notifications
-      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", staffInfo.id));
+      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", staffInfo.id), where("read", "==", false), orderBy("createdAt", "desc"));
       const unsubNotifs = onSnapshot(notifsQuery, (snapshot) => {
         const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Notification}));
         setNotifications(notifs);
@@ -125,6 +128,15 @@ export default function PetugasPage() {
         return () => clearInterval(timer);
     }
   }, [toast]);
+  
+  const handleNotificationClick = async (notification: Notification) => {
+    const notifRef = doc(db, 'notifications', notification.id);
+    await updateDoc(notifRef, { read: true });
+
+    if(notification.link) {
+      router.push(notification.link);
+    }
+  }
 
   const statCards = [
     { title: "Laporan Ditugaskan", value: stats.assignedReports, icon: Shield },
@@ -205,11 +217,11 @@ export default function PetugasPage() {
                 {loadingNotifications ? <Skeleton className="h-24 w-full" /> : 
                 notifications.length > 0 ? (
                     notifications.map(notif => (
-                        <Link href={notif.link || '#'} key={notif.id} className="block border-l-4 border-primary pl-3 hover:bg-muted/50 rounded-r-md">
-                           <p className="font-semibold text-sm">{notif.title}</p>
+                        <button key={notif.id} onClick={() => handleNotificationClick(notif)} className="w-full text-left block border-l-4 border-primary pl-3 hover:bg-muted/50 rounded-r-md py-2">
+                           <p className="font-semibold text-sm flex items-center gap-2"><Bell className="h-4 w-4" />{notif.title}</p>
                            <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                            <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
-                        </Link>
+                        </button>
                     ))
                 ) : (
                     <p className="text-center text-sm text-muted-foreground py-4">Tidak ada pemberitahuan baru.</p>
