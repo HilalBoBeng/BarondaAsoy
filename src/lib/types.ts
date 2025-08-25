@@ -70,6 +70,7 @@ export interface Staff {
   addressType: 'kilongan' | 'luar_kilongan';
   addressDetail: string;
   accessCode: string;
+  status: 'pending' | 'active' | 'rejected';
 }
 
 export interface Notification {

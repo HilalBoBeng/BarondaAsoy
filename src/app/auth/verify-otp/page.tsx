@@ -47,6 +47,7 @@ export default function VerifyOtpPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationContext, setVerificationContext] = useState<any>(null);
   const [otpVerified, setOtpVerified] = useState(false);
+  const [isStaffFlow, setIsStaffFlow] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -214,7 +215,6 @@ export default function VerifyOtpPage() {
           localStorage.setItem('resetPasswordEmail', verificationContext.email);
           router.push('/auth/reset-password');
         } else if (verificationContext.flow === 'staffRegister') {
-           // Create staff account and send access code
             const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
             await addDoc(collection(db, 'staff'), {
                 name: verificationContext.name,
@@ -222,17 +222,15 @@ export default function VerifyOtpPage() {
                 phone: verificationContext.phone,
                 addressType: verificationContext.addressType,
                 addressDetail: verificationContext.addressDetail,
-                accessCode: accessCode
-            });
-            await sendStaffAccessCode({
-                email: verificationContext.email,
-                name: verificationContext.name,
                 accessCode: accessCode,
+                status: 'pending' // Set status to pending
             });
             setOtpVerified(true);
+            setIsStaffFlow(true);
         } else if (verificationContext.flow === 'staffResetPassword') {
             await resetStaffPassword({ email: verificationContext.email });
             setOtpVerified(true);
+            setIsStaffFlow(true);
         }
 
       } else {
@@ -250,6 +248,11 @@ export default function VerifyOtpPage() {
   };
 
   if (otpVerified) {
+    const successTitle = isStaffFlow ? "Pendaftaran Sedang Ditinjau" : "Proses Selesai";
+    const successDescription = isStaffFlow 
+      ? "Pendaftaran Anda telah berhasil dikirim dan sedang menunggu persetujuan dari admin. Anda akan menerima kode akses melalui email setelah disetujui."
+      : "Informasi akses Anda telah dikirim ke email. Silakan periksa kotak masuk Anda.";
+      
     return (
         <>
          <div className="flex flex-col items-center justify-center mb-6 text-center">
@@ -259,9 +262,9 @@ export default function VerifyOtpPage() {
          </div>
           <Card>
             <CardHeader>
-              <CardTitle>Proses Selesai</CardTitle>
+              <CardTitle>{successTitle}</CardTitle>
               <CardDescription>
-                Informasi akses Anda telah dikirim ke email. Silakan periksa kotak masuk Anda.
+                {successDescription}
               </CardDescription>
             </CardHeader>
             <CardFooter>

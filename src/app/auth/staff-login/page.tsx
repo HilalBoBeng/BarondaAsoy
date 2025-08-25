@@ -93,6 +93,11 @@ export default function StaffLoginPage() {
 
         const staffData = staffSnapshot.docs[0].data();
 
+        if (staffData.status !== 'active') {
+            throw new Error("Akun Anda belum disetujui oleh admin.");
+        }
+
+
         localStorage.setItem('userRole', 'petugas');
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffSnapshot.docs[0].id }));
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });

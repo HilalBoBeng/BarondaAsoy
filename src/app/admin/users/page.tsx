@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { db, app } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, addDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
+import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, updateDoc, writeBatch, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2 } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -26,6 +26,9 @@ import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { id } from 'date-fns/locale';
 import type { AppUser, Staff } from '@/lib/types';
+import { sendStaffAccessCode } from '@/ai/flows/send-staff-access-code';
+import { Badge } from '@/components/ui/badge';
+
 
 const blockUserSchema = z.object({
   blockStarts: z.date({ required_error: "Tanggal mulai blokir harus diisi." }),
@@ -34,32 +37,25 @@ const blockUserSchema = z.object({
 });
 type BlockUserFormValues = z.infer<typeof blockUserSchema>;
 
-const addStaffSchema = z.object({
-  name: z.string().min(1, "Nama staf tidak boleh kosong."),
-  phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
-  accessCode: z.string().min(6, "Kode akses minimal 6 karakter."),
-});
-type AddStaffFormValues = z.infer<typeof addStaffSchema>;
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [pendingStaff, setPendingStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  // State for dialogs
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
-  const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   const blockForm = useForm<BlockUserFormValues>({ resolver: zodResolver(blockUserSchema) });
-  const staffForm = useForm<AddStaffFormValues>({ resolver: zodResolver(addStaffSchema) });
 
   useEffect(() => {
     setLoading(true);
     const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    const staffQuery = query(collection(db, "staff"), orderBy("name"));
+    const activeStaffQuery = query(collection(db, "staff"), where("status", "==", "active"), orderBy("name"));
+    const pendingStaffQuery = query(collection(db, "staff"), where("status", "==", "pending"), orderBy("name"));
 
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({
@@ -68,26 +64,27 @@ export default function UsersAdminPage() {
             createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID') || 'N/A'
         })) as AppUser[];
         setUsers(usersData);
-        if (loading) setLoading(false);
-    }, (error) => {
-        console.error("Error fetching users:", error);
-        toast({ variant: 'destructive', title: "Gagal Memuat Warga", description: "Tidak dapat mengambil data warga." });
-    });
+        setLoading(false);
+    }, (error) => console.error("Error fetching users:", error));
     
-    const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
+    const unsubStaff = onSnapshot(activeStaffQuery, (snapshot) => {
         const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
         setStaff(staffData);
-         if (loading) setLoading(false);
-    }, (error) => {
-        console.error("Error fetching staff:", error);
-        toast({ variant: 'destructive', title: "Gagal Memuat Staf", description: "Tidak dapat mengambil data staf." });
-    });
+         setLoading(false);
+    }, (error) => console.error("Error fetching staff:", error));
+
+     const unsubPendingStaff = onSnapshot(pendingStaffQuery, (snapshot) => {
+        const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+        setPendingStaff(staffData);
+         setLoading(false);
+    }, (error) => console.error("Error fetching pending staff:", error));
     
     return () => {
         unsubUsers();
         unsubStaff();
+        unsubPendingStaff();
     };
-  }, [toast]);
+  }, []);
 
   const handleOpenBlockDialog = (user: AppUser) => {
     setCurrentUser(user);
@@ -109,7 +106,6 @@ export default function UsersAdminPage() {
         toast({ title: "Berhasil", description: `${currentUser.displayName} telah diblokir.` });
         setIsBlockDialogOpen(false);
     } catch (error) {
-        console.error("Error blocking user:", error);
         toast({ variant: "destructive", title: "Gagal", description: "Gagal memblokir pengguna." });
     } finally {
         setIsSubmitting(false);
@@ -127,25 +123,35 @@ export default function UsersAdminPage() {
         });
         toast({ title: "Berhasil", description: `Blokir telah dibuka.` });
     } catch (error) {
-        console.error("Error unblocking user:", error);
         toast({ variant: "destructive", title: "Gagal", description: "Gagal membuka blokir pengguna." });
     }
   };
 
-  const handleAddStaff = async (data: AddStaffFormValues) => {
+  const handleStaffApproval = async (staffMember: Staff, approved: boolean) => {
     setIsSubmitting(true);
+    const staffRef = doc(db, 'staff', staffMember.id);
     try {
-        await addDoc(collection(db, 'staff'), data);
-        toast({ title: "Berhasil", description: "Staf baru berhasil ditambahkan."});
-        setIsAddStaffDialogOpen(false);
-        staffForm.reset();
-    } catch(error) {
-        console.error("Error adding staff:", error);
-        toast({ variant: "destructive", title: "Gagal", description: "Gagal menambahkan staf." });
+        if (approved) {
+            await updateDoc(staffRef, { status: 'active' });
+            await sendStaffAccessCode({
+                email: staffMember.email,
+                name: staffMember.name,
+                accessCode: staffMember.accessCode
+            });
+            toast({ title: "Berhasil", description: `${staffMember.name} telah disetujui dan kode akses telah dikirim.` });
+        } else {
+            // Reject: just delete the document
+            await deleteDoc(staffRef);
+            toast({ title: "Berhasil", description: `Pendaftaran ${staffMember.name} telah ditolak.` });
+        }
+    } catch (error) {
+        const action = approved ? "menyetujui" : "menolak";
+        toast({ variant: "destructive", title: "Gagal", description: `Gagal ${action} pendaftaran.`});
     } finally {
         setIsSubmitting(false);
     }
-  };
+  }
+
 
   const handleDeleteStaff = async (id: string) => {
      try {
@@ -166,14 +172,15 @@ export default function UsersAdminPage() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="users">
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-            <TabsList>
-              <TabsTrigger value="users">Warga</TabsTrigger>
-              <TabsTrigger value="staff">Staf</TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="users">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="users">Warga</TabsTrigger>
+            <TabsTrigger value="staff">Staf Aktif</TabsTrigger>
+            <TabsTrigger value="pending-staff">
+                Persetujuan Staf {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="users" className="mt-4">
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
@@ -231,13 +238,14 @@ export default function UsersAdminPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="staff">
+          <TabsContent value="staff" className="mt-4">
              <div className="rounded-lg border">
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Nomor HP</TableHead>
                             <TableHead>Kode Akses</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
@@ -249,6 +257,7 @@ export default function UsersAdminPage() {
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
@@ -257,6 +266,7 @@ export default function UsersAdminPage() {
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
                                     <TableCell>{s.email}</TableCell>
+                                    <TableCell>{s.phone}</TableCell>
                                     <TableCell>{s.accessCode}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
@@ -279,13 +289,68 @@ export default function UsersAdminPage() {
                             ))
                          ) : (
                              <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">Belum ada staf ditambahkan.</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center">Belum ada staf aktif.</TableCell>
                             </TableRow>
                          )}
                     </TableBody>
                 </Table>
              </div>
           </TabsContent>
+
+          <TabsContent value="pending-staff" className="mt-4">
+             <div className="rounded-lg border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nama</TableHead>
+                            <TableHead>Email & HP</TableHead>
+                            <TableHead>Alamat</TableHead>
+                            <TableHead className="text-right">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                         {loading ? (
+                             Array.from({ length: 1 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-10 w-24 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))
+                         ) : pendingStaff.length > 0 ? (
+                            pendingStaff.map((s) => (
+                                <TableRow key={s.id}>
+                                    <TableCell>{s.name}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span>{s.email}</span>
+                                            <span className="text-xs text-muted-foreground">{s.phone}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{s.addressDetail}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex gap-2 justify-end">
+                                            <Button size="sm" onClick={() => handleStaffApproval(s, true)} disabled={isSubmitting}>
+                                                <Check className="h-4 w-4 mr-2" /> Setujui
+                                            </Button>
+                                            <Button size="sm" variant="destructive" onClick={() => handleStaffApproval(s, false)} disabled={isSubmitting}>
+                                                <X className="h-4 w-4 mr-2" /> Tolak
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                         ) : (
+                             <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">Tidak ada pendaftaran staf yang tertunda.</TableCell>
+                            </TableRow>
+                         )}
+                    </TableBody>
+                </Table>
+             </div>
+          </TabsContent>
+
         </Tabs>
       </CardContent>
     </Card>
