@@ -49,7 +49,14 @@ export default function UsersAdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
-  const blockForm = useForm<BlockUserFormValues>({ resolver: zodResolver(blockUserSchema) });
+  const blockForm = useForm<BlockUserFormValues>({ 
+    resolver: zodResolver(blockUserSchema),
+    defaultValues: {
+        blockReason: '',
+        blockStarts: new Date(),
+        blockEnds: new Date(),
+    }
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -83,7 +90,11 @@ export default function UsersAdminPage() {
 
   const handleOpenBlockDialog = (user: AppUser) => {
     setCurrentUser(user);
-    blockForm.reset();
+    blockForm.reset({
+        blockReason: '',
+        blockStarts: new Date(),
+        blockEnds: new Date(),
+    });
     setIsBlockDialogOpen(true);
   };
   
@@ -408,3 +419,5 @@ export default function UsersAdminPage() {
     </>
   );
 }
+
+    
