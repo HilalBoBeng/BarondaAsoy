@@ -36,7 +36,6 @@ const scheduleSchema = z.object({
   area: z.string().min(1, "Area tidak boleh kosong."),
   date: z.date({ required_error: "Tanggal patroli harus diisi." }),
   time: z.string().min(1, "Waktu patroli tidak boleh kosong.").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?-\s?([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format waktu salah. Contoh: 20:00 - 22:00"),
-  status: z.enum(['Pending', 'In Progress', 'Completed']),
 });
 
 type ScheduleFormValues = z.infer<typeof scheduleSchema>;
@@ -56,7 +55,6 @@ export default function ScheduleAdminPage() {
       officer: '',
       area: '',
       time: '',
-      status: 'Pending',
     },
   });
   
@@ -88,12 +86,14 @@ export default function ScheduleAdminPage() {
   useEffect(() => {
     if (isDialogOpen) {
       if (currentSchedule) {
-        form.reset({
-          ...currentSchedule,
-          date: currentSchedule.date instanceof Timestamp ? currentSchedule.date.toDate() : (currentSchedule.date as Date),
-        });
+        const defaultValues = {
+            ...currentSchedule,
+            date: currentSchedule.date instanceof Timestamp ? currentSchedule.date.toDate() : (currentSchedule.date as Date),
+        };
+        delete (defaultValues as any).status; // remove status from form values
+        form.reset(defaultValues);
       } else {
-        form.reset({ officer: '', area: '', time: '', status: 'Pending', date: undefined });
+        form.reset({ officer: '', area: '', time: '', date: undefined });
       }
     }
   }, [isDialogOpen, currentSchedule, form]);
@@ -106,16 +106,20 @@ export default function ScheduleAdminPage() {
   const onSubmit = async (values: ScheduleFormValues) => {
     setIsSubmitting(true);
     try {
-      const dataToSave = {
-        ...values,
-        date: Timestamp.fromDate(values.date)
-      };
-
       if (currentSchedule) {
+         const dataToUpdate = {
+            ...values,
+            date: Timestamp.fromDate(values.date)
+         };
         const docRef = doc(db, 'schedules', currentSchedule.id);
-        await updateDoc(docRef, dataToSave);
+        await updateDoc(docRef, dataToUpdate);
         toast({ title: "Berhasil", description: "Jadwal berhasil diperbarui." });
       } else {
+         const dataToSave = {
+            ...values,
+            date: Timestamp.fromDate(values.date),
+            status: 'Pending' as ScheduleEntry['status'],
+         };
         await addDoc(collection(db, 'schedules'), dataToSave);
         toast({ title: "Berhasil", description: "Jadwal berhasil dibuat." });
       }
@@ -307,20 +311,6 @@ export default function ScheduleAdminPage() {
                 )} />
                 <FormField control={form.control} name="time" render={({ field }) => (
                   <FormItem><FormLabel>Waktu</FormLabel><FormControl><Input placeholder="20:00 - 22:00" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="status" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="Pending">Tertunda</SelectItem>
-                                <SelectItem value="In Progress">Berlangsung</SelectItem>
-                                <SelectItem value="Completed">Selesai</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
                 )} />
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
