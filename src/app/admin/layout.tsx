@@ -68,7 +68,7 @@ export default function AdminLayout({
   const navItems = [
     { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-    { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
+    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
     { href: "/admin/live-chat", icon: MessageCircle, label: "Live Chat" },

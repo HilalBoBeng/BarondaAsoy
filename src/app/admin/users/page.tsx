@@ -120,7 +120,7 @@ export default function UsersAdminPage() {
     <>
     <Card>
       <CardHeader>
-        <CardTitle>Manajemen Pengguna & Staf</CardTitle>
+        <CardTitle>Manajemen Pengguna</CardTitle>
         <CardDescription>Kelola warga yang terdaftar dan staf (petugas) di aplikasi.</CardDescription>
       </CardHeader>
       <CardContent>
