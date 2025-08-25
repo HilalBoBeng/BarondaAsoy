@@ -37,50 +37,65 @@ export default function ChatbotWidget() {
     const user = auth.currentUser;
     const [liveChatSession, setLiveChatSession] = useState<LiveChatSession | null>(null);
 
-    // Effect to restore session
+    // Effect to check for and restore an active session from localStorage
     useEffect(() => {
-        const checkSession = async () => {
+        const checkAndRestoreSession = async () => {
             if (!user) return;
             const sessionId = localStorage.getItem(CHAT_SESSION_ID_KEY);
             if (sessionId) {
                 const sessionRef = doc(db, 'live_chats', sessionId);
                 const sessionSnap = await getDoc(sessionRef);
                 if (sessionSnap.exists()) {
-                    const sessionData = sessionSnap.data() as LiveChatSession;
+                    const sessionData = { id: sessionId, ...sessionSnap.data() } as LiveChatSession;
                     if (sessionData.status !== 'closed') {
-                        setLiveChatSession({ ...sessionData, id: sessionId });
+                        setLiveChatSession(sessionData); // Restore session state
                         setChatMode('live');
                         setIsOpen(true);
                     } else {
+                        // Clean up if the session was closed
                         localStorage.removeItem(CHAT_SESSION_ID_KEY);
                     }
                 } else {
-                    localStorage.removeItem(CHAT_SESSION_ID_KEY);
+                     localStorage.removeItem(CHAT_SESSION_ID_KEY);
                 }
             }
         };
-        checkSession();
+        checkAndRestoreSession();
     }, [user]);
-    
-    // Effect to subscribe to live chat messages
+
+    // Effect to subscribe to live chat session updates (status changes) and messages
     useEffect(() => {
-        if (liveChatSession?.id) {
-            const messagesQuery = collection(db, `live_chats/${liveChatSession.id}/messages`);
-            const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-                const newMessages: Message[] = snapshot.docs
-                    .map(doc => {
-                        const data = doc.data() as LiveChatMessage;
-                        return {
-                            sender: data.senderId === user?.uid ? 'user' : 'agent',
-                            text: data.text
-                        };
-                    })
-                    .sort((a,b) => (a as any).timestamp - (b as any).timestamp); // Sorting might be needed if Firestore doesn't guarantee order
-                setMessages(newMessages);
-            });
-            return () => unsubscribe();
-        }
-    }, [liveChatSession, user?.uid]);
+        if (!liveChatSession?.id) return;
+
+        // Listen for session status changes (e.g., pending -> active)
+        const sessionUnsub = onSnapshot(doc(db, 'live_chats', liveChatSession.id), (doc) => {
+            if (doc.exists()) {
+                const updatedSession = { id: doc.id, ...doc.data() } as LiveChatSession;
+                setLiveChatSession(updatedSession); // Update the session state in real-time
+            }
+        });
+
+        // Listen for new messages
+        const messagesQuery = collection(db, `live_chats/${liveChatSession.id}/messages`);
+        const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
+            const newMessages: Message[] = snapshot.docs
+                .map(doc => {
+                    const data = doc.data() as LiveChatMessage;
+                    return {
+                        sender: data.senderId === user?.uid ? 'user' : 'agent',
+                        text: data.text
+                    };
+                })
+                .sort((a,b) => (a as any).timestamp - (b as any).timestamp); 
+            setMessages(newMessages);
+        });
+
+        return () => {
+            sessionUnsub();
+            messagesUnsub();
+        };
+
+    }, [liveChatSession?.id, user?.uid]);
 
 
     useEffect(() => {
@@ -154,7 +169,15 @@ export default function ChatbotWidget() {
             });
 
             localStorage.setItem(CHAT_SESSION_ID_KEY, newSessionRef.id);
-            setLiveChatSession({ id: newSessionRef.id } as LiveChatSession);
+            const newSessionData = {
+                id: newSessionRef.id,
+                 userId: user.uid,
+                userName: user.displayName,
+                userEmail: user.email,
+                status: 'pending',
+            } as LiveChatSession;
+
+            setLiveChatSession(newSessionData);
             setMessages([{ sender: 'agent', text: `Anda berada di antrean. Mohon tunggu, seorang petugas akan segera melayani Anda.` }]);
 
         } catch (error) {
