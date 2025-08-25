@@ -109,10 +109,11 @@ export default function PetugasPage() {
       getCountFromServer(completedQuery).then(snap => setStats(prev => ({ ...prev, completedReports: snap.data().count })));
       
       // Fetch Notifications
-      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", staffInfo.id), where("read", "==", false), orderBy("createdAt", "desc"));
+      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", staffInfo.id), orderBy("createdAt", "desc"));
       const unsubNotifs = onSnapshot(notifsQuery, (snapshot) => {
         const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Notification}));
-        setNotifications(notifs);
+        const unreadNotifs = notifs.filter(n => !n.read);
+        setNotifications(unreadNotifs);
         setLoadingNotifications(false);
       });
 
@@ -172,8 +173,8 @@ export default function PetugasPage() {
                             <CardTitle>Jadwal Anda Hari Ini</CardTitle>
                             <CardDescription>{format(new Date(), "EEEE, d MMMM yyyy", { locale: id })}</CardDescription>
                         </div>
-                        <Badge variant={statusConfig[scheduleToday.status].variant} className={statusConfig[scheduleToday.status].className}>
-                            {statusConfig[scheduleToday.status].label}
+                        <Badge variant={statusConfig[scheduleToday.status]?.variant || 'default'} className={statusConfig[scheduleToday.status]?.className}>
+                            {statusConfig[scheduleToday.status]?.label || scheduleToday.status}
                         </Badge>
                     </div>
                 </CardHeader>

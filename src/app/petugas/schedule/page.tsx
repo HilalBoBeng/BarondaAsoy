@@ -143,12 +143,12 @@ export default function PetugasSchedulePage() {
          <CardFooter className="flex-col sm:flex-row gap-2">
             {schedule.status === 'Pending' && (
                 <>
-                    <Button className="w-full sm:w-auto" onClick={() => handleUpdateStatus(schedule, 'In Progress')}><Check className="mr-2 h-4 w-4" /> Konfirmasi Hadir</Button>
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Izin')}><FileText className="mr-2 h-4 w-4" /> Ajukan Izin</Button>
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => handleUpdateStatus(schedule, 'In Progress')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Konfirmasi Hadir</Button>
+                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Izin')} disabled={isSubmitting}><FileText className="mr-2 h-4 w-4" /> Ajukan Izin</Button>
+                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')} disabled={isSubmitting}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                 </>
             )}
-            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus(schedule, 'Pending Review')}><Check className="mr-2 h-4 w-4" /> Ajukan Penyelesaian</Button>}
+            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus(schedule, 'Pending Review')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Ajukan Penyelesaian</Button>}
             {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit' || schedule.status === 'Pending Review') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
         </CardFooter>
       </Card>

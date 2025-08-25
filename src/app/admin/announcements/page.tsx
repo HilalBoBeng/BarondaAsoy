@@ -32,6 +32,7 @@ export default function AnnouncementsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const { toast } = useToast();
 
@@ -110,23 +111,29 @@ export default function AnnouncementsAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
+    setIsDeleting(id);
     try {
       await deleteDoc(doc(db, 'announcements', id));
       toast({ title: "Berhasil", description: "Pengumuman berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus pengumuman." });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
   const renderActions = (ann: Announcement) => (
     <div className="flex gap-2 justify-end">
-      <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)}>
+      <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)} disabled={isSubmitting || !!isDeleting}>
         <Edit className="h-4 w-4" />
         <span className="sr-only">Edit</span>
       </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /><span className="sr-only">Hapus</span></Button>
+          <Button variant="destructive" size="sm" disabled={isSubmitting || !!isDeleting}>
+            {isDeleting === ann.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
+            <span className="sr-only">Hapus</span>
+          </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -151,7 +158,7 @@ export default function AnnouncementsAdminPage() {
           <CardTitle>Manajemen Pengumuman</CardTitle>
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
         </div>
-        <Button onClick={() => handleDialogOpen()}>
+        <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Buat Pengumuman
         </Button>

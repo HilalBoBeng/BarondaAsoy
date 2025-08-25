@@ -40,6 +40,7 @@ export default function EmergencyContactsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [currentContact, setCurrentContact] = useState<EmergencyContact | null>(null);
   const { toast } = useToast();
 
@@ -93,22 +94,27 @@ export default function EmergencyContactsAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
+    setIsDeleting(id);
     try {
       await deleteDoc(doc(db, 'emergency_contacts', id));
       toast({ title: "Berhasil", description: "Kontak berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus kontak." });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
   const renderActions = (contact: EmergencyContact) => (
       <div className="flex gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => handleDialogOpen(contact)}>
+          <Button variant="outline" size="sm" onClick={() => handleDialogOpen(contact)} disabled={isSubmitting || !!isDeleting}>
               <Edit className="h-4 w-4" />
           </Button>
           <AlertDialog>
               <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
+                  <Button variant="destructive" size="sm" disabled={isSubmitting || !!isDeleting}>
+                    {isDeleting === contact.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
+                  </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                   <AlertDialogHeader>
@@ -131,7 +137,7 @@ export default function EmergencyContactsAdminPage() {
           <CardTitle>Manajemen Kontak Darurat</CardTitle>
           <CardDescription>Tambah, edit, atau hapus kontak penting.</CardDescription>
         </div>
-        <Button onClick={() => handleDialogOpen()}>
+        <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Tambah Kontak
         </Button>

@@ -73,7 +73,7 @@ export default function PetugasLayout({
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
-    router.push('/auth/staff-login');
+    router.push('/');
   };
 
   const navItems = [

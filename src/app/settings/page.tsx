@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn } from "lucide-react"
+import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn, Home } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -106,7 +106,7 @@ export default function SettingsPage() {
   
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/auth/login');
+    router.push('/');
   };
 
   return (
@@ -117,7 +117,8 @@ export default function SettingsPage() {
           </h1>
           <Button asChild variant="outline">
             <Link href="/">
-              Kembali ke Halaman Utama
+              <Home className="mr-2 h-4 w-4" />
+              Halaman Utama
             </Link>
           </Button>
        </header>
