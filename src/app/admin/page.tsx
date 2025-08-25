@@ -4,11 +4,9 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { Shield, Megaphone, Users, CalendarCheck, FileText, UserCheck } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Shield, Megaphone, Users, UserCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { Report } from "@/lib/types";
@@ -26,8 +24,8 @@ export default function AdminPage() {
 
     useEffect(() => {
         // Fetch stats
-        const reportsQuery = query(collection(db, "reports"), where('triageResult.threatLevel', 'in', ['medium', 'high']));
-        const usersQuery = collection(db, "users"); // Assuming you have a 'users' collection
+        const reportsQuery = query(collection(db, "reports"), where('status', '!=', 'resolved'));
+        const usersQuery = collection(db, "users");
         const scheduleQuery = query(collection(db, 'schedules'), where('status', '==', 'In Progress'));
         const announcementsQuery = collection(db, "announcements");
 
@@ -37,7 +35,6 @@ export default function AdminPage() {
             onSnapshot(announcementsQuery, (snapshot) => setStats(prev => ({ ...prev, totalAnnouncements: snapshot.size }))),
         ];
 
-        // Fetch total users once, as it's less likely to change frequently
         getDocs(usersQuery).then(snapshot => {
             setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
         }).finally(() => setLoadingStats(false));
@@ -48,7 +45,7 @@ export default function AdminPage() {
             const reports = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                createdAt: doc.data().createdAt.toDate().toLocaleDateString('id-ID')
+                createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID')
             })) as Report[];
             setRecentReports(reports);
             setLoadingReports(false);
@@ -69,14 +66,6 @@ export default function AdminPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Dasbor Admin</h1>
-                    <p className="text-muted-foreground">Ringkasan aktivitas dan manajemen sistem.</p>
-                </div>
-            </div>
-
-            {/* Stat Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {loadingStats ? (
                     Array.from({ length: 4 }).map((_, i) => (
@@ -100,11 +89,9 @@ export default function AdminPage() {
                 )}
             </div>
             
-            {/* Recent Reports */}
             <Card>
                 <CardHeader>
                     <CardTitle>Laporan Terbaru</CardTitle>
-                    <CardDescription>5 laporan terakhir yang masuk dari warga.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <div className="rounded-lg border">
@@ -135,7 +122,7 @@ export default function AdminPage() {
                                             <TableCell className="max-w-sm truncate">{report.reportText}</TableCell>
                                             <TableCell className="text-right">
                                                 {report.triageResult ? (
-                                                    <Badge variant={report.triageResult.threatLevel === 'high' ? 'destructive' : 'secondary'}>
+                                                    <Badge variant={report.triageResult.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
                                                         {report.triageResult.threatLevel}
                                                     </Badge>
                                                 ) : <span className="text-muted-foreground text-xs">N/A</span>}
