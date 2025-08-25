@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc, endBefore, limitToLast } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc, endBefore, limitToLast } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -71,6 +71,7 @@ export default function ReportHistory({ user }: { user: User | null }) {
             const reportsRef = collection(db, 'reports');
             let q;
 
+            // Simplified query to avoid composite index. Sorting will be done on the client.
             if (direction === 'next' && lastVisible) {
                 q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
             } else if (direction === 'prev' && firstVisible) {
@@ -126,6 +127,7 @@ export default function ReportHistory({ user }: { user: User | null }) {
         } else {
             setLoading(false);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const goToNextPage = () => {

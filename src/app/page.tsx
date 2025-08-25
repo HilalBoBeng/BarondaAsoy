@@ -18,21 +18,23 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy, updateDoc } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail, Trash } from "lucide-react";
+import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy, updateDoc, getDoc } from 'firebase/firestore';
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail, Trash, ShieldBan } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Notification } from "@/lib/types";
+import type { Notification, AppUser } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [userInfo, setUserInfo] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [greeting, setGreeting] = useState("Selamat Datang");
@@ -73,30 +75,39 @@ export default function Home() {
       return;
     }
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
         setUser(currentUser);
-        setLoading(false);
         if (currentUser) {
-            // Simplified query to avoid composite index requirement.
-            const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if(userDocSnap.exists()) {
+                const userData = userDocSnap.data() as AppUser;
+                setUserInfo(userData);
+                if (userData.isBlocked) {
+                    // Don't setLoading(false) here, so the loading screen persists
+                    return; 
+                }
+            }
+
+            const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
             const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
                 const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-                // Sort manually on the client-side
-                const sortedNotifs = notifs.sort((a, b) => 
-                    (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime()
-                );
-                setNotifications(sortedNotifs);
+                setNotifications(notifs);
             }, (error) => {
                 console.error("Error fetching notifications: ", error);
             });
+             setLoading(false);
             return () => unsubscribeNotifications();
         } else {
+            setUserInfo(null);
             setNotifications([]);
+            setLoading(false);
         }
     });
 
     return () => unsubscribeAuth();
-}, [auth, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth, router]);
 
   const handleLogout = async () => {
     try {
@@ -148,6 +159,27 @@ export default function Home() {
       </div>
     );
   }
+  
+  if (userInfo?.isBlocked) {
+    return (
+        <AlertDialog open={true}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2"><ShieldBan className="h-6 w-6 text-destructive"/>Akun Anda Diblokir</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Akun Anda telah ditangguhkan oleh admin.
+                        {userInfo.blockReason && <p className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</p>}
+                        {userInfo.blockEnds && <p className="mt-1"><strong>Blokir berakhir:</strong> {userInfo.blockEnds}</p>}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <p className="text-sm text-muted-foreground w-full text-center">Silakan hubungi admin atau petugas untuk informasi lebih lanjut.</p>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+  }
+
 
   return (
     <>
@@ -380,6 +412,9 @@ export default function Home() {
             <div className="py-4 whitespace-pre-wrap break-words">
                 <p>{selectedNotification?.message}</p>
             </div>
+            <DialogFooter>
+                <Button onClick={() => setSelectedNotification(null)}>Tutup</Button>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
     </>
