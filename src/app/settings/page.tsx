@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useTheme } from "next-themes"
@@ -9,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Mail } from "lucide-react"
 import Link from "next/link"
 
 export default function SettingsPage() {
@@ -59,9 +60,19 @@ export default function SettingsPage() {
                 </Card>
             </div>
         </main>
-        <footer className="border-t bg-background py-4 text-center text-sm text-muted-foreground px-4">
-            © {new Date().getFullYear()} Baronda - Siskamling Digital Kelurahan Kilongan.
+        <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
+            <div className="space-y-2">
+                <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
+                <div className="flex justify-center">
+                    <a href="mailto:admin@bobeng.icu" className="inline-flex items-center gap-2 text-primary hover:underline">
+                        <Mail className="h-4 w-4" />
+                        <span>Hubungi Admin</span>
+                    </a>
+                </div>
+            </div>
         </footer>
     </div>
   )
 }
+
+    

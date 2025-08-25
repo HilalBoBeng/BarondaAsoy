@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -329,8 +329,16 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="border-t bg-background py-4 text-center text-sm text-muted-foreground px-4">
-        © {new Date().getFullYear()} Baronda - Siskamling Digital Kelurahan Kilongan.
+      <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
+        <div className="space-y-2">
+            <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
+            <div className="flex justify-center">
+                 <a href="mailto:admin@bobeng.icu" className="inline-flex items-center gap-2 text-primary hover:underline">
+                    <Mail className="h-4 w-4" />
+                    <span>Hubungi Admin</span>
+                </a>
+            </div>
+        </div>
       </footer>
     </div>
   );
