@@ -49,7 +49,7 @@ const verifyPasswordAndSendChangeEmailOtpFlow = ai.defineFlow(
       // 2. If re-authentication is successful, send an OTP to the *new* email address.
       const otpResult = await sendOtp({
         email: newEmail,
-        context: 'register', // Using 'register' context to imply a verification step
+        context: 'changeEmail',
       });
 
       if (!otpResult.success) {

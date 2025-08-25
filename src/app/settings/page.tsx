@@ -9,9 +9,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card"
-import { Moon, Sun, Mail, KeyRound, Loader2, AtSign } from "lucide-react"
+import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -23,6 +22,7 @@ import { useState, useEffect } from 'react'
 import { useToast } from "@/hooks/use-toast"
 import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword, signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
+import { verifyPasswordAndSendChangeEmailOtp } from "@/ai/flows/change-email"
 
 // Schemas
 const passwordSchema = z.object({
@@ -46,12 +46,6 @@ export default function SettingsPage() {
   const auth = getAuth();
   const router = useRouter();
   const user = auth.currentUser;
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/login');
-    }
-  }, [user, router]);
 
   const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema) });
   const emailForm = useForm<EmailFormValues>({ resolver: zodResolver(emailSchema) });
@@ -78,26 +72,28 @@ export default function SettingsPage() {
     setIsEmailSubmitting(true);
 
     try {
-      const credential = EmailAuthProvider.credential(user.email, data.password);
-      await reauthenticateWithCredential(user, credential);
+        const result = await verifyPasswordAndSendChangeEmailOtp({
+            currentEmail: user.email,
+            newEmail: data.newEmail,
+            password: data.password,
+        });
 
-      // In a real app, you would now trigger a Genkit flow to send an OTP to the new email.
-      // For this simulation, we'll assume the OTP is verified and proceed.
-      // await sendChangeEmailOtp({ newEmail: data.newEmail, userId: user.uid });
-      
-      // Store context and redirect to OTP page
-      localStorage.setItem('verificationContext', JSON.stringify({
-          flow: 'changeEmail',
-          email: user.email, // old email for re-auth
-          newEmail: data.newEmail,
-          password: data.password // for re-auth after OTP
-      }));
+        if (result.success) {
+            // Store context and redirect to OTP page
+            localStorage.setItem('verificationContext', JSON.stringify({
+                flow: 'changeEmail',
+                currentEmail: user.email, // old email
+                newEmail: data.newEmail,
+                password: data.password // for re-auth after OTP
+            }));
+             toast({ title: "Verifikasi Diperlukan", description: `Kode OTP telah dikirim ke ${data.newEmail}.` });
+             router.push('/auth/verify-otp');
+        } else {
+            throw new Error(result.message);
+        }
 
-      toast({ title: "Verifikasi Diperlukan", description: `Kode OTP telah dikirim ke ${data.newEmail}.` });
-      router.push('/auth/verify-otp');
-
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Gagal", description: "Kata sandi salah atau terjadi kesalahan." });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: "Gagal", description: error.message || "Kata sandi salah atau terjadi kesalahan." });
     } finally {
       setIsEmailSubmitting(false);
     }
@@ -128,73 +124,87 @@ export default function SettingsPage() {
                         <CardDescription>Ubah kata sandi atau email Anda.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
-                        {/* Change Password */}
-                        <Form {...passwordForm}>
-                            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                                <h3 className="font-semibold flex items-center gap-2"><KeyRound className="h-5 w-5" />Ubah Kata Sandi</h3>
-                                <FormField
-                                    control={passwordForm.control}
-                                    name="currentPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                                            <FormControl><Input type="password" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={passwordForm.control}
-                                    name="newPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Kata Sandi Baru</FormLabel>
-                                            <FormControl><Input type="password" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit" disabled={isPasswordSubmitting}>
-                                    {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Simpan Kata Sandi
-                                </Button>
-                            </form>
-                        </Form>
+                      {user ? (
+                        <>
+                          {/* Change Password */}
+                          <Form {...passwordForm}>
+                              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                                  <h3 className="font-semibold flex items-center gap-2"><KeyRound className="h-5 w-5" />Ubah Kata Sandi</h3>
+                                  <FormField
+                                      control={passwordForm.control}
+                                      name="currentPassword"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Kata Sandi Saat Ini</FormLabel>
+                                              <FormControl><Input type="password" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={passwordForm.control}
+                                      name="newPassword"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Kata Sandi Baru</FormLabel>
+                                              <FormControl><Input type="password" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <Button type="submit" disabled={isPasswordSubmitting}>
+                                      {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                      Simpan Kata Sandi
+                                  </Button>
+                              </form>
+                          </Form>
 
-                        <Separator />
+                          <Separator />
 
-                        {/* Change Email */}
-                        <Form {...emailForm}>
-                             <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
-                                <h3 className="font-semibold flex items-center gap-2"><AtSign className="h-5 w-5" />Ubah Email</h3>
-                                 <FormField
-                                    control={emailForm.control}
-                                    name="newEmail"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email Baru</FormLabel>
-                                            <FormControl><Input type="email" placeholder="email.baru@contoh.com" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                 <FormField
-                                    control={emailForm.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Verifikasi Kata Sandi</FormLabel>
-                                            <FormControl><Input type="password" placeholder="Masukkan kata sandi Anda saat ini" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                 <Button type="submit" disabled={isEmailSubmitting}>
-                                    {isEmailSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Lanjutkan ke Verifikasi
-                                </Button>
-                            </form>
-                        </Form>
+                          {/* Change Email */}
+                          <Form {...emailForm}>
+                              <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                                  <h3 className="font-semibold flex items-center gap-2"><AtSign className="h-5 w-5" />Ubah Email</h3>
+                                  <FormField
+                                      control={emailForm.control}
+                                      name="newEmail"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Email Baru</FormLabel>
+                                              <FormControl><Input type="email" placeholder="email.baru@contoh.com" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={emailForm.control}
+                                      name="password"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Verifikasi Kata Sandi Saat Ini</FormLabel>
+                                              <FormControl><Input type="password" placeholder="Masukkan kata sandi Anda" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <Button type="submit" disabled={isEmailSubmitting}>
+                                      {isEmailSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                      Lanjutkan ke Verifikasi
+                                  </Button>
+                              </form>
+                          </Form>
+                        </>
+                      ) : (
+                        <div className="text-center p-8 border-2 border-dashed rounded-lg">
+                          <p className="mb-4 text-muted-foreground">Masuk untuk mengubah pengaturan akun Anda.</p>
+                          <Button asChild>
+                              <Link href="/auth/login">
+                                  <LogIn className="mr-2 h-4 w-4" />
+                                  Masuk
+                              </Link>
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                 </Card>
 
