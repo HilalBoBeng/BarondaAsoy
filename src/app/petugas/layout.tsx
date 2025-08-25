@@ -9,7 +9,8 @@ import {
   ShieldAlert,
   Calendar,
   Menu,
-  UserCircle
+  UserCircle,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -50,8 +51,10 @@ export default function PetugasLayout({
 
   const navItems = [
     { href: "/petugas", icon: Home, label: "Dasbor" },
-    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan" },
+    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga" },
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya" },
+    { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
+    { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
   ];
 
   if (!isClient) {
@@ -66,7 +69,7 @@ export default function PetugasLayout({
             </AvatarFallback>
         </Avatar>
         <div>
-            <p className="font-bold text-base">Nama Petugas</p>
+            <p className="font-bold text-base">Petugas</p>
             <p className="text-sm text-muted-foreground">Role: Petugas</p>
         </div>
     </div>
@@ -124,7 +127,7 @@ export default function PetugasLayout({
               </SheetTrigger>
               <SheetContent side="left" className="flex flex-col p-0">
                   <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="hidden">Menu Navigasi</SheetTitle>
+                    <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                     <NavHeader />
                   </SheetHeader>
                 <div className="flex-1 overflow-auto py-2">
@@ -135,12 +138,14 @@ export default function PetugasLayout({
 
            <div className="w-full flex-1">
              <h1 className="text-lg font-semibold md:text-2xl truncate">
-              {navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/'))?.label || 'Dasbor Petugas'}
+              {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dasbor Petugas'}
             </h1>
           </div>
-           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
-              <Bell className="h-4 w-4" />
-              <span className="sr-only">Toggle notifications</span>
+           <Button variant="outline" size="icon" className="ml-auto h-8 w-8 asChild">
+              <Link href="/petugas/notifications">
+                <Bell className="h-4 w-4" />
+                <span className="sr-only">Toggle notifications</span>
+              </Link>
             </Button>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">

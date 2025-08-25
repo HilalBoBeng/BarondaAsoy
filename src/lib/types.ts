@@ -7,6 +7,7 @@ export interface Announcement {
   title: string;
   content: string;
   date: string | Date | Timestamp;
+  target: 'all' | 'users' | 'staff';
   likes?: number;
   dislikes?: number;
   likesBy?: string[];
@@ -70,14 +71,29 @@ export interface Staff {
 
 export interface Notification {
     id: string;
-    userId: string;
+    userId: string; // Can be user UID, staff ID, 'all_users', or 'all_staff'
     title: string;
     message: string;
     createdAt: Timestamp | Date;
     read: boolean;
     link?: string;
-    recipientName?: string; // Added for display purposes
-    recipientEmail?: string; // Added for display purposes
+    recipientName?: string; 
+    recipientEmail?: string; 
 }
 
-    
+export interface PatrolLog {
+  id: string;
+  officerName: string;
+  officerId: string;
+  title: string;
+  description: string;
+  photoURL?: string;
+  createdAt: Timestamp | Date;
+}
+
+export interface EquipmentStatus {
+    id: string; // e.g., 'senter', 'borgol'
+    name: string;
+    status: 'good' | 'broken' | 'missing';
+    lastChecked: Timestamp | Date;
+}
