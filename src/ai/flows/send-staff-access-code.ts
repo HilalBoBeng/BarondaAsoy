@@ -36,6 +36,15 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
     outputSchema: SendStaffAccessCodeOutputSchema,
   },
   async ({ email, name, accessCode }) => {
+    // Check for required environment variables
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP environment variables are not set.');
+      return {
+        success: false,
+        message: 'Layanan email belum dikonfigurasi oleh admin.',
+      };
+    }
+
     try {
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,

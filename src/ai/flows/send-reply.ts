@@ -42,6 +42,15 @@ const sendReplyFlow = ai.defineFlow(
     outputSchema: SendReplyOutputSchema,
   },
   async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole }) => {
+    // Check for required environment variables
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP environment variables are not set.');
+      return {
+        success: false,
+        message: 'Layanan email belum dikonfigurasi oleh admin.',
+      };
+    }
+    
     try {
       // 1. Send email notification
       const transporter = nodemailer.createTransport({

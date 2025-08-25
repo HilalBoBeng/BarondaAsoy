@@ -37,6 +37,15 @@ const sendOtpFlow = ai.defineFlow(
     outputSchema: SendOtpOutputSchema,
   },
   async ({ email, context = 'register' }) => {
+    // Check for required environment variables
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP environment variables are not set.');
+      return {
+        success: false,
+        message: 'Layanan email belum dikonfigurasi oleh admin.',
+      };
+    }
+
     try {
       // Check if user/staff exists if it's a password reset context
       if (context === 'resetPassword' || context === 'staffResetPassword') {

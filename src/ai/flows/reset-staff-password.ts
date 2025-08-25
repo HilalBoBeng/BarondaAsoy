@@ -37,6 +37,15 @@ const resetStaffPasswordFlow = ai.defineFlow(
     outputSchema: ResetStaffPasswordOutputSchema,
   },
   async ({ email }) => {
+    // Check for required environment variables
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP environment variables are not set.');
+      return {
+        success: false,
+        message: 'Layanan email belum dikonfigurasi oleh admin.',
+      };
+    }
+
     try {
       // 1. Find the staff member by email
       const staffQuery = query(collection(db, 'staff'), where('email', '==', email));

@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -270,6 +270,12 @@ export default function Home() {
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                         <Link href="/settings">
+                           <UserIcon className="mr-2 h-4 w-4" />
+                           <span>Profil Saya</span>
+                         </Link>
+                      </DropdownMenuItem>
                        <DropdownMenuItem asChild>
                          <Link href="/settings">
                            <Settings className="mr-2 h-4 w-4" />
@@ -387,7 +393,7 @@ export default function Home() {
                         <CardContent className="space-y-4 max-h-[400px] overflow-auto">
                            {loadingPatrolLogs ? <Skeleton className="h-20 w-full" /> : 
                            patrolLogs.length > 0 ? (
-                                patrolLogs.map(log => (
+                                patrolLogs.map((log) => (
                                     <div key={log.id} className="border-b pb-2">
                                         <div className="flex justify-between text-xs text-muted-foreground">
                                             <span>Oleh: {log.officerName}</span>
