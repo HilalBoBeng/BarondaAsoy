@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
+import { useRouter } from 'next/navigation';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -30,6 +31,7 @@ export default function Announcements() {
   const auth = getAuth();
   const user = auth.currentUser;
   const { toast } = useToast();
+  const router = useRouter();
 
   const plugin = useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true })
@@ -65,7 +67,12 @@ export default function Announcements() {
 
   const handleReaction = async (announcementId: string, reaction: 'like' | 'dislike') => {
     if (!user) {
-      toast({ variant: 'destructive', title: 'Gagal', description: 'Anda harus masuk untuk memberikan reaksi.' });
+      toast({ 
+          variant: 'destructive', 
+          title: 'Akses Dibutuhkan', 
+          description: 'Anda harus masuk untuk memberikan reaksi.' 
+      });
+      router.push('/auth/login');
       return;
     }
     if (reacting) return;
@@ -139,7 +146,7 @@ export default function Announcements() {
   };
 
   const ReactionButton = ({ announcement, type }: { announcement: Announcement, type: 'like' | 'dislike' }) => {
-    const hasReacted = type === 'like' ? announcement.likesBy?.includes(user?.uid || '') : announcement.dislikesBy?.includes(user?.uid || '');
+    const hasReacted = user ? (type === 'like' ? announcement.likesBy?.includes(user.uid) : announcement.dislikesBy?.includes(user.uid)) : false;
     const count = type === 'like' ? announcement.likes : announcement.dislikes;
     const Icon = type === 'like' ? ThumbsUp : ThumbsDown;
 
@@ -149,10 +156,10 @@ export default function Announcements() {
           size="sm"
           className={cn(
             "flex items-center gap-1 text-muted-foreground",
-            hasReacted && (type === 'like' ? "text-green-600 bg-green-100" : "text-red-600 bg-red-100")
+            hasReacted && (type === 'like' ? "text-green-600 bg-green-100 dark:bg-green-900/50 dark:text-green-400" : "text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-400")
           )}
           onClick={() => handleReaction(announcement.id, type)}
-          disabled={!user || reacting === announcement.id}
+          disabled={reacting === announcement.id}
         >
           <Icon className="h-4 w-4" /> {count}
         </Button>
@@ -163,7 +170,7 @@ export default function Announcements() {
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <span tabIndex={0}>{button}</span>
+                        {button}
                     </TooltipTrigger>
                     <TooltipContent>
                         <p>Masuk untuk memberi reaksi</p>
