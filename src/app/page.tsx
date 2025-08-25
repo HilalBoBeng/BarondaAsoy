@@ -261,8 +261,11 @@ export default function Home() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 {greeting}, {user?.displayName || 'Warga'}!
             </h1>
+            <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                Selamat datang di Baronda Kelurahan Kilongan
+            </p>
             <p className="text-muted-foreground text-sm sm:text-base">
-                {currentTime || 'Sistem Keamanan Lingkungan berbasis digital untuk lingkungan yang lebih aman.'}
+                {currentTime}
             </p>
           </div>
 
@@ -323,3 +326,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
