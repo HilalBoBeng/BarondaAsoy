@@ -73,28 +73,31 @@ export default function Home() {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      
-      if (currentUser) {
-          // The query requires an index. Removing orderBy and sorting on the client.
-          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
-          const unsubNotifications = onSnapshot(q, (snapshot) => {
-              const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-              // Sort client-side
-              notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
-              setNotifications(notifs);
-          });
-          return () => unsubNotifications();
-      } else {
-          setNotifications([]);
-      }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [auth, router]);
   
+  useEffect(() => {
+    if (user) {
+        // The query requires an index. Removing orderBy and sorting on the client.
+        const q = query(collection(db, "notifications"), where("userId", "==", user.uid));
+        const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+            const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+            // Sort client-side
+            notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
+            setNotifications(notifs);
+        });
+        return () => unsubscribeNotifications(); // Correctly unsubscribe when user changes or logs out
+    } else {
+        // Clear notifications if there's no user
+        setNotifications([]);
+    }
+  }, [user]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
