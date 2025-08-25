@@ -118,11 +118,6 @@ export default function StaffLoginPage() {
                 Masuk
               </Button>
               <div className="text-center text-sm">
-                <Link href="/auth/login" className="underline">
-                  Masuk sebagai Warga?
-                </Link>
-              </div>
-              <div className="text-center text-sm">
                   <Link href="/" className="underline">
                       Kembali ke Halaman Utama
                   </Link>

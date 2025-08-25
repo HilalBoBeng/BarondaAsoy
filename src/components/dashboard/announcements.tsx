@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, runTransaction, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { Megaphone, Calendar, ThumbsUp, ThumbsDown } from 'lucide-react';
+import Autoplay from "embla-carousel-autoplay"
 import {
   Card,
   CardContent,
@@ -29,6 +30,10 @@ export default function Announcements() {
   const auth = getAuth();
   const user = auth.currentUser;
   const { toast } = useToast();
+
+  const plugin = useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: true })
+  )
 
   useEffect(() => {
     const q = query(collection(db, 'announcements'), orderBy('date', 'desc'));
@@ -183,11 +188,14 @@ export default function Announcements() {
         </div>
       ) : (
         <Carousel 
+            plugins={[plugin.current]}
             opts={{
                 align: "start",
                 loop: true,
             }}
             className="w-full"
+            onMouseEnter={plugin.current.stop}
+            onMouseLeave={plugin.current.reset}
         >
             <CarouselContent>
                 {announcements.map((announcement) => (

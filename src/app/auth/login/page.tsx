@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -117,15 +118,24 @@ export default function LoginPage() {
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Masuk
               </Button>
+              <div className="text-center text-sm text-muted-foreground">
+                  Belum punya akun?{" "}
+                  <Link
+                      href="/auth/register"
+                      className="underline text-primary"
+                  >
+                      Daftar di sini
+                  </Link>
+              </div>
               <div className="text-center text-sm">
                 <Link href="/auth/forgot-password" className="underline">
                   Lupa Kata Sandi?
                 </Link>
               </div>
               <div className="text-center text-sm">
-                <Link href="/" className="underline">
-                    Kembali ke Halaman Utama
-                </Link>
+                  <Link href="/" className="underline">
+                      Kembali ke Halaman Utama
+                  </Link>
               </div>
             </CardFooter>
           </form>
