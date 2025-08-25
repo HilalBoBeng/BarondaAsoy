@@ -55,6 +55,15 @@ export default function Home() {
           </div>
 
           <div className="space-y-6">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Pengumuman</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Announcements />
+                </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Lapor Aktivitas</CardTitle>
@@ -72,15 +81,6 @@ export default function Home() {
                     <div className="max-h-[500px] overflow-auto">
                         <Schedule />
                     </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Pengumuman</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Announcements />
                 </CardContent>
             </Card>
 
