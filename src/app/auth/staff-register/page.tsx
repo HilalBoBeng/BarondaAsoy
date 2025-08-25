@@ -91,7 +91,7 @@ export default function StaffRegisterPage() {
         <CardHeader>
           <CardTitle>Daftar Akun Petugas</CardTitle>
           <CardDescription>
-            Isi formulir di bawah ini untuk mendaftar sebagai petugas.
+            Isi formulir di bawah ini untuk mendaftar. Setelah verifikasi OTP, kode akses unik akan dikirim ke email Anda.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
