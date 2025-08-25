@@ -36,7 +36,7 @@ const sendOtpFlow = ai.defineFlow(
     inputSchema: SendOtpInputSchema,
     outputSchema: SendOtpOutputSchema,
   },
-  async ({ email, context }) => {
+  async ({ email, context = 'register' }) => {
     try {
       // If the context is for resetting a password, check if the user exists first.
       if (context === 'resetPassword') {
@@ -92,10 +92,25 @@ const sendOtpFlow = ai.defineFlow(
           },
       });
 
+      const isResetPassword = context === 'resetPassword';
+      const subject = isResetPassword 
+        ? 'Atur Ulang Kata Sandi Akun Baronda Anda' 
+        : 'Kode Verifikasi Akun Baronda Anda';
+
+      const welcomeMessage = isResetPassword
+        ? `<p>Kami menerima permintaan untuk mengatur ulang kata sandi akun Anda. Gunakan kode di bawah ini untuk melanjutkan.</p>`
+        : `<h2>Selamat Datang di Baronda!</h2>
+           <p>Terima kasih telah mendaftar. Satu langkah lagi untuk mengamankan akun Anda. Silakan gunakan kode verifikasi di bawah ini.</p>`;
+
+      const securityWarning = isResetPassword
+        ? `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak merasa meminta untuk mengatur ulang kata sandi, harap abaikan email ini dan segera amankan akun Anda.`
+        : `<strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Jika Anda tidak merasa mendaftar, harap abaikan email ini.`;
+
+
       const mailOptions = {
           from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
           to: email,
-          subject: 'Kode Verifikasi Anda untuk Baronda',
+          subject: subject,
           html: `
             <!DOCTYPE html>
             <html lang="id">
@@ -111,8 +126,6 @@ const sendOtpFlow = ai.defineFlow(
                     .otp-code { font-size: 36px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2C3E50; background-color: #f0f4f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
                     .warning { font-size: 12px; color: #777; text-align: center; margin-top: 20px; padding: 10px; background-color: #fffbe6; border: 1px solid #ffe58f; border-radius: 4px;}
                     .footer { font-size: 12px; color: #999; text-align: center; margin-top: 30px; }
-                    .contact-link { color: #1a73e8; text-decoration: none; display: inline-flex; align-items: center; margin-top: 15px; font-weight: 500;}
-                    .contact-link img { height: 16px; vertical-align: middle; margin-right: 8px; }
                 </style>
             </head>
             <body>
@@ -121,12 +134,11 @@ const sendOtpFlow = ai.defineFlow(
                         <div class="header">
                             <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo">
                         </div>
-                        <h2>Selamat Datang di Baronda!</h2>
-                        <p>Terima kasih telah mendaftar. Satu langkah lagi untuk mengamankan akun Anda. Silakan gunakan kode verifikasi di bawah ini.</p>
+                        ${welcomeMessage}
                         <div class="otp-code">${otp}</div>
                         <p>Kode ini hanya berlaku selama <strong>10 menit</strong>.</p>
                         <div class="warning">
-                            <strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Jika Anda tidak merasa meminta kode ini, harap abaikan email ini atau hubungi admin jika Anda merasa ada aktivitas mencurigakan.
+                           ${securityWarning}
                         </div>
                     </div>
                     <div class="footer">

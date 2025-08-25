@@ -23,7 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { verifyOtp } from '@/ai/flows/verify-otp';
 import { sendOtp } from '@/ai/flows/send-otp';
@@ -48,26 +48,57 @@ export default function VerifyOtpPage() {
   const auth = getAuth(app);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
-  // State for resend OTP feature
   const [cooldown, setCooldown] = useState(0);
   const [resendAttempts, setResendAttempts] = useState(0);
+
+  // Function to get cooldown data from localStorage
+  const getCooldownData = useCallback(() => {
+    const data = localStorage.getItem('otpCooldown');
+    if (!data) return null;
+    try {
+      const parsed = JSON.parse(data);
+      // Basic validation
+      if (parsed.email === verificationContext?.email && parsed.expiry && parsed.attempts) {
+        return parsed;
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }, [verificationContext?.email]);
 
   useEffect(() => {
     const contextStr = localStorage.getItem('verificationContext');
     if (contextStr) {
       setVerificationContext(JSON.parse(contextStr));
-    } else {
-      // Redirect if no context is found, but allow navigation
-      // for users who manually navigate away and want to come back.
-      // router.replace('/auth/register'); 
     }
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+    if (!verificationContext) return;
+
+    const savedCooldown = getCooldownData();
+    if (savedCooldown) {
+        const now = new Date().getTime();
+        const remaining = Math.ceil((savedCooldown.expiry - now) / 1000);
+        if (remaining > 0) {
+            setCooldown(remaining);
+            setResendAttempts(savedCooldown.attempts);
+        }
+    }
+  }, [verificationContext, getCooldownData]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (cooldown > 0) {
       timer = setInterval(() => {
-        setCooldown((prevCooldown) => prevCooldown - 1);
+        setCooldown((prevCooldown) => {
+            if(prevCooldown - 1 <= 0) {
+                localStorage.removeItem('otpCooldown');
+                return 0;
+            }
+            return prevCooldown - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(timer);
@@ -80,12 +111,11 @@ export default function VerifyOtpPage() {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const { value } = e.target;
-    // Only allow numeric input
     if (!/^\d*$/.test(value)) return;
 
     let currentOtp = form.getValues('otp') || '';
     let otpArray = currentOtp.split('');
-    otpArray[index] = value.slice(-1); // Ensure only one character
+    otpArray[index] = value.slice(-1);
     form.setValue('otp', otpArray.join(''));
 
     if (value && index < 5) {
@@ -104,7 +134,7 @@ export default function VerifyOtpPage() {
 
     setIsSubmitting(true);
     try {
-        const result = await sendOtp({ email: verificationContext.email });
+        const result = await sendOtp({ email: verificationContext.email, context: verificationContext.flow });
         if (result.success) {
             toast({
                 title: "Kode Terkirim",
@@ -113,10 +143,14 @@ export default function VerifyOtpPage() {
             const newAttempts = resendAttempts + 1;
             setResendAttempts(newAttempts);
 
-            // Set cooldown based on attempts
-            if (newAttempts === 1) setCooldown(60); // 1 minute
-            else if (newAttempts === 2) setCooldown(180); // 3 minutes
-            else setCooldown(300); // 5 minutes for subsequent attempts
+            let newCooldown = 0;
+            if (newAttempts === 1) newCooldown = 60; // 1 minute
+            else if (newAttempts === 2) newCooldown = 180; // 3 minutes
+            else newCooldown = 300; // 5 minutes
+
+            setCooldown(newCooldown);
+            const expiry = new Date().getTime() + newCooldown * 1000;
+            localStorage.setItem('otpCooldown', JSON.stringify({ email: verificationContext.email, expiry, attempts: newAttempts }));
 
         } else {
             throw new Error(result.message);
@@ -145,6 +179,7 @@ export default function VerifyOtpPage() {
       if (result.success) {
         toast({ title: 'Berhasil', description: 'Verifikasi OTP berhasil.' });
         localStorage.removeItem('verificationContext');
+        localStorage.removeItem('otpCooldown');
 
         if (verificationContext.flow === 'register') {
           const userCredential = await createUserWithEmailAndPassword(
