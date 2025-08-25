@@ -103,7 +103,7 @@ export default function LiveChatAdminPage() {
                 senderName: adminInfo.name || 'Admin',
             });
 
-            setSelectedChat(chat);
+            setSelectedChat({ ...chat, status: 'active' });
         } catch (error) {
             console.error("Failed to accept chat:", error);
             toast({ variant: 'destructive', title: "Gagal", description: "Gagal menerima obrolan." });
@@ -149,9 +149,13 @@ export default function LiveChatAdminPage() {
         }
     };
 
+    const statusPriority = { 'pending': 1, 'active': 2, 'closed': 3 };
     const sortedChats = [...allChats].sort((a, b) => {
-        if (a.status === 'pending' && b.status !== 'pending') return -1;
-        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        const priorityA = statusPriority[a.status] || 99;
+        const priorityB = statusPriority[b.status] || 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
         return (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis();
     });
 
@@ -167,11 +171,11 @@ export default function LiveChatAdminPage() {
                              <div
                                 key={chat.id}
                                 className={cn(
-                                    "w-full h-auto flex items-center justify-start p-3 text-left mb-2 rounded-lg cursor-pointer hover:bg-muted",
+                                    "w-full h-auto flex items-start justify-start p-3 text-left mb-2 rounded-lg cursor-pointer hover:bg-muted",
                                     selectedChat?.id === chat.id && "bg-muted",
-                                    chat.status === 'pending' && "cursor-default hover:bg-transparent"
+                                    chat.status === 'pending' && "border border-primary/50"
                                 )}
-                                onClick={() => { if(chat.status !== 'pending') setSelectedChat(chat) }}
+                                onClick={() => { setSelectedChat(chat) }}
                              >
                                 <Avatar className="h-10 w-10 mr-3">
                                     <AvatarImage src={chat.userPhotoURL || undefined} />
@@ -204,7 +208,7 @@ export default function LiveChatAdminPage() {
                             <CardTitle>{selectedChat.userName}</CardTitle>
                             <CardDescription>
                                 {selectedChat.status === 'active' 
-                                    ? `Aktif sejak ${formatDistanceToNow((selectedChat.acceptedAt as Timestamp)?.toDate(), { addSuffix: true, locale: id })}` 
+                                    ? `Aktif sejak ${formatDistanceToNow((selectedChat.acceptedAt as Timestamp)?.toDate() || new Date(), { addSuffix: true, locale: id })}` 
                                     : `Ditutup`
                                 }
                             </CardDescription>
@@ -234,9 +238,9 @@ export default function LiveChatAdminPage() {
                                 placeholder="Ketik balasan..." 
                                 value={messageInput}
                                 onChange={(e) => setMessageInput(e.target.value)}
-                                disabled={isSending || selectedChat.status === 'closed'}
+                                disabled={isSending || selectedChat.status !== 'active'}
                             />
-                            <Button type="submit" size="icon" disabled={isSending || selectedChat.status === 'closed'}><Send className="h-4 w-4" /></Button>
+                            <Button type="submit" size="icon" disabled={isSending || selectedChat.status !== 'active'}><Send className="h-4 w-4" /></Button>
                         </form>
                     </CardFooter>
                     </>
