@@ -31,10 +31,13 @@ export default function AdminLayout({
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [adminName, setAdminName] = useState("Admin");
+  const [adminEmail, setAdminEmail] = useState("admin@baronda.app");
 
   useEffect(() => {
     setIsClient(true);
     const userRole = localStorage.getItem('userRole');
+    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+
     if (userRole !== 'admin') {
       router.replace('/auth/staff-login');
       toast({
@@ -43,9 +46,11 @@ export default function AdminLayout({
         description: "Anda harus masuk sebagai admin untuk mengakses halaman ini.",
       });
     } else {
-        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
         if (staffInfo.name) {
             setAdminName(staffInfo.name);
+        }
+        if (staffInfo.email) {
+            setAdminEmail(staffInfo.email);
         }
     }
   }, [router, toast]);
@@ -71,12 +76,10 @@ export default function AdminLayout({
   }
 
   const NavHeader = () => (
-    <div className="flex items-center gap-3 p-4">
-        <div>
-            <p className="font-bold text-base">{adminName}</p>
-            <p className="text-sm text-muted-foreground">admin@baronda.app</p>
-            <p className="text-xs text-muted-foreground mt-1">Role: Admin</p>
-        </div>
+    <div className="flex flex-col items-start p-4 text-left">
+        <p className="font-bold text-base">{adminName}</p>
+        <p className="text-sm text-muted-foreground">{adminEmail}</p>
+        <p className="text-xs text-muted-foreground mt-1">Admin</p>
     </div>
   );
 
@@ -126,7 +129,7 @@ export default function AdminLayout({
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
-        <div className="flex h-auto items-center border-b px-4 lg:h-auto lg:px-6 py-4">
+        <div className="flex h-auto items-center border-b px-2 lg:h-auto lg:px-4 py-2">
           <NavHeader />
         </div>
         <div className="flex-1 overflow-auto py-2">
@@ -147,7 +150,7 @@ export default function AdminLayout({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <SheetHeader className="p-4 border-b">
+               <SheetHeader className="p-0 border-b">
                  <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                  <NavHeader />
                </SheetHeader>

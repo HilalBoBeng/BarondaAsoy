@@ -217,7 +217,7 @@ export default function VerifyOtpPage() {
           localStorage.setItem('resetPasswordEmail', verificationContext.email);
           router.push('/auth/reset-password');
         } else if (verificationContext.flow === 'staffRegister') {
-            const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const accessCode = Math.random().toString(36).substring(2, 17).toUpperCase();
             await addDoc(collection(db, 'staff'), {
                 name: verificationContext.name,
                 email: verificationContext.email,

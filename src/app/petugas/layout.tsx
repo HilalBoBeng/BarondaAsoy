@@ -33,6 +33,8 @@ export default function PetugasLayout({
   useEffect(() => {
     setIsClient(true);
     const userRole = localStorage.getItem('userRole');
+    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+
     if (userRole !== 'petugas') {
       router.replace('/auth/staff-login');
        toast({
@@ -41,7 +43,6 @@ export default function PetugasLayout({
         description: "Anda harus masuk sebagai petugas untuk mengakses halaman ini.",
       });
     } else {
-        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
         if (staffInfo.name) {
             setStaffName(staffInfo.name);
         }
@@ -70,12 +71,10 @@ export default function PetugasLayout({
   }
   
   const NavHeader = () => (
-    <div className="flex items-center gap-3 p-4">
-        <div>
-            <p className="font-bold text-base">{staffName}</p>
-            <p className="text-sm text-muted-foreground">{staffEmail}</p>
-            <p className="text-xs text-muted-foreground mt-1">Role: Petugas</p>
-        </div>
+    <div className="flex flex-col items-start p-4 text-left">
+        <p className="font-bold text-base">{staffName}</p>
+        <p className="text-sm text-muted-foreground">{staffEmail}</p>
+        <p className="text-xs text-muted-foreground mt-1">Petugas</p>
     </div>
   );
 
@@ -125,7 +124,7 @@ export default function PetugasLayout({
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
-        <div className="flex h-auto items-center border-b px-4 lg:h-auto lg:px-6 py-4">
+        <div className="flex h-auto items-center border-b px-2 lg:h-auto lg:px-4 py-2">
           <NavHeader />
         </div>
         <div className="flex-1 overflow-auto py-2">
@@ -146,7 +145,7 @@ export default function PetugasLayout({
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="flex flex-col p-0">
-                  <SheetHeader className="p-4 border-b">
+                  <SheetHeader className="p-0 border-b">
                     <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                     <NavHeader />
                   </SheetHeader>

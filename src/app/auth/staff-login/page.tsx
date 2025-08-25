@@ -62,6 +62,8 @@ export default function StaffLoginPage() {
     // Admin login check
     if (data.accessCode === "Admin123") {
         localStorage.setItem('userRole', 'admin');
+        const adminInfo = { name: "Admin Utama", email: "admin@baronda.app" };
+        localStorage.setItem('staffInfo', JSON.stringify(adminInfo));
         toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
         router.push("/admin");
         setIsSubmitting(false);
@@ -88,7 +90,7 @@ export default function StaffLoginPage() {
         }
 
         localStorage.setItem('userRole', 'petugas');
-        localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id }));
+        localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email }));
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
         router.push("/petugas");
 
