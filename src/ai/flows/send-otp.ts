@@ -130,11 +130,7 @@ const sendOtpFlow = ai.defineFlow(
                         </div>
                     </div>
                     <div class="footer">
-                        © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.<br>
-                         <a href="mailto:admin@bobeng.icu" class="contact-link">
-                            <img src="https://iili.io/KJfW5uf.png" alt="Email Icon" data-ai-hint="email icon">
-                            <span>Hubungi Admin</span>
-                        </a>
+                        © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.
                     </div>
                 </div>
             </body>
