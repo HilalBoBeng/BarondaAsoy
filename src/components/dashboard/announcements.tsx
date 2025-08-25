@@ -43,10 +43,7 @@ export default function Announcements() {
   }, []);
 
   return (
-    <div className="grid gap-6">
-      <div className="flex items-center">
-        <h1 className="text-2xl font-bold">Pengumuman Komunitas</h1>
-      </div>
+    <div>
        {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
