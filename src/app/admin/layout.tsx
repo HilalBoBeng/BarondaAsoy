@@ -12,15 +12,16 @@ import {
   ShieldAlert,
   Phone,
   Menu,
+  UserCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BarondaLogo } from "@/components/icons";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function AdminLayout({
   children,
@@ -64,6 +65,20 @@ export default function AdminLayout({
       return null;
   }
 
+  const NavHeader = () => (
+    <div className="flex items-center gap-3 p-4">
+        <Avatar className="h-12 w-12">
+            <AvatarFallback>
+                <UserCircle className="h-8 w-8" />
+            </AvatarFallback>
+        </Avatar>
+        <div>
+            <p className="font-bold text-base">Nama Admin</p>
+            <p className="text-sm text-muted-foreground">Role: Admin</p>
+        </div>
+    </div>
+  );
+
   const NavContent = () => (
     <>
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
@@ -93,11 +108,8 @@ export default function AdminLayout({
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
-        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-          <Link href="/admin" className="flex items-center gap-2 font-semibold">
-            <BarondaLogo className="h-6 w-6" />
-            <span className="">Baronda Admin</span>
-          </Link>
+        <div className="flex h-auto items-center border-b px-4 lg:h-auto lg:px-6 py-4">
+          <NavHeader />
         </div>
         <div className="flex-1 overflow-auto py-2">
             <NavContent />
@@ -116,20 +128,20 @@ export default function AdminLayout({
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-              <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 mb-4">
-                <Link href="/admin" className="flex items-center gap-2 font-semibold">
-                  <BarondaLogo className="h-6 w-6" />
-                  <span className="">Baronda Admin</span>
-                </Link>
+            <SheetContent side="left" className="flex flex-col p-0">
+               <SheetHeader className="p-4 border-b">
+                 <SheetTitle className="hidden">Menu Navigasi</SheetTitle>
+                 <NavHeader />
+               </SheetHeader>
+              <div className="flex-1 overflow-auto py-2">
+                <NavContent />
               </div>
-              <NavContent />
             </SheetContent>
           </Sheet>
 
           <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold md:text-2xl">
-              {navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/'))?.label || 'Dasbor Admin'}
+            <h1 className="text-lg font-semibold md:text-2xl truncate">
+              {navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin'))?.label || 'Dasbor Admin'}
             </h1>
           </div>
           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
@@ -137,7 +149,7 @@ export default function AdminLayout({
               <span className="sr-only">Toggle notifications</span>
             </Button>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
           {children}
         </main>
       </div>
