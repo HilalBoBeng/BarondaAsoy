@@ -27,8 +27,8 @@ export default function SettingsPage() {
             </Link>
           </Button>
        </header>
-        <main className="flex flex-1 flex-col items-center justify-center p-4">
-            <div className="w-full max-w-lg">
+        <main className="flex-1 p-4 sm:p-6 md:p-8">
+             <div className="mx-auto max-w-2xl">
                 <Card>
                     <CardHeader>
                     <CardTitle>Pengaturan Tampilan</CardTitle>
