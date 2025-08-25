@@ -77,7 +77,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
                             <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo">
                         </div>
                         <h2>Selamat Bergabung, ${name}!</h2>
-                        <p>Pendaftaran Anda sebagai petugas Baronda telah berhasil. Gunakan informasi di bawah ini untuk masuk ke akun Anda.</p>
+                        <p>Pendaftaran Anda sebagai petugas Baronda telah berhasil disetujui. Gunakan informasi di bawah ini untuk masuk ke akun Anda.</p>
                         <p><strong>Email:</strong> ${email}</p>
                         <p><strong>Kode Akses Anda:</strong></p>
                         <div class="code-container">

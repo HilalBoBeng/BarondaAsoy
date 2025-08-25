@@ -258,8 +258,8 @@ export default function VerifyOtpPage() {
       successTitle = "Pendaftaran Sedang Ditinjau";
       successDescription = "Pendaftaran Anda telah berhasil dikirim dan sedang menunggu persetujuan dari admin. PENTING: Kode akses unik Anda untuk login akan dikirimkan ke email Anda hanya setelah pendaftaran Anda disetujui oleh admin. Silakan periksa email Anda secara berkala.";
     } else if (isStaffResetFlow) {
-      successTitle = "Kode Akses Terkirim";
-      successDescription = "Kode akses Anda yang sudah ada telah dikirim ulang ke email Anda. Silakan periksa kotak masuk Anda.";
+      successTitle = "Kode Akses Baru Terkirim";
+      successDescription = "Kode akses baru Anda telah dikirim ulang ke email Anda. Silakan periksa kotak masuk Anda.";
     }
       
     return (
