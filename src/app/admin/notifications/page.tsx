@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, doc, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, deleteDoc, limit, startAfter, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, doc, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, deleteDoc, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, endBefore, limitToLast } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -38,97 +38,97 @@ export default function NotificationsAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLastPage, setIsLastPage] = useState(false);
+  const [userMap, setUserMap] = useState<Map<string, AppUser>>(new Map());
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
     defaultValues: { userIds: [], title: '', message: '' },
   });
 
-  const fetchInitialData = async () => {
-    setLoading(true);
+  const fetchUsers = async () => {
     try {
-      // Fetch users first
       const usersQuery = query(collection(db, "users"), orderBy("displayName"));
       const usersSnapshot = await getDocs(usersQuery);
       const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as AppUser[];
       setUsers(usersData);
-      const userMap = new Map(usersData.map(u => [u.uid, u]));
-      
-      // Then fetch initial notifications
+      setUserMap(new Map(usersData.map(u => [u.uid, u])));
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Gagal Memuat Warga', description: 'Tidak dapat mengambil daftar warga.' });
+    }
+  };
+
+  const fetchNotifications = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
+    setLoading(true);
+    try {
+      let q;
       const notifsRef = collection(db, 'notifications');
-      const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATIONS_PER_PAGE));
+      
+      if (direction === 'next' && lastVisible) {
+        q = query(notifsRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(NOTIFICATIONS_PER_PAGE));
+      } else if (direction === 'prev' && firstVisible) {
+        q = query(notifsRef, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(NOTIFICATIONS_PER_PAGE));
+      } else {
+        q = query(notifsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATIONS_PER_PAGE));
+      }
+
       const documentSnapshots = await getDocs(q);
       
+      if (documentSnapshots.empty && direction !== 'initial') {
+        setIsLastPage(true);
+        setLoading(false);
+        if (direction === 'next') setCurrentPage(prev => prev > 1 ? prev - 1 : 1);
+        return;
+      }
+      
       const newNotifs = documentSnapshots.docs.map(docSnap => {
-          const data = docSnap.data();
-          const recipient = userMap.get(data.userId) || { displayName: data.userId === 'all' ? 'Semua Warga' : 'Pengguna Dihapus', email: '' };
-          return {
-              id: docSnap.id,
-              ...data,
-              createdAt: data.createdAt?.toDate(),
-              recipientName: recipient.displayName,
-              recipientEmail: recipient.email,
-          } as Notification;
+        const data = docSnap.data();
+        const recipient = userMap.get(data.userId) || { displayName: data.userId === 'all' ? 'Semua Warga' : 'Pengguna Dihapus', email: '' };
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toDate(),
+          recipientName: recipient.displayName,
+          recipientEmail: recipient.email,
+        } as Notification;
       });
 
-      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-      setLastVisible(lastDoc || null);
       setNotifications(newNotifs);
-      setHasMore(documentSnapshots.docs.length >= NOTIFICATIONS_PER_PAGE);
+      setFirstVisible(documentSnapshots.docs[0] || null);
+      setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1] || null);
+      setIsLastPage(documentSnapshots.docs.length < NOTIFICATIONS_PER_PAGE);
 
     } catch (error) {
-      console.error("Error fetching initial data:", error);
-      toast({ variant: 'destructive', title: 'Gagal Memuat Data', description: 'Tidak dapat mengambil daftar warga atau notifikasi.' });
+      console.error("Error fetching notifications:", error);
+      toast({ variant: 'destructive', title: 'Gagal Memuat Notifikasi' });
     } finally {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchMoreNotifications = async () => {
-    if (!lastVisible || !hasMore || loadingMore) return;
-    setLoadingMore(true);
-
-    try {
-        const notifsRef = collection(db, 'notifications');
-        const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATIONS_PER_PAGE), startAfter(lastVisible));
-        const documentSnapshots = await getDocs(q);
-        const userMap = new Map(users.map(u => [u.uid, u]));
-
-        const newNotifs = documentSnapshots.docs.map(docSnap => {
-            const data = docSnap.data();
-            const recipient = userMap.get(data.userId) || { displayName: data.userId === 'all' ? 'Semua Warga' : 'Pengguna Dihapus', email: '' };
-            return {
-                id: docSnap.id,
-                ...data,
-                createdAt: data.createdAt?.toDate(),
-                recipientName: recipient.displayName,
-                recipientEmail: recipient.email,
-            } as Notification;
-        });
-
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-        setLastVisible(lastDoc || null);
-        setNotifications(prev => [...prev, ...newNotifs]);
-        setHasMore(documentSnapshots.docs.length >= NOTIFICATIONS_PER_PAGE);
-
-    } catch (error) {
-        console.error("Error fetching more notifications:", error);
-        toast({ variant: 'destructive', title: 'Gagal Memuat Notifikasi Tambahan' });
-    } finally {
-        setLoadingMore(false);
-    }
+    fetchUsers().then(() => fetchNotifications(1));
+  }, [userMap.size]); // Re-fetch notifications if userMap changes
+  
+  const goToNextPage = () => {
+    const newPage = currentPage + 1;
+    setCurrentPage(newPage);
+    fetchNotifications(newPage, 'next');
   };
 
+  const goToPrevPage = () => {
+    if (currentPage === 1) return;
+    const newPage = currentPage - 1;
+    setCurrentPage(newPage);
+    fetchNotifications(newPage, 'prev');
+  };
 
   const onSubmit = async (values: NotificationFormValues) => {
     setIsSubmitting(true);
@@ -159,7 +159,7 @@ export default function NotificationsAdminPage() {
       
         form.reset({ userIds: [], title: '', message: '' });
         setIsDialogOpen(false);
-        await fetchInitialData(); // Refresh list
+        await fetchNotifications(1); // Refresh list
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mengirim pemberitahuan." });
       console.error(error);
@@ -254,15 +254,28 @@ export default function NotificationsAdminPage() {
                 </TableBody>
             </Table>
           </div>
-        {hasMore && !loading && (
-            <div className="text-center mt-6">
-                <Button onClick={fetchMoreNotifications} disabled={loadingMore}>
-                    {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Muat Lebih Banyak
-                </Button>
-            </div>
-        )}
       </CardContent>
+       <CardFooter>
+        <div className="flex items-center justify-end space-x-2 w-full">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1 || loading}
+            >
+                Sebelumnya
+            </Button>
+            <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={isLastPage || loading}
+            >
+                Berikutnya
+            </Button>
+        </div>
+      </CardFooter>
     </Card>
 
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

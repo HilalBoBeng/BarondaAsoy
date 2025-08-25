@@ -70,11 +70,6 @@ export default function PetugasLayout({
   
   const NavHeader = () => (
     <div className="flex items-center gap-3 p-4">
-        <Avatar className="h-12 w-12">
-            <AvatarFallback>
-                <UserCircle className="h-8 w-8" />
-            </AvatarFallback>
-        </Avatar>
         <div>
             <p className="font-bold text-base">{staffName}</p>
             <p className="text-sm text-muted-foreground">Role: Petugas</p>

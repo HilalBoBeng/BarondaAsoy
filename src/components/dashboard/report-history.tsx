@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc, endBefore, limitToLast } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -53,91 +53,40 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
 export default function ReportHistory({ user }: { user: User | null }) {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [hasMore, setHasMore] = useState(true);
     const { toast } = useToast();
 
-    const fetchReports = async (initial = false) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [isLastPage, setIsLastPage] = useState(false);
+
+    const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
         if (!user) {
             setLoading(false);
             return;
         }
-
-        if (initial) setLoading(true);
-        else setLoadingMore(true);
+        setLoading(true);
 
         try {
             const reportsRef = collection(db, 'reports');
             let q;
-            if (initial) {
-                 q = query(
-                    reportsRef, 
-                    where('userId', '==', user.uid),
-                    orderBy('createdAt', 'desc'),
-                    limit(REPORTS_PER_PAGE)
-                );
-            } else if(lastVisible) {
-                q = query(
-                    reportsRef,
-                    where('userId', '==', user.uid),
-                    orderBy('createdAt', 'desc'),
-                    startAfter(lastVisible),
-                    limit(REPORTS_PER_PAGE)
-                );
+
+            if (direction === 'next' && lastVisible) {
+                q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+            } else if (direction === 'prev' && firstVisible) {
+                q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
             } else {
-                 setLoading(false);
-                 setLoadingMore(false);
-                 return;
+                q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
             }
 
-            const documentSnapshots = await getDocs(q);
-            
-            const newReports = documentSnapshots.docs.map(doc => {
-                 const data = doc.data();
-                 const repliesObject = data.replies || {};
-                 const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                 
-                 return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-                    replies: repliesArray
-                } as Report;
-            });
-
-            const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-            setLastVisible(lastDoc || null);
-
-            if(initial) {
-                setReports(newReports);
-            } else {
-                setReports(prev => [...prev, ...newReports]);
-            }
-            
-            if (documentSnapshots.docs.length < REPORTS_PER_PAGE) {
-                setHasMore(false);
-            }
-
-        } catch (error) {
-            console.error("Error fetching reports:", error);
-            toast({ variant: 'destructive', title: 'Gagal Memuat Laporan', description: 'Terjadi kesalahan saat mengambil riwayat laporan Anda.' });
-        } finally {
-            setLoading(false);
-            setLoadingMore(false);
-        }
-    };
-    
-    useEffect(() => {
-        if (user) {
-            const reportsRef = collection(db, 'reports');
-            const q = query(
-                reportsRef,
-                where('userId', '==', user.uid),
-                orderBy('createdAt', 'desc')
-            );
-            
             const unsubscribe = onSnapshot(q, (snapshot) => {
+                if (snapshot.empty && direction !== 'initial') {
+                    setIsLastPage(true);
+                    setLoading(false);
+                    if (direction === 'next') setCurrentPage(prev => prev > 1 ? prev - 1 : 1);
+                    return;
+                }
+
                 const reportsData = snapshot.docs.map(doc => {
                     const data = doc.data();
                     const repliesObject = data.replies || {};
@@ -150,20 +99,54 @@ export default function ReportHistory({ user }: { user: User | null }) {
                         replies: repliesArray
                     } as Report;
                 });
+                
                 setReports(reportsData);
+                setFirstVisible(snapshot.docs[0]);
+                setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+                setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
                 setLoading(false);
+            }, (error) => {
+                 console.error("Error fetching reports:", error);
+                 toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+                 setLoading(false);
             });
 
-            return () => unsubscribe();
+            return unsubscribe;
+        } catch (error) {
+            console.error("Error fetching reports:", error);
+            toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        if (user) {
+            const unsub = fetchReports(1);
+            return () => { unsub.then(u => u && u()) };
         } else {
             setLoading(false);
         }
     }, [user]);
 
+    const goToNextPage = () => {
+        const newPage = currentPage + 1;
+        setCurrentPage(newPage);
+        fetchReports(newPage, 'next');
+    };
+
+    const goToPrevPage = () => {
+        if (currentPage === 1) return;
+        const newPage = currentPage - 1;
+        setCurrentPage(newPage);
+        fetchReports(newPage, 'prev');
+    };
+
+
     const handleDelete = async (reportId: string) => {
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
+            // The onSnapshot listener will auto-update the UI
         } catch (error) {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
@@ -263,11 +246,24 @@ export default function ReportHistory({ user }: { user: User | null }) {
                 </Card>
             )}
 
-            {hasMore && !loading && (
-                <div className="text-center">
-                    <Button onClick={() => fetchReports(false)} disabled={loadingMore}>
-                        {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Muat Lebih Banyak
+            {reports.length > 0 && (
+                <div className="flex items-center justify-end space-x-2 w-full">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={currentPage === 1 || loading}
+                    >
+                        Sebelumnya
+                    </Button>
+                    <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={isLastPage || loading}
+                    >
+                        Berikutnya
                     </Button>
                 </div>
             )}
