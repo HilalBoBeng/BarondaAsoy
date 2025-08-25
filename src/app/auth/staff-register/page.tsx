@@ -29,11 +29,16 @@ import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const staffRegisterSchema = z
   .object({
     name: z.string().min(1, "Nama tidak boleh kosong."),
     email: z.string().email("Format email tidak valid."),
+    phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
+    addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
+    addressDetail: z.string().optional(),
     password: z
       .string()
       .min(8, "Kata sandi minimal 8 karakter."),
@@ -42,7 +47,17 @@ const staffRegisterSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Konfirmasi kata sandi tidak cocok.",
     path: ["confirmPassword"],
+  })
+  .refine((data) => {
+    if (data.addressType === 'luar_kilongan') {
+      return !!data.addressDetail && data.addressDetail.length > 0;
+    }
+    return true;
+  }, {
+    message: "Detail alamat harus diisi jika memilih 'Luar Kilongan'.",
+    path: ["addressDetail"],
   });
+
 
 type StaffRegisterFormValues = z.infer<typeof staffRegisterSchema>;
 
@@ -52,19 +67,26 @@ export default function StaffRegisterPage() {
   const router = useRouter();
   const form = useForm<StaffRegisterFormValues>({
     resolver: zodResolver(staffRegisterSchema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { name: "", email: "", phone: "", addressDetail: "", password: "", confirmPassword: "" },
   });
+  
+  const addressType = form.watch('addressType');
 
  const onSubmit = async (data: StaffRegisterFormValues) => {
     setIsSubmitting(true);
     try {
+       const dataToStore = {
+        ...data,
+        addressDetail: data.addressType === 'kilongan' ? 'KILONGAN' : data.addressDetail,
+      };
+
       const result = await sendOtp({ email: data.email, context: 'staffRegister' });
       if (result.success) {
         toast({
           title: "Berhasil",
           description: "Kode OTP telah dikirim ke email Anda untuk verifikasi.",
         });
-        localStorage.setItem('verificationContext', JSON.stringify({ ...data, flow: 'staffRegister' }));
+        localStorage.setItem('verificationContext', JSON.stringify({ ...dataToStore, flow: 'staffRegister' }));
         router.push('/auth/verify-otp');
       } else {
         throw new Error(result.message);
@@ -123,6 +145,55 @@ export default function StaffRegisterPage() {
                   </FormItem>
                 )}
               />
+               <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nomor HP</FormLabel>
+                    <FormControl>
+                      <Input placeholder="08xxxxxxxxxx" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="addressType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alamat</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Pilih jenis alamat" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="kilongan">Kilongan</SelectItem>
+                            <SelectItem value="luar_kilongan">Luar Kilongan</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {addressType === 'luar_kilongan' && (
+                  <FormField
+                    control={form.control}
+                    name="addressDetail"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Detail Alamat</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="Masukkan nama jalan, nomor rumah, RT/RW, dll." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
+
               <FormField
                 control={form.control}
                 name="password"

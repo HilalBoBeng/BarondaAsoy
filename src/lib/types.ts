@@ -67,6 +67,8 @@ export interface Staff {
   name: string;
   email: string;
   phone: string;
+  addressType: 'kilongan' | 'luar_kilongan';
+  addressDetail: string;
   accessCode: string;
   password?: string;
 }

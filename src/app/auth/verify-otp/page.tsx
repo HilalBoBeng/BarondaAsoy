@@ -219,7 +219,10 @@ export default function VerifyOtpPage() {
             await addDoc(collection(db, 'staff'), {
                 name: verificationContext.name,
                 email: verificationContext.email,
-                password: verificationContext.password,
+                phone: verificationContext.phone,
+                addressType: verificationContext.addressType,
+                addressDetail: verificationContext.addressDetail,
+                password: verificationContext.password, // IMPORTANT: In a real app, this should be hashed.
                 accessCode: accessCode
             });
             await sendStaffAccessCode({
