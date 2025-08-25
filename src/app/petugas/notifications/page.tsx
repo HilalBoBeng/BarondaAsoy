@@ -154,7 +154,7 @@ export default function PetugasNotificationsPage() {
                         new Date(((selectedItem as Announcement).date as Timestamp).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
                 </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
+            <div className="py-4 whitespace-pre-wrap break-words">
                 <p>{itemType === 'notification' ? (selectedItem as Notification)?.message : (selectedItem as Announcement)?.content}</p>
             </div>
             <DialogFooter>

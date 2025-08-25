@@ -83,17 +83,14 @@ export default function Home() {
   
   useEffect(() => {
     if (user) {
-        // The query requires an index. Removing orderBy and sorting on the client.
         const q = query(collection(db, "notifications"), where("userId", "==", user.uid));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
             const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-            // Sort client-side
             notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
             setNotifications(notifs);
         });
-        return () => unsubscribeNotifications(); // Correctly unsubscribe when user changes or logs out
+        return () => unsubscribeNotifications();
     } else {
-        // Clear notifications if there's no user
         setNotifications([]);
     }
   }, [user]);
@@ -125,7 +122,6 @@ export default function Home() {
   const handleNotificationDelete = async (notifId: string) => {
       try {
           await deleteDoc(doc(db, "notifications", notifId));
-          // The onSnapshot listener will automatically update the UI
           toast({ title: 'Berhasil', description: 'Notifikasi telah dihapus.' });
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus notifikasi.' });
@@ -189,10 +185,10 @@ export default function Home() {
                             notifications.map(notif => (
                                 <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className="flex items-start gap-2 cursor-pointer">
                                    <div className="flex-grow">
-                                        <p className="font-semibold flex items-center gap-2">
+                                        <div className="font-semibold flex items-center gap-2">
                                             {notif.title}
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
-                                        </p>
+                                        </div>
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
@@ -364,23 +360,19 @@ export default function Home() {
                     {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt.toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
                 </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
+            <div className="py-4 whitespace-pre-wrap break-words">
                 <p>{selectedNotification?.message}</p>
             </div>
-            <DialogFooter className="sm:justify-between flex-col-reverse sm:flex-row gap-2">
-                 <Button type="button" variant="destructive" size="sm" onClick={() => {
+            <DialogFooter className="sm:justify-between flex-row-reverse">
+                 <Button type="button" variant="destructive" size="icon" onClick={() => {
                      if(selectedNotification) {
                         handleNotificationDelete(selectedNotification.id)
                         setSelectedNotification(null)
                      }
                  }}>
-                    <X className="mr-2 h-4 w-4" /> Hapus
+                    <Trash className="h-4 w-4" />
+                    <span className="sr-only">Hapus</span>
                  </Button>
-                 <DialogClose asChild>
-                    <Button type="button" variant="secondary">
-                        Tutup
-                    </Button>
-                </DialogClose>
             </DialogFooter>
         </DialogContent>
     </Dialog>
