@@ -29,7 +29,12 @@ import { useRouter } from "next/navigation";
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Kata sandi saat ini diperlukan."),
   newPassword: z.string().min(8, "Kata sandi baru minimal 8 karakter."),
+  confirmNewPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmNewPassword, {
+    message: "Konfirmasi kata sandi baru tidak cocok.",
+    path: ["confirmNewPassword"],
 });
+
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
@@ -98,6 +103,19 @@ export default function AdminSettingsPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Kata Sandi Baru</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="confirmNewPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
                   <FormControl>
                     <Input type="password" {...field} />
                   </FormControl>

@@ -28,7 +28,12 @@ import { verifyPasswordAndSendChangeEmailOtp } from "@/ai/flows/change-email"
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Kata sandi saat ini harus diisi."),
   newPassword: z.string().min(8, "Kata sandi baru minimal 8 karakter."),
+  confirmNewPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmNewPassword, {
+    message: "Konfirmasi kata sandi baru tidak cocok.",
+    path: ["confirmNewPassword"],
 });
+
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 const emailSchema = z.object({
@@ -147,6 +152,17 @@ export default function SettingsPage() {
                                       render={({ field }) => (
                                           <FormItem>
                                               <FormLabel>Kata Sandi Baru</FormLabel>
+                                              <FormControl><Input type="password" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={passwordForm.control}
+                                      name="confirmNewPassword"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
                                               <FormControl><Input type="password" {...field} /></FormControl>
                                               <FormMessage />
                                           </FormItem>
