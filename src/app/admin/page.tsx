@@ -173,7 +173,7 @@ export default function AdminPage() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-24 text-center">Belum ada laporan.</TableCell>
-                                    </TabelRow>
+                                    </TableRow>
                                 )}
                             </TableBody>
                         </Table>
