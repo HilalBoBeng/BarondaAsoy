@@ -100,8 +100,15 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+        <Image 
+            src="https://iili.io/KJ4aGxp.png" 
+            alt="Loading Logo" 
+            width={120} 
+            height={120} 
+            className="animate-pulse"
+            priority
+        />
       </div>
     );
   }
