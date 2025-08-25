@@ -13,7 +13,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection } from 'firebase/firestore';
 
 
 const SendReplyInputSchema = z.object({
