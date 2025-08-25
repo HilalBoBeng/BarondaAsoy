@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from "firebase/firestore";
 import type { TriageReportOutput } from "@/ai/flows/triage-report";
 
@@ -7,7 +8,7 @@ export interface Announcement {
   title: string;
   content: string;
   date: string | Date | Timestamp;
-  target: 'all' | 'users' | 'staff';
+  target?: 'all' | 'users' | 'staff';
   likes?: number;
   dislikes?: number;
   likesBy?: string[];
@@ -97,3 +98,4 @@ export interface EquipmentStatus {
     status: 'good' | 'broken' | 'missing';
     lastChecked: Timestamp | Date;
 }
+

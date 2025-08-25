@@ -1,15 +1,16 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { Shield, Megaphone, Users, UserCheck, Calendar, User, FileText } from "lucide-react";
+import { Shield, Megaphone, Users, UserCheck, Calendar, User, FileText, ClipboardList } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { Report } from "@/lib/types";
+import type { Report, PatrolLog } from "@/lib/types";
 
 export default function AdminPage() {
     const [stats, setStats] = useState({
@@ -19,8 +20,10 @@ export default function AdminPage() {
         totalAnnouncements: 0,
     });
     const [recentReports, setRecentReports] = useState<Report[]>([]);
+    const [recentPatrolLogs, setRecentPatrolLogs] = useState<PatrolLog[]>([]);
     const [loadingStats, setLoadingStats] = useState(true);
     const [loadingReports, setLoadingReports] = useState(true);
+    const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
     const [greeting, setGreeting] = useState("Selamat Datang");
     const [currentTime, setCurrentTime] = useState("");
     const [currentDate, setCurrentDate] = useState("");
@@ -45,6 +48,8 @@ export default function AdminPage() {
     }, []);
 
     useEffect(() => {
+        let mounted = true;
+
         // Fetch stats
         const reportsQuery = query(collection(db, "reports"), where('status', '!=', 'resolved'));
         const usersQuery = collection(db, "users");
@@ -52,12 +57,10 @@ export default function AdminPage() {
         const announcementsQuery = collection(db, "announcements");
 
         const unsubStats = [
-            onSnapshot(reportsQuery, (snapshot) => setStats(prev => ({ ...prev, activeReports: snapshot.size }))),
-            onSnapshot(scheduleQuery, (snapshot) => setStats(prev => ({...prev, officersOnDuty: snapshot.size}))),
-            onSnapshot(announcementsQuery, (snapshot) => setStats(prev => ({ ...prev, totalAnnouncements: snapshot.size }))),
+            onSnapshot(reportsQuery, (snapshot) => { if(mounted) setStats(prev => ({ ...prev, activeReports: snapshot.size })) }),
+            onSnapshot(scheduleQuery, (snapshot) => { if(mounted) setStats(prev => ({...prev, officersOnDuty: snapshot.size})) }),
+            onSnapshot(announcementsQuery, (snapshot) => { if(mounted) setStats(prev => ({ ...prev, totalAnnouncements: snapshot.size })) }),
         ];
-        
-        let mounted = true;
         
         getDocs(usersQuery).then(snapshot => {
             if(mounted) {
@@ -80,11 +83,26 @@ export default function AdminPage() {
                 setLoadingReports(false);
             }
         });
+        
+        // Fetch recent patrol logs
+        const recentPatrolLogsQuery = query(collection(db, "patrol_logs"), orderBy("createdAt", "desc"), limit(5));
+        const unsubPatrolLogs = onSnapshot(recentPatrolLogsQuery, (snapshot) => {
+             if (mounted) {
+                const logs = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    createdAt: doc.data().createdAt?.toDate().toLocaleString('id-ID', {dateStyle: 'medium', timeStyle: 'short'})
+                })) as PatrolLog[];
+                setRecentPatrolLogs(logs);
+                setLoadingPatrolLogs(false);
+            }
+        });
 
         return () => {
             mounted = false;
             unsubStats.forEach(unsub => unsub());
             unsubReports();
+            unsubPatrolLogs();
         };
     }, []);
 
@@ -142,77 +160,146 @@ export default function AdminPage() {
                 )}
             </div>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Laporan Terbaru</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {/* Mobile View */}
-                    <div className="sm:hidden space-y-4">
-                      {loadingReports ? (
-                         Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
-                      ) : recentReports.length > 0 ? (
-                        recentReports.map(report => (
-                          <Card key={report.id}>
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />{report.reporterName}</CardTitle>
-                                    {threatLevelBadge(report)}
-                                </div>
-                                <CardDescription className="flex items-center gap-2 pt-1"><Calendar className="h-4 w-4" />{report.createdAt as string}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground break-words">{report.reportText}</p>
-                            </CardContent>
-                          </Card>  
-                        ))
-                      ) : (
-                        <div className="text-center py-12 text-muted-foreground">Belum ada laporan.</div>
-                      )}
-                    </div>
-                    
-                    {/* Desktop View */}
-                     <div className="hidden sm:block rounded-lg border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tanggal</TableHead>
-                                    <TableHead>Pelapor</TableHead>
-                                    <TableHead>Laporan</TableHead>
-                                    <TableHead className="text-right">Ancaman</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loadingReports ? (
-                                     Array.from({ length: 3 }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                                            <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : recentReports.length > 0 ? (
-                                    recentReports.map(report => (
-                                        <TableRow key={report.id}>
-                                            <TableCell>{report.createdAt as string}</TableCell>
-                                            <TableCell className="font-medium">{report.reporterName}</TableCell>
-                                            <TableCell className="max-w-sm truncate">{report.reportText}</TableCell>
-                                            <TableCell className="text-right">
-                                                {threatLevelBadge(report)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Laporan Warga Terbaru</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {/* Mobile View */}
+                        <div className="sm:hidden space-y-4">
+                          {loadingReports ? (
+                             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
+                          ) : recentReports.length > 0 ? (
+                            recentReports.map(report => (
+                              <Card key={report.id}>
+                                <CardHeader>
+                                    <div className="flex justify-between items-start">
+                                        <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />{report.reporterName}</CardTitle>
+                                        {threatLevelBadge(report)}
+                                    </div>
+                                    <CardDescription className="flex items-center gap-2 pt-1"><Calendar className="h-4 w-4" />{report.createdAt as string}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-muted-foreground break-words">{report.reportText}</p>
+                                </CardContent>
+                              </Card>  
+                            ))
+                          ) : (
+                            <div className="text-center py-12 text-muted-foreground">Belum ada laporan warga.</div>
+                          )}
+                        </div>
+                        
+                        {/* Desktop View */}
+                         <div className="hidden sm:block rounded-lg border">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">Belum ada laporan.</TableCell>
+                                        <TableHead>Tanggal</TableHead>
+                                        <TableHead>Pelapor</TableHead>
+                                        <TableHead>Laporan</TableHead>
+                                        <TableHead className="text-right">Ancaman</TableHead>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+                                </TableHeader>
+                                <TableBody>
+                                    {loadingReports ? (
+                                         Array.from({ length: 3 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                                <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : recentReports.length > 0 ? (
+                                        recentReports.map(report => (
+                                            <TableRow key={report.id}>
+                                                <TableCell>{report.createdAt as string}</TableCell>
+                                                <TableCell className="font-medium">{report.reporterName}</TableCell>
+                                                <TableCell className="max-w-sm truncate">{report.reportText}</TableCell>
+                                                <TableCell className="text-right">
+                                                    {threatLevelBadge(report)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">Belum ada laporan warga.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Log Patroli Terbaru</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         {/* Mobile View */}
+                        <div className="sm:hidden space-y-4">
+                          {loadingPatrolLogs ? (
+                             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
+                          ) : recentPatrolLogs.length > 0 ? (
+                            recentPatrolLogs.map(log => (
+                              <Card key={log.id}>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" />{log.title}</CardTitle>
+                                    <CardDescription className="flex items-center gap-2 pt-1"><User className="h-4 w-4" />{log.officerName}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-muted-foreground break-words">{log.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-2">{log.createdAt as string}</p>
+                                </CardContent>
+                              </Card>  
+                            ))
+                          ) : (
+                            <div className="text-center py-12 text-muted-foreground">Belum ada log patroli.</div>
+                          )}
+                        </div>
+
+                        {/* Desktop View */}
+                         <div className="hidden sm:block rounded-lg border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Waktu</TableHead>
+                                        <TableHead>Petugas</TableHead>
+                                        <TableHead>Judul</TableHead>
+                                        <TableHead>Deskripsi</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loadingPatrolLogs ? (
+                                         Array.from({ length: 3 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : recentPatrolLogs.length > 0 ? (
+                                        recentPatrolLogs.map(log => (
+                                            <TableRow key={log.id}>
+                                                <TableCell>{log.createdAt as string}</TableCell>
+                                                <TableCell className="font-medium">{log.officerName}</TableCell>
+                                                <TableCell>{log.title}</TableCell>
+                                                <TableCell className="max-w-sm truncate">{log.description}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">Belum ada log patroli.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }

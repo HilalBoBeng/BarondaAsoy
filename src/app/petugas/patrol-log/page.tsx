@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -62,7 +62,7 @@ export default function PatrolLogPage() {
         const unsubEquipment = onSnapshot(equipmentRef, (snapshot) => {
             if (snapshot.empty) {
                 // Initialize if not present
-                const batch = db.batch();
+                const batch = writeBatch(db);
                 initialEquipment.forEach(item => {
                     const docRef = doc(db, 'equipment_status', item.id);
                     batch.set(docRef, { ...item, lastChecked: serverTimestamp() });
