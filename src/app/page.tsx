@@ -10,7 +10,7 @@ import {
 import ReportActivity from '@/components/dashboard/report-activity';
 import ReportHistory from "@/components/dashboard/report-history";
 import Schedule from '@/components/dashboard/schedule';
-import Announcements from "@/components/dashboard/announcements";
+import Announcements from '@/components/dashboard/announcements';
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy } from 'firebase/firestore';
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
