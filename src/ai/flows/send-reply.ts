@@ -1,8 +1,10 @@
+
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow for sending a reply from an admin to a user's report.
+ * @fileOverview This file defines a Genkit flow for sending a reply from an admin to a user's report
+ * and saving the reply to Firestore.
  *
- * - sendReply - Sends an email reply to the user who submitted a report.
+ * - sendReply - Sends an email reply and saves it to the report document.
  * - SendReplyInput - The input type for the sendReply function.
  * - SendReplyOutput - The return type for the sendReply function.
  */
@@ -10,11 +12,16 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
+import { db } from '@/lib/firebase/client';
+import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+
 
 const SendReplyInputSchema = z.object({
+  reportId: z.string().describe("The ID of the report document in Firestore."),
   recipientEmail: z.string().email().describe("The recipient's email address."),
   replyMessage: z.string().describe('The content of the reply message.'),
   originalReport: z.string().describe('The original report text for context.'),
+  replierRole: z.enum(['Admin', 'Petugas']).describe("The role of the person replying."),
 });
 export type SendReplyInput = z.infer<typeof SendReplyInputSchema>;
 
@@ -34,8 +41,9 @@ const sendReplyFlow = ai.defineFlow(
     inputSchema: SendReplyInputSchema,
     outputSchema: SendReplyOutputSchema,
   },
-  async ({ recipientEmail, replyMessage, originalReport }) => {
+  async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole }) => {
     try {
+      // 1. Send email notification
       const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
           port: parseInt(process.env.SMTP_PORT || '587'),
@@ -49,11 +57,11 @@ const sendReplyFlow = ai.defineFlow(
       const mailOptions = {
           from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
           to: recipientEmail,
-          subject: 'Tanggapan atas Laporan Anda',
+          subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-                <h2>Tanggapan dari Admin</h2>
-                <p>Berikut adalah tanggapan dari admin terkait laporan yang Anda kirimkan:</p>
+                <h2>Tanggapan dari ${replierRole}</h2>
+                <p>Berikut adalah tanggapan dari ${replierRole} terkait laporan yang Anda kirimkan:</p>
                 <div style="background-color: #f9f9f9; border-left: 4px solid #f9a825; margin: 1em 0; padding: 10px 20px;">
                     <p style="font-style: italic;">"${replyMessage}"</p>
                 </div>
@@ -69,11 +77,21 @@ const sendReplyFlow = ai.defineFlow(
       };
 
       await transporter.sendMail(mailOptions);
-      console.log(`Successfully sent reply to ${recipientEmail}`);
+      console.log(`Successfully sent reply notification to ${recipientEmail}`);
+
+      // 2. Save reply to Firestore document
+      const reportRef = doc(db, 'reports', reportId);
+      await updateDoc(reportRef, {
+          replies: arrayUnion({
+              message: replyMessage,
+              replierRole: replierRole,
+              timestamp: serverTimestamp(),
+          })
+      });
 
       return {
         success: true,
-        message: 'Reply has been sent successfully.',
+        message: 'Reply has been sent and saved successfully.',
       };
     } catch (error) {
       console.error('Failed to send reply:', error);

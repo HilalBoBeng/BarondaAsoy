@@ -92,13 +92,15 @@ export default function ReportsAdminPage() {
     setIsSubmittingReply(true);
     try {
         const result = await sendReply({
+            reportId: currentReport.id,
             recipientEmail: currentReport.reporterEmail,
             replyMessage: values.replyMessage,
-            originalReport: currentReport.reportText
+            originalReport: currentReport.reportText,
+            replierRole: 'Admin'
         });
 
         if (result.success) {
-            toast({ title: 'Berhasil', description: 'Balasan berhasil dikirim.' });
+            toast({ title: 'Berhasil', description: 'Balasan berhasil dikirim dan disimpan.' });
             setIsReplyDialogOpen(false);
         } else {
             throw new Error(result.message);
@@ -125,8 +127,8 @@ export default function ReportsAdminPage() {
   const renderActions = (report: Report) => (
     <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
         <Button variant="outline" size="sm" onClick={() => handleOpenReplyDialog(report)} disabled={!report.reporterEmail}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Balas
+            <MessageSquare className="h-4 w-4 mr-0 sm:mr-2" />
+            <span className="hidden sm:inline">Balas</span>
         </Button>
         <Select value={report.status} onValueChange={(value) => handleStatusChange(report.id, value as ReportStatus)}>
             <SelectTrigger className="w-full sm:w-[150px]">

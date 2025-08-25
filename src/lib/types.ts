@@ -25,6 +25,12 @@ export interface EmergencyContact {
   type: 'police' | 'fire' | 'medical' | 'other';
 }
 
+export interface Reply {
+    message: string;
+    replierRole: 'Admin' | 'Petugas';
+    timestamp: Date | Timestamp;
+}
+
 export interface Report {
   id: string;
   reporterName: string;
@@ -35,4 +41,5 @@ export interface Report {
   createdAt: string | Date | Timestamp;
   triageResult: TriageReportOutput;
   status: 'new' | 'in_progress' | 'resolved';
+  replies?: Reply[];
 }

@@ -4,12 +4,12 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import type { Report } from '@/lib/types';
+import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
-import { Card, CardContent } from '../ui/card';
+import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
@@ -27,15 +27,28 @@ const statusDisplay: Record<string, { text: string; variant: 'destructive' | 'de
   resolved: { text: 'Selesai', variant: 'secondary' },
 };
 
+const ReplyCard = ({ reply }: { reply: Reply }) => (
+    <Card className="mt-2 bg-muted/50">
+        <CardContent className="p-3">
+            <div className="flex justify-between items-start">
+                 <p className="text-xs text-foreground/80 break-words flex-grow pr-2">
+                    {reply.message}
+                </p>
+                <div className="flex-shrink-0">
+                    <Badge variant={reply.replierRole === 'Admin' ? 'default' : 'secondary'}>{reply.replierRole}</Badge>
+                </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+                {formatDistanceToNow( (reply.timestamp as Timestamp)?.toDate() || new Date(), { addSuffix: true, locale: id })}
+            </p>
+        </CardContent>
+    </Card>
+);
+
+
 export default function ReportHistory({ user }: { user: User | null }) {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [firstDoc, setFirstDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [isLastPage, setIsLastPage] = useState(false);
-    const [page, setPage] = useState(1);
-
-    const reportsPerPage = 5;
 
     useEffect(() => {
         if (!user) {
@@ -43,52 +56,38 @@ export default function ReportHistory({ user }: { user: User | null }) {
             return;
         }
 
-        const fetchReports = () => {
+        const reportsRef = collection(db, 'reports');
+        const q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), limit(10)); // Fetch last 10 reports
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
             setLoading(true);
-            const reportsRef = collection(db, 'reports');
-            const q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), limit(reportsPerPage));
-
-            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-                if (querySnapshot.empty) {
-                    setReports([]);
-                    setLoading(false);
-                    setIsLastPage(true);
-                    return;
-                }
-
-                const reportsData: Report[] = querySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        ...data,
-                        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-                    } as Report;
-                });
-                
-                setReports(reportsData);
-                setFirstDoc(querySnapshot.docs[0]);
-                const newLastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
-                setLastDoc(newLastDoc);
-                
-                const nextQuery = query(collection(db, 'reports'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'), startAfter(newLastDoc), limit(1));
-                const nextDocs = await getDocs(nextQuery);
-                setIsLastPage(nextDocs.empty);
-
+            if (querySnapshot.empty) {
+                setReports([]);
                 setLoading(false);
-            }, (error) => {
-                console.error("Error fetching reports:", error);
-                setLoading(false);
-            });
-
-            return unsubscribe;
-        };
-
-        const unsubscribe = fetchReports();
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
+                return;
             }
-        };
+
+            const reportsData: Report[] = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+                    replies: (data.replies || []).map((r: any) => ({
+                        ...r,
+                        timestamp: r.timestamp instanceof Timestamp ? r.timestamp.toDate() : new Date(),
+                    })),
+                } as Report;
+            });
+            
+            setReports(reportsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching reports:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [user]);
 
     if (!user) {
@@ -136,6 +135,17 @@ export default function ReportHistory({ user }: { user: User | null }) {
                                 </div>
                             </div>
                         </CardContent>
+                        {report.replies && report.replies.length > 0 && (
+                            <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
+                                 <h4 className="text-xs font-semibold flex items-center gap-1">
+                                    <MessageSquare className="h-3 w-3" />
+                                    Balasan:
+                                 </h4>
+                                {report.replies.map((reply, index) => (
+                                    <ReplyCard key={index} reply={reply} />
+                                ))}
+                            </CardFooter>
+                        )}
                     </Card>
                 ))
             ) : (
@@ -148,5 +158,3 @@ export default function ReportHistory({ user }: { user: User | null }) {
         </div>
     );
 }
-
-    
