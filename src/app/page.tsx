@@ -34,9 +34,29 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [greeting, setGreeting] = useState("Selamat Datang");
+  const [currentTime, setCurrentTime] = useState("");
+
   const auth = getAuth(app);
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) return "Selamat Pagi";
+      if (hour >= 12 && hour < 15) return "Selamat Siang";
+      if (hour >= 15 && hour < 19) return "Selamat Sore";
+      return "Selamat Malam";
+    };
+    setGreeting(getGreeting());
+
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('id-ID'));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
@@ -238,8 +258,12 @@ export default function Home() {
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Selamat Datang di Siskamling Digital</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Sistem Keamanan Lingkungan berbasis digital untuk lingkungan yang lebih aman.</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                {greeting}, {user?.displayName || 'Warga'}!
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+                {currentTime || 'Sistem Keamanan Lingkungan berbasis digital untuk lingkungan yang lebih aman.'}
+            </p>
           </div>
 
           <div className="space-y-6">
