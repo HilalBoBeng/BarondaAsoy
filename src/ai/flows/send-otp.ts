@@ -10,7 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 
@@ -37,14 +37,29 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email }) => {
     try {
-      // 1. Generate a 6-digit OTP
+      const batch = writeBatch(db);
+
+      // 1. Invalidate all previous active OTPs for this email
+      const q = query(
+          collection(db, 'otps'),
+          where('email', '==', email),
+          where('used', '==', false),
+          where('expiresAt', '>', new Date())
+      );
+      const oldOtpsSnapshot = await getDocs(q);
+      oldOtpsSnapshot.forEach(doc => {
+          batch.update(doc.ref, { used: true });
+      });
+      
+      // 2. Generate a 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      // 2. Set expiration time (10 minutes from now)
+      // 3. Set expiration time (10 minutes from now)
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-      // 3. Save to Firestore
-      await addDoc(collection(db, 'otps'), {
+      // 4. Save new OTP to Firestore
+      const newOtpRef = doc(collection(db, 'otps'));
+      batch.set(newOtpRef, {
         email,
         otp,
         createdAt: serverTimestamp(),
@@ -52,7 +67,7 @@ const sendOtpFlow = ai.defineFlow(
         used: false,
       });
 
-      // 4. Send email using nodemailer
+      // 5. Send email using nodemailer
       const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
           port: parseInt(process.env.SMTP_PORT || '587'),
@@ -116,6 +131,9 @@ const sendOtpFlow = ai.defineFlow(
 
       await transporter.sendMail(mailOptions);
       console.log(`Successfully sent OTP to ${email}`);
+
+      // 6. Commit all database changes
+      await batch.commit();
 
       return {
         success: true,
