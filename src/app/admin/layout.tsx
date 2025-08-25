@@ -41,6 +41,7 @@ export default function AdminLayout({
     newReports: 0,
     pendingStaff: 0,
   });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -77,6 +78,7 @@ export default function AdminLayout({
   }, [router, toast]);
 
   const handleLogout = () => {
+    setIsLoggingOut(true);
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
@@ -131,12 +133,12 @@ export default function AdminLayout({
               <item.icon className="h-4 w-4" />
               {item.label}
             </div>
-            {item.badge && item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
+            {item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
           </Link>
         ))}
       </nav>
       <div className="mt-auto p-4">
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar
         </Button>

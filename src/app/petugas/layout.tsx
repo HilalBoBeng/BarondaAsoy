@@ -34,6 +34,7 @@ export default function PetugasLayout({
   const [staffName, setStaffName] = useState("Petugas");
   const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, pendingSchedules: 0 });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -70,6 +71,7 @@ export default function PetugasLayout({
   }, [router, toast]);
 
   const handleLogout = () => {
+    setIsLoggingOut(true);
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
@@ -122,12 +124,12 @@ export default function PetugasLayout({
               <item.icon className="h-4 w-4" />
               {item.label}
             </div>
-             {item.badge && item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
+             {item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
           </Link>
         ))}
       </nav>
       <div className="mt-auto p-4">
-         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout}>
+         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar
           </Button>
