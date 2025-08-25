@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy, updateDoc } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -76,24 +76,22 @@ export default function Home() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+      
+      if (currentUser) {
+          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+          const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+              const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+              notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
+              setNotifications(notifs);
+          });
+          return () => unsubscribeNotifications();
+      } else {
+          setNotifications([]);
+      }
     });
 
     return () => unsubscribeAuth();
   }, [auth, router]);
-  
-  useEffect(() => {
-    if (user) {
-        const q = query(collection(db, "notifications"), where("userId", "==", user.uid));
-        const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
-            const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-            notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
-            setNotifications(notifs);
-        });
-        return () => unsubscribeNotifications();
-    } else {
-        setNotifications([]);
-    }
-  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -359,12 +357,7 @@ export default function Home() {
                 <DialogDescription>
                     {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt.toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
                 </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 whitespace-pre-wrap break-words">
-                <p>{selectedNotification?.message}</p>
-            </div>
-            <DialogFooter className="sm:justify-between flex-row-reverse">
-                 <Button type="button" variant="destructive" size="icon" onClick={() => {
+                 <Button type="button" variant="ghost" size="icon" className="absolute right-6 top-6" onClick={() => {
                      if(selectedNotification) {
                         handleNotificationDelete(selectedNotification.id)
                         setSelectedNotification(null)
@@ -373,6 +366,14 @@ export default function Home() {
                     <Trash className="h-4 w-4" />
                     <span className="sr-only">Hapus</span>
                  </Button>
+            </DialogHeader>
+            <div className="py-4 whitespace-pre-wrap break-words">
+                <p>{selectedNotification?.message}</p>
+            </div>
+             <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="secondary">Tutup</Button>
+                </DialogClose>
             </DialogFooter>
         </DialogContent>
     </Dialog>
