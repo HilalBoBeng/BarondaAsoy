@@ -4,8 +4,8 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { Shield, Megaphone, Users, UserCheck } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, Megaphone, Users, UserCheck, Calendar, User, FileText } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -34,24 +34,33 @@ export default function AdminPage() {
             onSnapshot(scheduleQuery, (snapshot) => setStats(prev => ({...prev, officersOnDuty: snapshot.size}))),
             onSnapshot(announcementsQuery, (snapshot) => setStats(prev => ({ ...prev, totalAnnouncements: snapshot.size }))),
         ];
-
+        
+        let mounted = true;
+        
         getDocs(usersQuery).then(snapshot => {
-            setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
-        }).finally(() => setLoadingStats(false));
+            if(mounted) {
+                setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
+            }
+        }).finally(() => {
+            if(mounted) setLoadingStats(false);
+        });
 
         // Fetch recent reports
         const recentReportsQuery = query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(5));
         const unsubReports = onSnapshot(recentReportsQuery, (snapshot) => {
-            const reports = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID')
-            })) as Report[];
-            setRecentReports(reports);
-            setLoadingReports(false);
+             if (mounted) {
+                const reports = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID')
+                })) as Report[];
+                setRecentReports(reports);
+                setLoadingReports(false);
+            }
         });
 
         return () => {
+            mounted = false;
             unsubStats.forEach(unsub => unsub());
             unsubReports();
         };
@@ -63,6 +72,17 @@ export default function AdminPage() {
         { title: "Petugas Bertugas", value: stats.officersOnDuty, icon: UserCheck, color: "text-green-500" },
         { title: "Pengumuman", value: stats.totalAnnouncements, icon: Megaphone, color: "text-yellow-500" },
     ];
+
+    const threatLevelBadge = (report: Report) => {
+        if (!report.triageResult) return <span className="text-muted-foreground text-xs">N/A</span>;
+        
+        const level = report.triageResult.threatLevel;
+        return (
+            <Badge variant={level === 'high' ? 'destructive' : level === 'medium' ? 'default' : 'secondary'} className="capitalize">
+                {level}
+            </Badge>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -94,7 +114,32 @@ export default function AdminPage() {
                     <CardTitle>Laporan Terbaru</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     <div className="rounded-lg border">
+                    {/* Mobile View */}
+                    <div className="sm:hidden space-y-4">
+                      {loadingReports ? (
+                         Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
+                      ) : recentReports.length > 0 ? (
+                        recentReports.map(report => (
+                          <Card key={report.id}>
+                            <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />{report.reporterName}</CardTitle>
+                                    {threatLevelBadge(report)}
+                                </div>
+                                <CardDescription className="flex items-center gap-2 pt-1"><Calendar className="h-4 w-4" />{report.createdAt as string}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground break-words">{report.reportText}</p>
+                            </CardContent>
+                          </Card>  
+                        ))
+                      ) : (
+                        <div className="text-center py-12 text-muted-foreground">Belum ada laporan.</div>
+                      )}
+                    </div>
+                    
+                    {/* Desktop View */}
+                     <div className="hidden sm:block rounded-lg border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -118,21 +163,17 @@ export default function AdminPage() {
                                     recentReports.map(report => (
                                         <TableRow key={report.id}>
                                             <TableCell>{report.createdAt as string}</TableCell>
-                                            <TableCell>{report.reporterName}</TableCell>
+                                            <TableCell className="font-medium">{report.reporterName}</TableCell>
                                             <TableCell className="max-w-sm truncate">{report.reportText}</TableCell>
                                             <TableCell className="text-right">
-                                                {report.triageResult ? (
-                                                    <Badge variant={report.triageResult.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
-                                                        {report.triageResult.threatLevel}
-                                                    </Badge>
-                                                ) : <span className="text-muted-foreground text-xs">N/A</span>}
+                                                {threatLevelBadge(report)}
                                             </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-24 text-center">Belum ada laporan.</TableCell>
-                                    </TableRow>
+                                    </TabelRow>
                                 )}
                             </TableBody>
                         </Table>
