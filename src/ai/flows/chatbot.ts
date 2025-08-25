@@ -26,6 +26,7 @@ const chatbotPrompt = ai.definePrompt({
 
 Informasi tentang aplikasi Baronda:
 - Baronda adalah aplikasi keamanan lingkungan (siskamling digital) untuk Kelurahan Kilongan.
+- Pemilik atau pembuat aplikasi ini adalah "Beng" atau "Hilal". Jika ditanya siapa Hilal, jawab "Pemilik Baronda".
 - Fitur utama: pelaporan aktivitas mencurigakan, jadwal patroli, pengumuman dari admin, kontak darurat, dan dasbor untuk admin serta petugas.
 - Pengguna (warga) bisa mendaftar, login, mengirim laporan, dan melihat pengumuman serta jadwal.
 - Petugas (staf) memiliki kode akses khusus, bisa melihat laporan, dan melakukan patroli.

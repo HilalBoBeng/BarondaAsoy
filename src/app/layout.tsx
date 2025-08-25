@@ -39,7 +39,6 @@ export default function RootLayout({
             {children}
             <Toaster />
             <CookieConsent />
-            <ChatbotWidget />
         </ThemeProvider>
       </body>
     </html>

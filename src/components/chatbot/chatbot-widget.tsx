@@ -70,10 +70,10 @@ export default function ChatbotWidget() {
             <div className="fixed bottom-6 right-6 z-50">
                 <Button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="rounded-full w-16 h-16 shadow-2xl animate-fade-in"
+                    className="rounded-full w-14 h-14 shadow-2xl animate-fade-in"
                 >
-                    {isOpen ? <X className="h-8 w-8" /> : 
-                        <Image src="https://iili.io/KJ4aGxp.png" alt="Chat" width={40} height={40} />
+                    {isOpen ? <X className="h-7 w-7" /> : 
+                        <Image src="https://iili.io/KJ4aGxp.png" alt="Chat" width={36} height={36} />
                     }
                 </Button>
             </div>
@@ -147,4 +147,3 @@ export default function ChatbotWidget() {
         </>
     );
 }
-
