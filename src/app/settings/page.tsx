@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn, Home } from "lucide-react"
+import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -112,15 +112,15 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Kembali
+            </Link>
+          </Button>
           <h1 className="text-lg sm:text-xl font-bold text-primary">
             Pengaturan
           </h1>
-          <Button asChild variant="outline">
-            <Link href="/">
-              <Home className="mr-2 h-4 w-4" />
-              Halaman Utama
-            </Link>
-          </Button>
        </header>
         <main className="flex-1 p-4 sm:p-6 md:p-8">
              <div className="mx-auto max-w-2xl space-y-8">

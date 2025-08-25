@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, KeyRound, ArrowLeft } from 'lucide-react';
+import { Loader2, User, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser } from '@/lib/types';
@@ -89,19 +89,19 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl space-y-8">
        <div className="flex items-center justify-between">
-         <div className="flex items-center space-x-4">
-            <User className="h-12 w-12 text-muted-foreground" />
-            <div>
-              <h1 className="text-2xl font-bold">{user?.displayName}</h1>
-              <p className="text-muted-foreground">{user?.email}</p>
+            <Button asChild variant="outline" size="sm">
+                <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Kembali
+                </Link>
+            </Button>
+            <div className="flex items-center space-x-4">
+                <div>
+                <h1 className="text-2xl font-bold text-right">{user?.displayName}</h1>
+                <p className="text-muted-foreground text-right">{user?.email}</p>
+                </div>
+                 <User className="h-12 w-12 text-muted-foreground" />
             </div>
-         </div>
-          <Button asChild variant="outline">
-            <Link href="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Kembali ke Dasbor
-            </Link>
-          </Button>
       </div>
       
       <Card>
@@ -182,20 +182,6 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pengaturan Akun</CardTitle>
-          <CardDescription>Kelola keamanan akun Anda.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Button asChild variant="outline">
-                <Link href="/settings">
-                    <KeyRound className='mr-2 h-4 w-4'/>
-                    Ubah Kata Sandi atau Email
-                </Link>
-            </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

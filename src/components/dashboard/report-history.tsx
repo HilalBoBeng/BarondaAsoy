@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where, deleteDoc, doc, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, deleteDoc, doc, orderBy, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -10,12 +10,13 @@ import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { MessageSquare, Trash } from 'lucide-react';
-import { formatDistanceToNow, type format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
+const REPORTS_PER_PAGE = 5;
 
 const categoryDisplay: Record<string, string> = {
     theft: "Pencurian",
@@ -48,59 +49,100 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     </Card>
 );
 
-
 export default function ReportHistory({ user }: { user?: User | null }) {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    
+    const [currentPage, setCurrentPage] = useState(1);
+    const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [isLastPage, setIsLastPage] = useState(false);
 
-    useEffect(() => {
+    const fetchReports = async (direction: 'next' | 'prev' | 'initial') => {
         setLoading(true);
+        try {
+            const reportsRef = collection(db, 'reports');
+            let q;
 
-        const reportsRef = collection(db, 'reports');
-        // If a user is passed, filter by their UID. Otherwise, fetch all reports.
-        const q = user 
-            ? query(reportsRef, where('userId', '==', user.uid))
-            : query(reportsRef);
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const reportsData = snapshot.docs.map(doc => {
-                const data = doc.data();
-                const repliesObject = data.replies || {};
-                const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+            // Base query with optional user filter
+            const baseQuery = user 
+                ? [where('userId', '==', user.uid)]
+                : [];
 
-                return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-                    replies: repliesArray
-                } as Report;
-            });
+            if (direction === 'next' && lastVisible) {
+                q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+            } else if (direction === 'prev' && firstVisible) {
+                 q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+            } else {
+                q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
+            }
             
-            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                if (direction !== 'initial') {
+                    setIsLastPage(true);
+                } else {
+                    setReports([]);
+                }
+                setLoading(false);
+                return;
+            }
+            
+            const reportsData = snapshot.docs.map(doc => {
+                 const data = doc.data();
+                 const repliesObject = data.replies || {};
+                 const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+                 return {
+                     id: doc.id,
+                     ...data,
+                     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+                     replies: repliesArray
+                 } as Report;
+             });
 
             setReports(reportsData);
-            setLoading(false);
-        }, (error) => {
-             console.error("Error fetching reports:", error);
-             toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
-             setLoading(false);
-        });
+            setFirstVisible(snapshot.docs[0]);
+            setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
 
-        return () => unsubscribe();
-    }, [user, toast]);
+        } catch (error) {
+            console.error("Error fetching reports:", error);
+            toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchReports('initial');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
+    const goToNextPage = () => {
+        setCurrentPage(prev => prev + 1);
+        fetchReports('next');
+    };
+
+    const goToPrevPage = () => {
+        setCurrentPage(prev => prev - 1);
+        fetchReports('prev');
+    };
+
 
     const handleDelete = async (reportId: string) => {
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
+            fetchReports('initial'); // Refresh data
         } catch (error) {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
         }
     };
 
-    if (loading) {
+    if (loading && reports.length === 0) {
         return (
             <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -116,26 +158,16 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         )
     }
     
-    if (user && reports.length === 0) {
+    if (!loading && reports.length === 0) {
+         const message = user ? "Anda belum pernah membuat laporan." : "Belum ada laporan dari komunitas.";
         return (
              <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
-                    Anda belum pernah membuat laporan.
+                    {message}
                 </CardContent>
             </Card>
         );
     }
-    
-     if (!user && reports.length === 0) {
-        return (
-             <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                    Belum ada laporan dari komunitas.
-                </CardContent>
-            </Card>
-        );
-    }
-
 
     return (
         <div className="space-y-4">
@@ -203,6 +235,25 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                     </CardFooter>
                 </Card>
             ))}
+            <div className="flex items-center justify-end space-x-2 pt-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1 || loading}
+                >
+                    Sebelumnya
+                </Button>
+                 <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPage}
+                    disabled={isLastPage || loading}
+                >
+                    Berikutnya
+                </Button>
+            </div>
         </div>
     );
 }
