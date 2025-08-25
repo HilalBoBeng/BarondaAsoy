@@ -49,7 +49,7 @@ export default function Announcements() {
             {Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i}>
                     <CardHeader>
-                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-5 w-3/4" />
                         <Skeleton className="h-4 w-1/2 mt-2" />
                     </CardHeader>
                     <CardContent>
@@ -67,19 +67,19 @@ export default function Announcements() {
                 <CardHeader>
                 <div className="flex items-start justify-between">
                     <div>
-                    <CardTitle className="text-xl">{announcement.title}</CardTitle>
-                    <CardDescription className="mt-1 flex items-center gap-2">
+                    <CardTitle className="text-lg">{announcement.title}</CardTitle>
+                    <CardDescription className="mt-1 flex items-center gap-2 text-xs">
                         <Calendar className="h-4 w-4" />
                         <span>{announcement.date as string}</span>
                     </CardDescription>
                     </div>
                     <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                        <Megaphone className="h-6 w-6" />
+                        <Megaphone className="h-5 w-5" />
                     </div>
                 </div>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                <p className="text-muted-foreground">{announcement.content}</p>
+                <p className="text-sm text-muted-foreground">{announcement.content}</p>
                 </CardContent>
             </Card>
             ))}

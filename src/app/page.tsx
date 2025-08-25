@@ -29,7 +29,7 @@ export default function Home() {
               className="h-10 w-10"
             />
             <div>
-              <span className="text-xl font-bold text-primary">Baronda</span>
+              <span className="text-lg font-bold text-primary">Baronda</span>
               <p className="text-xs text-muted-foreground">Kelurahan Kilongan</p>
             </div>
           </Link>
@@ -50,7 +50,7 @@ export default function Home() {
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-7xl space-y-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Selamat Datang di Siskamling Digital</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Selamat Datang di Siskamling Digital</h1>
             <p className="text-muted-foreground">Sistem Keamanan Lingkungan berbasis digital untuk lingkungan yang lebih aman.</p>
           </div>
 

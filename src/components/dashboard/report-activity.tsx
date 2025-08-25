@@ -130,7 +130,7 @@ export default function ReportActivity() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Lapor Aktivitas Mencurigakan</CardTitle>
+        <CardTitle className="text-lg">Lapor Aktivitas Mencurigakan</CardTitle>
         <CardDescription>
           Laporan Anda akan dianalisis oleh AI kami untuk penilaian segera dan disimpan.
         </CardDescription>
