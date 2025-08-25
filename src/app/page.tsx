@@ -21,7 +21,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -78,7 +77,6 @@ function AppLayout() {
         <SidebarMenuButton
           onClick={() => handleViewChange(view)}
           isActive={activeView === view}
-          tooltip={viewConfig[view].title}
         >
           <Icon />
           <span>{viewConfig[view].title}</span>
@@ -89,9 +87,9 @@ function AppLayout() {
 
   return (
     <>
-      <Sidebar collapsible="icon" className="bg-sidebar">
-        <SidebarHeader className="h-14 items-center justify-center p-2 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:py-2">
-          <BarondaLogo className="h-8 w-auto shrink-0 transition-all duration-200 group-data-[collapsible=icon]:h-6" />
+      <Sidebar collapsible="none" className="bg-sidebar">
+        <SidebarHeader className="h-14 items-center justify-center p-2">
+          <BarondaLogo className="h-8 w-auto shrink-0" />
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -103,7 +101,7 @@ function AppLayout() {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Profile">
+                <SidebarMenuButton>
                     <Avatar className="size-7">
                         <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="person portrait" />
                         <AvatarFallback>U</AvatarFallback>
@@ -117,7 +115,7 @@ function AppLayout() {
       <div className="flex flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-sm lg:h-[60px] lg:px-6">
           <div className="flex items-center gap-4">
-            <SidebarTrigger />
+            <SidebarTrigger className="lg:hidden" />
             <h1 className="text-lg font-semibold md:text-xl">
               {viewConfig[activeView].title}
             </h1>
@@ -127,9 +125,9 @@ function AppLayout() {
             Warga
           </Button>
         </header>
-        <SidebarInset className="flex-1 overflow-auto">
-          <main className="p-4 md:p-8">{renderView()}</main>
-        </SidebarInset>
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto max-w-7xl p-4 md:p-8">{renderView()}</div>
+        </main>
       </div>
     </>
   );
