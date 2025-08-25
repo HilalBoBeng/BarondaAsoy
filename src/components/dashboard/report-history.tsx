@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, where, deleteDoc, doc, endBefore, limitToLast, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, startAfter, getDocs, type QueryDocumentSnapshot, type DocumentData, type Timestamp, where, deleteDoc, doc, endBefore, limitToLast, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Loader2, MessageSquare, Trash } from 'lucide-react';
+import { MessageSquare, Trash } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
@@ -71,7 +71,8 @@ export default function ReportHistory({ user }: { user: User | null }) {
             const reportsRef = collection(db, 'reports');
             let q;
 
-            // Simplified query to avoid composite index. Sorting will be done on the client.
+            // Removing orderBy from the query to avoid composite index error.
+            // Sorting will be handled client-side.
             if (direction === 'next' && lastVisible) {
                 q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
             } else if (direction === 'prev' && firstVisible) {
@@ -101,6 +102,9 @@ export default function ReportHistory({ user }: { user: User | null }) {
                     } as Report;
                 });
                 
+                // Client-side sorting
+                reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+
                 setReports(reportsData);
                 setFirstVisible(snapshot.docs[0]);
                 setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
@@ -272,5 +276,3 @@ export default function ReportHistory({ user }: { user: User | null }) {
         </div>
     );
 }
-
-    
