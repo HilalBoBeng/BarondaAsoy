@@ -15,7 +15,7 @@ export interface Announcement {
 }
 
 export interface ScheduleEntry {
-  id: string;
+  id:string;
   date: string | Date | Timestamp;
   time: string;
   officer: string;
@@ -48,6 +48,8 @@ export interface Report {
   triageResult: TriageReportOutput;
   status: 'new' | 'in_progress' | 'resolved';
   replies?: Reply[] | Record<string, Reply>;
+  handlerName?: string;
+  handlerId?: string;
 }
 
 export interface AppUser {
@@ -71,6 +73,7 @@ export interface Staff {
   addressDetail: string;
   accessCode: string;
   status: 'pending' | 'active' | 'rejected';
+  points?: number;
 }
 
 export interface Notification {

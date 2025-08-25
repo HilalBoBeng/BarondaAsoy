@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -127,7 +127,7 @@ export default function UsersAdminPage() {
     const staffRef = doc(db, 'staff', staffMember.id);
     try {
         if (approved) {
-            await updateDoc(staffRef, { status: 'active' });
+            await updateDoc(staffRef, { status: 'active', points: 0 });
             await sendStaffAccessCode({
                 email: staffMember.email,
                 name: staffMember.name,
@@ -240,7 +240,7 @@ export default function UsersAdminPage() {
                         <TableRow>
                             <TableHead>Nama</TableHead>
                             <TableHead>Email</TableHead>
-                            <TableHead>Nomor HP</TableHead>
+                            <TableHead>Poin</TableHead>
                             <TableHead>Kode Akses</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
@@ -251,8 +251,8 @@ export default function UsersAdminPage() {
                                 <TableRow key={i}>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
@@ -261,7 +261,12 @@ export default function UsersAdminPage() {
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
                                     <TableCell>{s.email}</TableCell>
-                                    <TableCell>{s.phone}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center font-bold">
+                                            <Star className="h-4 w-4 mr-1 text-yellow-500 fill-yellow-400" />
+                                            {s.points || 0}
+                                        </div>
+                                    </TableCell>
                                     <TableCell>{s.accessCode}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>

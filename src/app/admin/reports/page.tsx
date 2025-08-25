@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,8 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, CheckCircle, AlertTriangle, HelpCircle, Calendar, User, MessageSquare, Loader2 } from 'lucide-react';
-import type { Report, Reply } from '@/lib/types';
+import { Trash, CheckCircle, AlertTriangle, HelpCircle, Calendar, User, MessageSquare, Loader2, UserCheck } from 'lucide-react';
+import type { Report, Reply, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -31,26 +31,35 @@ const replySchema = z.object({
 });
 type ReplyFormValues = z.infer<typeof replySchema>;
 
-const REPORTS_PER_PAGE = 5;
+const assignSchema = z.object({
+  handlerId: z.string().min(1, "Petugas harus dipilih."),
+});
+type AssignFormValues = z.infer<typeof assignSchema>;
+
 
 export default function ReportsAdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const { toast } = useToast();
 
-  const replyForm = useForm<ReplyFormValues>({
-    resolver: zodResolver(replySchema),
-    defaultValues: { replyMessage: '' },
-  });
-  
+  const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
+  const assignForm = useForm<AssignFormValues>({ resolver: zodResolver(assignSchema) });
+
   useEffect(() => {
-    const unsub = onSnapshot(query(collection(db, "reports"), orderBy('createdAt', 'desc')), (snapshot) => {
+    const fetchStaff = async () => {
+      const staffQuery = query(collection(db, "staff"), where("status", "==", "active"));
+      const staffSnapshot = await getDocs(staffQuery);
+      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+      setStaffList(staffData);
+    };
+    fetchStaff();
+
+    const unsubReports = onSnapshot(query(collection(db, "reports"), orderBy('createdAt', 'desc')), (snapshot) => {
         const reportsData = snapshot.docs.map(doc => {
             const data = doc.data();
             const repliesObject = data.replies || {};
@@ -70,25 +79,66 @@ export default function ReportsAdminPage() {
         setLoading(false);
     });
 
-    return () => unsub();
+    return () => unsubReports();
   }, [toast]);
 
   const handleStatusChange = async (id: string, status: ReportStatus) => {
-    try {
-      const docRef = doc(db, 'reports', id);
-      await updateDoc(docRef, { status });
-       // Optimistic update
-      setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
-      toast({ title: "Berhasil", description: "Status laporan berhasil diperbarui." });
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat memperbarui status." });
+    if (status === 'in_progress') {
+      const reportToAssign = reports.find(r => r.id === id);
+      if (reportToAssign) {
+        setCurrentReport(reportToAssign);
+        assignForm.reset();
+        setIsAssignDialogOpen(true);
+      }
+    } else {
+      try {
+        const docRef = doc(db, 'reports', id);
+        await updateDoc(docRef, { status });
+        setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+        toast({ title: "Berhasil", description: "Status laporan berhasil diperbarui." });
+      } catch (error) {
+        toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat memperbarui status." });
+      }
     }
   };
+  
+  const onAssignSubmit = async (values: AssignFormValues) => {
+    if (!currentReport) return;
+    setIsSubmitting(true);
+    const selectedStaff = staffList.find(s => s.id === values.handlerId);
+    if (!selectedStaff) {
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Petugas tidak ditemukan.' });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    try {
+      const reportRef = doc(db, 'reports', currentReport.id);
+      await updateDoc(reportRef, { 
+        status: 'in_progress',
+        handlerId: selectedStaff.id,
+        handlerName: selectedStaff.name,
+      });
+
+      const staffRef = doc(db, 'staff', selectedStaff.id);
+      await updateDoc(staffRef, {
+        points: increment(1)
+      });
+      
+      toast({ title: "Berhasil", description: `Laporan ditugaskan kepada ${selectedStaff.name}.` });
+      setIsAssignDialogOpen(false);
+      setCurrentReport(null);
+    } catch(error) {
+       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menugaskan laporan.' });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
 
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'reports', id));
-      // Optimistic delete handled by onSnapshot
       toast({ title: "Berhasil", description: "Laporan berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus laporan." });
@@ -106,7 +156,7 @@ export default function ReportsAdminPage() {
         toast({ variant: 'destructive', title: 'Gagal', description: 'Email pelapor tidak ditemukan.' });
         return;
     }
-    setIsSubmittingReply(true);
+    setIsSubmitting(true);
     try {
         const result = await sendReply({
             reportId: currentReport.id,
@@ -126,7 +176,7 @@ export default function ReportsAdminPage() {
         const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak diketahui.';
         toast({ variant: 'destructive', title: 'Gagal Mengirim Balasan', description: errorMessage });
     } finally {
-        setIsSubmittingReply(false);
+        setIsSubmitting(false);
     }
   };
   
@@ -159,6 +209,12 @@ export default function ReportsAdminPage() {
       const { icon: Icon, className } = config[level];
       return <Icon className={`h-4 w-4 ${className}`} />
   }
+  
+  const statusOptions: {value: ReportStatus; label: string; disabled?: (currentStatus: ReportStatus) => boolean}[] = [
+    { value: 'new', label: 'Baru', disabled: (currentStatus) => currentStatus !== 'new' },
+    { value: 'in_progress', label: 'Ditangani', disabled: (currentStatus) => currentStatus === 'resolved' },
+    { value: 'resolved', label: 'Selesai', disabled: (currentStatus) => currentStatus === 'new' },
+  ];
 
   const renderActions = (report: Report) => {
     const hasReplies = report.replies && report.replies.length > 0;
@@ -173,9 +229,11 @@ export default function ReportsAdminPage() {
                     <SelectValue placeholder="Ubah Status" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="new">Baru</SelectItem>
-                    <SelectItem value="in_progress">Ditangani</SelectItem>
-                    <SelectItem value="resolved">Selesai</SelectItem>
+                    {statusOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value} disabled={option.disabled && option.disabled(report.status)}>
+                            {option.label}
+                        </SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
             {report.status === 'resolved' && (
@@ -228,6 +286,11 @@ export default function ReportsAdminPage() {
                             <span className="ml-2">{report.triageResult?.threatLevel || 'N/A'}</span>
                         </Badge>
                     </div>
+                     {report.handlerName && (
+                        <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <UserCheck className="h-3 w-3" /> Ditangani oleh: <strong>{report.handlerName}</strong>
+                        </div>
+                    )}
                      {report.replies && report.replies.length > 0 && (
                         <div className="mt-4">
                             <h4 className="text-xs font-semibold mb-1">Balasan:</h4>
@@ -254,6 +317,7 @@ export default function ReportsAdminPage() {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Pelapor</TableHead>
                 <TableHead>Laporan & Balasan</TableHead>
+                <TableHead>Penanggung Jawab</TableHead>
                 <TableHead>Ancaman</TableHead>
                 <TableHead className="w-[350px] text-right">Aksi</TableHead>
               </TableRow>
@@ -265,6 +329,7 @@ export default function ReportsAdminPage() {
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-[280px] ml-auto" /></TableCell>
                   </TableRow>
@@ -287,6 +352,7 @@ export default function ReportsAdminPage() {
                             </div>
                         )}
                     </TableCell>
+                    <TableCell>{report.handlerName || '-'}</TableCell>
                     <TableCell>
                         <Badge variant={report.triageResult?.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
                             <ThreatLevelIcon level={report.triageResult?.threatLevel} />
@@ -302,7 +368,7 @@ export default function ReportsAdminPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
+                  <TableCell colSpan={6} className="text-center h-24">
                     Belum ada laporan masuk.
                   </TableCell>
                 </TableRow>
@@ -341,9 +407,53 @@ export default function ReportsAdminPage() {
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Batal</Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isSubmittingReply}>
-                            {isSubmittingReply && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Kirim Balasan
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="sm:max-w-md w-[90%] rounded-lg">
+            <DialogHeader>
+                <DialogTitle>Tugaskan Laporan</DialogTitle>
+                <CardDescription>Pilih petugas yang akan menangani laporan ini.</CardDescription>
+            </DialogHeader>
+            <Form {...assignForm}>
+                <form onSubmit={assignForm.handleSubmit(onAssignSubmit)} className="space-y-4 pt-4">
+                     <FormField
+                        control={assignForm.control}
+                        name="handlerId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Petugas</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih petugas" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {staffList.map(s => (
+                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Batal</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Tugaskan
                         </Button>
                     </DialogFooter>
                 </form>
