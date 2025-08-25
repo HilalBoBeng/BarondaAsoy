@@ -22,6 +22,7 @@ import { LogIn, LogOut, UserPlus, UserCircle, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
 
 
 export default function Home() {
@@ -29,14 +30,24 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [auth]);
+    // Redirect admin/petugas if they land on the home page
+    const userRole = localStorage.getItem('userRole');
+    if (userRole === 'admin') {
+      router.replace('/admin');
+    } else if (userRole === 'petugas') {
+      router.replace('/petugas');
+    } else {
+      // Only set loading to false if not redirecting
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }
+  }, [auth, router]);
 
   const handleLogout = async () => {
     try {
