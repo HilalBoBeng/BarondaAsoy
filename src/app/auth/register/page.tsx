@@ -46,8 +46,8 @@ export default function RegisterPage() {
   });
 
   const onSubmit = (data: RegisterFormValues) => {
-    console.log("Register submitted", data);
-    // TODO: Implement Firebase registration logic with email verification
+    console.log("OTP requested for registration:", data);
+    // TODO: Implement Firebase registration logic with OTP via email
   };
 
   return (
@@ -116,7 +116,7 @@ export default function RegisterPage() {
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button type="submit" className="w-full">
-              Daftar
+              Daftar & Kirim OTP
             </Button>
              <div className="text-center text-sm text-muted-foreground">
                 Sudah punya akun?{" "}
@@ -125,6 +125,11 @@ export default function RegisterPage() {
                     className="underline text-primary"
                 >
                     Masuk di sini
+                </Link>
+            </div>
+             <div className="text-center text-sm">
+                <Link href="/" className="underline">
+                    Kembali ke Halaman Utama
                 </Link>
             </div>
           </CardFooter>

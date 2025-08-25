@@ -36,8 +36,8 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit = (data: ForgotPasswordFormValues) => {
-    console.log("Forgot password submitted", data);
-    // TODO: Implement Firebase password reset logic
+    console.log("OTP requested for password reset:", data);
+    // TODO: Implement Firebase password reset logic with OTP via email
   };
 
   return (
@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
       <CardHeader>
         <CardTitle>Lupa Kata Sandi</CardTitle>
         <CardDescription>
-          Masukkan email Anda untuk menerima tautan pengaturan ulang kata sandi.
+          Masukkan email Anda untuk menerima kode OTP untuk mengatur ulang kata sandi.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -67,12 +67,17 @@ export default function ForgotPasswordPage() {
           </CardContent>
           <CardFooter className="flex-col gap-4">
             <Button type="submit" className="w-full">
-              Kirim Tautan
+              Kirim Kode OTP
             </Button>
             <div className="text-center text-sm">
               <Link href="/auth/login" className="underline">
                 Kembali ke Halaman Masuk
               </Link>
+            </div>
+             <div className="text-center text-sm">
+                <Link href="/" className="underline">
+                    Kembali ke Halaman Utama
+                </Link>
             </div>
           </CardFooter>
         </form>

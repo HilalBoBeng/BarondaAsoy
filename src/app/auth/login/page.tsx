@@ -88,6 +88,11 @@ export default function LoginPage() {
                 Lupa Kata Sandi?
               </Link>
             </div>
+             <div className="text-center text-sm">
+                <Link href="/" className="underline">
+                    Kembali ke Halaman Utama
+                </Link>
+            </div>
           </CardFooter>
         </form>
       </Form>
