@@ -17,6 +17,9 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+import { Badge } from "@/components/ui/badge";
 
 export default function PetugasLayout({
   children,
@@ -29,6 +32,7 @@ export default function PetugasLayout({
   const [isClient, setIsClient] = useState(false);
   const [staffName, setStaffName] = useState("Petugas");
   const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
+  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, pendingSchedules: 0 });
 
   useEffect(() => {
     setIsClient(true);
@@ -49,6 +53,18 @@ export default function PetugasLayout({
         if (staffInfo.email) {
             setStaffEmail(staffInfo.email);
         }
+
+        // Badge listeners
+        const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
+        const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', staffInfo.id), where('status', '==', 'Pending'));
+        
+        const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+        const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
+        
+        return () => {
+          unsubReports();
+          unsubSchedules();
+        }
     }
   }, [router, toast]);
 
@@ -60,8 +76,8 @@ export default function PetugasLayout({
   };
 
   const navItems = [
-    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga" },
-    { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya" },
+    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports },
+    { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
     { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
   ];
@@ -97,12 +113,15 @@ export default function PetugasLayout({
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+              "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
               pathname.startsWith(item.href) && "bg-muted text-primary"
             )}
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            <div className="flex items-center gap-3">
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </div>
+             {item.badge && item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
           </Link>
         ))}
       </nav>

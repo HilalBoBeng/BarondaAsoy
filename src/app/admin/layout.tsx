@@ -23,6 +23,9 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import Image from "next/image";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminLayout({
   children,
@@ -35,6 +38,11 @@ export default function AdminLayout({
   const [isClient, setIsClient] = useState(false);
   const [adminName, setAdminName] = useState("Admin");
   const [adminEmail, setAdminEmail] = useState("admin@baronda.app");
+  const [badgeCounts, setBadgeCounts] = useState({
+    newReports: 0,
+    pendingStaff: 0,
+    pendingChats: 0
+  });
 
   useEffect(() => {
     setIsClient(true);
@@ -55,6 +63,21 @@ export default function AdminLayout({
         if (staffInfo.email) {
             setAdminEmail(staffInfo.email);
         }
+
+        // Setup badge listeners
+        const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
+        const staffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
+        const chatsQuery = query(collection(db, 'live_chats'), where('status', '==', 'pending'));
+        
+        const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+        const unsubStaff = onSnapshot(staffQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingStaff: snap.size})));
+        const unsubChats = onSnapshot(chatsQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingChats: snap.size})));
+        
+        return () => {
+          unsubReports();
+          unsubStaff();
+          unsubChats();
+        }
     }
   }, [router, toast]);
 
@@ -66,12 +89,12 @@ export default function AdminLayout({
   };
 
   const navItems = [
-    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
+    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: badgeCounts.newReports },
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna" },
+    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-    { href: "/admin/live-chat", icon: MessageCircle, label: "Live Chat" },
+    { href: "/admin/live-chat", icon: MessageCircle, label: "Live Chat", badge: badgeCounts.pendingChats },
     { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
   ];
@@ -106,12 +129,15 @@ export default function AdminLayout({
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+              "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
               pathname.startsWith(item.href) && "bg-muted text-primary"
             )}
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            <div className="flex items-center gap-3">
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </div>
+            {item.badge && item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
           </Link>
         ))}
       </nav>
