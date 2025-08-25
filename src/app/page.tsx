@@ -18,7 +18,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
-import { LogIn, LogOut, UserPlus, UserCircle } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -99,6 +99,13 @@ export default function Home() {
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                       <DropdownMenuItem asChild>
+                         <Link href="/settings">
+                           <Settings className="mr-2 h-4 w-4" />
+                           <span>Pengaturan</span>
+                         </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                        <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Keluar</span>
@@ -116,6 +123,13 @@ export default function Home() {
                          <Link href="/auth/register">
                             <UserPlus className="mr-2 h-4 w-4" />
                            <span>Daftar</span>
+                         </Link>
+                      </DropdownMenuItem>
+                       <DropdownMenuSeparator />
+                       <DropdownMenuItem asChild>
+                         <Link href="/settings">
+                           <Settings className="mr-2 h-4 w-4" />
+                           <span>Pengaturan</span>
                          </Link>
                       </DropdownMenuItem>
                     </>
