@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where, deleteDoc, doc, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, deleteDoc, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -15,9 +15,7 @@ import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import type { Timestamp } from 'firebase/firestore';
 
-const REPORTS_PER_PAGE = 5;
 
 const categoryDisplay: Record<string, string> = {
     theft: "Pencurian",
