@@ -22,6 +22,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { BarondaLogo } from "@/components/icons";
+import { sendOtp } from "@/ai/flows/send-otp";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -30,58 +36,88 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: "" },
   });
 
-  const onSubmit = (data: ForgotPasswordFormValues) => {
-    console.log("OTP requested for password reset:", data);
-    // TODO: Implement Firebase password reset logic with OTP via email
+  const onSubmit = async (data: ForgotPasswordFormValues) => {
+    setIsSubmitting(true);
+    try {
+      const result = await sendOtp({ email: data.email });
+      if (result.success) {
+        toast({
+          title: "Berhasil",
+          description: "Kode OTP telah dikirim ke email Anda.",
+        });
+        // TODO: Redirect to OTP verification page
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Gagal Mengirim OTP",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan.",
+      });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Lupa Kata Sandi</CardTitle>
-        <CardDescription>
-          Masukkan email Anda untuk menerima kode OTP untuk mengatur ulang kata sandi.
-        </CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent>
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@anda.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-          <CardFooter className="flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Kirim Kode OTP
-            </Button>
-            <div className="text-center text-sm">
-              <Link href="/auth/login" className="underline">
-                Kembali ke Halaman Masuk
-              </Link>
-            </div>
-             <div className="text-center text-sm">
-                <Link href="/" className="underline">
-                    Kembali ke Halaman Utama
+    <>
+      <div className="flex justify-center mb-6">
+          <BarondaLogo className="h-16 w-auto" />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lupa Kata Sandi</CardTitle>
+          <CardDescription>
+            Masukkan email Anda untuk menerima kode OTP untuk mengatur ulang kata sandi.
+          </CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="email@anda.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                 {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Kirim Kode OTP
+              </Button>
+              <div className="text-center text-sm">
+                <Link href="/auth/login" className="underline">
+                  Kembali ke Halaman Masuk
                 </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+              </div>
+              <div className="text-center text-sm">
+                  <Link href="/" className="underline">
+                      Kembali ke Halaman Utama
+                  </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </>
   );
 }

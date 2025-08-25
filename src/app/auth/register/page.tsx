@@ -22,6 +22,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { BarondaLogo } from "@/components/icons";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { sendOtp } from "@/ai/flows/send-otp";
+import { Loader2 } from "lucide-react";
 
 const registerSchema = z
   .object({
@@ -40,101 +45,131 @@ const registerSchema = z
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
 
-  const onSubmit = (data: RegisterFormValues) => {
-    console.log("OTP requested for registration:", data);
-    // TODO: Implement Firebase registration logic with OTP via email
+ const onSubmit = async (data: RegisterFormValues) => {
+    setIsSubmitting(true);
+    try {
+      const result = await sendOtp({ email: data.email });
+      if (result.success) {
+        toast({
+          title: "Berhasil",
+          description: "Kode OTP telah dikirim ke email Anda. Silakan periksa.",
+        });
+        // TODO: Store registration data temporarily (e.g., localStorage)
+        // and redirect to OTP verification page.
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Gagal Mengirim OTP",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Daftar Akun Baru</CardTitle>
-        <CardDescription>
-          Buat akun untuk mulai menggunakan aplikasi.
-        </CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Lengkap</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nama Anda" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@anda.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kata Sandi</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Konfirmasi Kata Sandi</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-          <CardFooter className="flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Daftar & Kirim OTP
-            </Button>
-             <div className="text-center text-sm text-muted-foreground">
-                Sudah punya akun?{" "}
-                <Link
-                    href="/auth/login"
-                    className="underline text-primary"
-                >
-                    Masuk di sini
-                </Link>
-            </div>
-             <div className="text-center text-sm">
-                <Link href="/" className="underline">
-                    Kembali ke Halaman Utama
-                </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+    <>
+      <div className="flex justify-center mb-6">
+          <BarondaLogo className="h-16 w-auto" />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Daftar Akun Baru</CardTitle>
+          <CardDescription>
+            Buat akun untuk mulai menggunakan aplikasi.
+          </CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nama Lengkap</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nama Anda" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="email@anda.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kata Sandi</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Konfirmasi Kata Sandi</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Daftar & Kirim OTP
+              </Button>
+              <div className="text-center text-sm text-muted-foreground">
+                  Sudah punya akun?{" "}
+                  <Link
+                      href="/auth/login"
+                      className="underline text-primary"
+                  >
+                      Masuk di sini
+                  </Link>
+              </div>
+              <div className="text-center text-sm">
+                  <Link href="/" className="underline">
+                      Kembali ke Halaman Utama
+                  </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </>
   );
 }
