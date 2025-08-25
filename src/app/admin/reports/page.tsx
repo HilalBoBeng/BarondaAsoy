@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, increment } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, increment, where, endBefore, limitToLast } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,6 +24,7 @@ import { sendReply } from '@/ai/flows/send-reply';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
+const REPORTS_PER_PAGE = 5;
 type ReportStatus = 'new' | 'in_progress' | 'resolved';
 
 const replySchema = z.object({
@@ -47,19 +48,44 @@ export default function ReportsAdminPage() {
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const { toast } = useToast();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [isLastPage, setIsLastPage] = useState(false);
+
   const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
   const assignForm = useForm<AssignFormValues>({ resolver: zodResolver(assignSchema) });
 
-  useEffect(() => {
-    const fetchStaff = async () => {
+  const fetchStaff = async () => {
       const staffQuery = query(collection(db, "staff"), where("status", "==", "active"));
       const staffSnapshot = await getDocs(staffQuery);
       const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
       setStaffList(staffData);
     };
-    fetchStaff();
 
-    const unsubReports = onSnapshot(query(collection(db, "reports"), orderBy('createdAt', 'desc')), (snapshot) => {
+  const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
+    setLoading(true);
+    try {
+      let q;
+      const reportsRef = collection(db, "reports");
+
+      if (direction === 'next' && lastVisible) {
+        q = query(reportsRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+      } else if (direction === 'prev' && firstVisible) {
+        q = query(reportsRef, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+      } else {
+        q = query(reportsRef, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
+      }
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (snapshot.empty) {
+            setIsLastPage(true);
+            setReports([]);
+            setLoading(false);
+            if (direction === 'next') setCurrentPage(prev => prev > 1 ? prev -1 : 1);
+            return;
+        }
+
         const reportsData = snapshot.docs.map(doc => {
             const data = doc.data();
             const repliesObject = data.replies || {};
@@ -71,16 +97,45 @@ export default function ReportsAdminPage() {
                 replies: repliesArray,
             } as Report;
         });
+
         setReports(reportsData);
+        setFirstVisible(snapshot.docs[0]);
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
         setLoading(false);
-    }, (error) => {
+      }, (error) => {
         console.error("Error fetching reports:", error);
         toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
         setLoading(false);
-    });
+      });
+      return unsubscribe;
 
-    return () => unsubReports();
-  }, [toast]);
+    } catch (error) {
+        console.error("Error fetching reports:", error);
+        toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+        setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaff();
+    const unsub = fetchReports(1);
+    return () => { unsub.then(u => u && u()) };
+  }, []);
+
+  const goToNextPage = () => {
+    const newPage = currentPage + 1;
+    setCurrentPage(newPage);
+    fetchReports(newPage, 'next');
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage === 1) return;
+    const newPage = currentPage - 1;
+    setCurrentPage(newPage);
+    fetchReports(newPage, 'prev');
+  };
+
 
   const handleStatusChange = async (id: string, status: ReportStatus) => {
     if (status === 'in_progress') {
@@ -94,7 +149,6 @@ export default function ReportsAdminPage() {
       try {
         const docRef = doc(db, 'reports', id);
         await updateDoc(docRef, { status });
-        setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
         toast({ title: "Berhasil", description: "Status laporan berhasil diperbarui." });
       } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat memperbarui status." });
@@ -377,6 +431,27 @@ export default function ReportsAdminPage() {
           </Table>
         </div>
       </CardContent>
+      <CardFooter>
+        <div className="flex items-center justify-end space-x-2 w-full">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1 || loading}
+            >
+                Sebelumnya
+            </Button>
+            <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={isLastPage || loading}
+            >
+                Berikutnya
+            </Button>
+        </div>
+      </CardFooter>
     </Card>
 
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
@@ -463,3 +538,5 @@ export default function ReportsAdminPage() {
     </>
   );
 }
+
+    
