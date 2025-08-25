@@ -140,12 +140,15 @@ export default function NotificationsAdminPage() {
         }
 
         const batch = writeBatch(db);
+        const title = values.title.toUpperCase();
+        const message = values.message.toUpperCase();
+
         values.userIds.forEach(userId => {
           const newNotifRef = doc(collection(db, 'notifications'));
           batch.set(newNotifRef, {
             userId: userId,
-            title: values.title,
-            message: values.message,
+            title: title,
+            message: message,
             read: false,
             createdAt: serverTimestamp(),
           });
@@ -377,5 +380,3 @@ export default function NotificationsAdminPage() {
     </>
   );
 }
-
-    

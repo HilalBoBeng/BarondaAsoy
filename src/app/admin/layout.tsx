@@ -50,7 +50,7 @@ export default function AdminLayout({
   const handleLogout = () => {
     localStorage.removeItem('userRole');
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
-    router.push('/auth/staff-login');
+    router.push('/');
   };
 
   const navItems = [
