@@ -106,3 +106,12 @@ export interface EquipmentStatus {
     notes: string;
     checkedBy?: string;
 }
+
+// New type for Change Email Flow
+export interface ChangeEmailContext {
+  flow: 'changeEmail';
+  userId: string;
+  newEmail: string;
+  // We don't store password directly in localStorage for safety.
+  // It's used once and then discarded.
+}

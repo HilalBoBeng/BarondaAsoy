@@ -29,10 +29,9 @@ import { verifyOtp } from '@/ai/flows/verify-otp';
 import { sendOtp } from '@/ai/flows/send-otp';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, updateProfile, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { app, db } from '@/lib/firebase/client';
 import { setDoc, doc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
-import { sendStaffAccessCode } from '@/ai/flows/send-staff-access-code';
 import { resetStaffPassword } from '@/ai/flows/reset-staff-password';
 import Image from 'next/image';
 
@@ -49,6 +48,7 @@ export default function VerifyOtpPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [isStaffFlow, setIsStaffFlow] = useState(false);
   const [isStaffResetFlow, setIsStaffResetFlow] = useState(false);
+  const [isChangeEmailFlow, setIsChangeEmailFlow] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -56,14 +56,12 @@ export default function VerifyOtpPage() {
   const [cooldown, setCooldown] = useState(0);
   const [resendAttempts, setResendAttempts] = useState(0);
 
-  // Function to get cooldown data from localStorage
   const getCooldownData = useCallback(() => {
     if (typeof window === 'undefined') return null;
     const data = localStorage.getItem('otpCooldown');
     if (!data) return null;
     try {
       const parsed = JSON.parse(data);
-      // Basic validation
       if (parsed.email === verificationContext?.email && parsed.expiry && typeof parsed.attempts !== 'undefined') {
         return parsed;
       }
@@ -141,10 +139,11 @@ export default function VerifyOtpPage() {
 
   const handleResendOtp = async () => {
     if (!verificationContext || cooldown > 0) return;
+    const emailToSend = verificationContext.flow === 'changeEmail' ? verificationContext.newEmail : verificationContext.email;
 
     setIsSubmitting(true);
     try {
-        const result = await sendOtp({ email: verificationContext.email, context: verificationContext.flow });
+        const result = await sendOtp({ email: emailToSend, context: verificationContext.flow });
         if (result.success) {
             toast({
                 title: "Kode Terkirim",
@@ -154,9 +153,9 @@ export default function VerifyOtpPage() {
             setResendAttempts(newAttempts);
 
             let newCooldown = 0;
-            if (newAttempts === 1) newCooldown = 60; // 1 minute
-            else if (newAttempts === 2) newCooldown = 180; // 3 minutes
-            else newCooldown = 300; // 5 minutes
+            if (newAttempts === 1) newCooldown = 60;
+            else if (newAttempts === 2) newCooldown = 180;
+            else newCooldown = 300;
 
             setCooldown(newCooldown);
             const expiry = new Date().getTime() + newCooldown * 1000;
@@ -181,10 +180,12 @@ export default function VerifyOtpPage() {
         toast({ variant: 'destructive', title: 'Kesalahan', description: 'Sesi verifikasi tidak ditemukan.' });
         return;
     }
+    
+    const emailToVerify = verificationContext.flow === 'changeEmail' ? verificationContext.newEmail : verificationContext.email;
 
     setIsSubmitting(true);
     try {
-      const result = await verifyOtp({ email: verificationContext.email, otp: data.otp });
+      const result = await verifyOtp({ email: emailToVerify, otp: data.otp });
 
       if (result.success) {
         toast({ title: 'Berhasil', description: 'Verifikasi OTP berhasil.' });
@@ -212,11 +213,11 @@ export default function VerifyOtpPage() {
           
           toast({ title: 'Pendaftaran Berhasil', description: 'Akun Anda telah dibuat. Silakan masuk.' });
           router.push('/auth/login');
+
         } else if (verificationContext.flow === 'resetPassword') {
-          // This path might need re-authentication before password reset.
-          // For now, let's assume the user is "logged in" by the OTP verification.
           localStorage.setItem('resetPasswordEmail', verificationContext.email);
           router.push('/auth/reset-password');
+
         } else if (verificationContext.flow === 'staffRegister') {
             const accessCode = Math.random().toString(36).substring(2, 17).toUpperCase();
             await addDoc(collection(db, 'staff'), {
@@ -226,7 +227,7 @@ export default function VerifyOtpPage() {
                 addressType: verificationContext.addressType,
                 addressDetail: verificationContext.addressDetail,
                 accessCode: accessCode,
-                status: 'pending' // Set status to pending
+                status: 'pending'
             });
             setOtpVerified(true);
             setIsStaffFlow(true);
@@ -234,8 +235,23 @@ export default function VerifyOtpPage() {
             await resetStaffPassword({ email: verificationContext.email });
             setOtpVerified(true);
             setIsStaffResetFlow(true);
-        }
+        } else if (verificationContext.flow === 'changeEmail') {
+            const user = auth.currentUser;
+            if (!user) throw new Error("Pengguna tidak ditemukan. Sesi mungkin berakhir.");
+            
+            // Re-authenticate again before sensitive change
+            const credential = EmailAuthProvider.credential(verificationContext.email, verificationContext.password);
+            await reauthenticateWithCredential(user, credential);
+            
+            // Update email in Firebase Auth
+            await updateEmail(user, verificationContext.newEmail);
 
+            // Update email in Firestore
+            await setDoc(doc(db, "users", user.uid), { email: verificationContext.newEmail }, { merge: true });
+            
+            setOtpVerified(true);
+            setIsChangeEmailFlow(true);
+        }
       } else {
         throw new Error(result.message);
       }
@@ -253,6 +269,8 @@ export default function VerifyOtpPage() {
   if (otpVerified) {
     let successTitle = "Proses Selesai";
     let successDescription = "Proses telah selesai. Anda dapat kembali ke halaman utama.";
+    let buttonText = "Kembali ke Halaman Utama";
+    let buttonLink = "/";
 
     if (isStaffFlow) {
       successTitle = "Pendaftaran Sedang Ditinjau";
@@ -260,6 +278,12 @@ export default function VerifyOtpPage() {
     } else if (isStaffResetFlow) {
       successTitle = "Kode Akses Baru Terkirim";
       successDescription = "Kode akses baru Anda telah dikirim ulang ke email Anda. Silakan periksa kotak masuk Anda.";
+    } else if (isChangeEmailFlow) {
+      successTitle = "Email Berhasil Diubah";
+      successDescription = "Email Anda telah berhasil diperbarui. Anda akan dikeluarkan dan perlu masuk kembali dengan email baru Anda.";
+      buttonText = "Kembali ke Halaman Masuk";
+      buttonLink = "/auth/login";
+      if(auth.currentUser) auth.signOut();
     }
       
     return (
@@ -278,7 +302,7 @@ export default function VerifyOtpPage() {
             </CardHeader>
             <CardFooter>
               <Button className="w-full" asChild>
-                <Link href="/">Kembali ke Halaman Utama</Link>
+                <Link href={buttonLink}>{buttonText}</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -297,7 +321,9 @@ export default function VerifyOtpPage() {
         <CardHeader>
           <CardTitle>Verifikasi Kode OTP</CardTitle>
           <CardDescription>
-            Masukkan 6 digit kode yang kami kirimkan ke email {verificationContext?.email || 'Anda'}.
+            Masukkan 6 digit kode yang kami kirimkan ke email {
+                verificationContext?.flow === 'changeEmail' ? verificationContext.newEmail : verificationContext?.email || 'Anda'
+            }.
           </CardDescription>
         </CardHeader>
         <Form {...form}>

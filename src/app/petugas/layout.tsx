@@ -8,7 +8,8 @@ import {
   ShieldAlert,
   Calendar,
   Menu,
-  FileText
+  FileText,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -62,6 +63,7 @@ export default function PetugasLayout({
     { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga" },
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya" },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
+    { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
   ];
 
   if (!isClient) {

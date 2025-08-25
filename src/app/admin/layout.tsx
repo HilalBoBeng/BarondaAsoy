@@ -13,6 +13,7 @@ import {
   Phone,
   Menu,
   MessageSquare,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -68,6 +69,7 @@ export default function AdminLayout({
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+    { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
   ];
   
   if (!isClient) {

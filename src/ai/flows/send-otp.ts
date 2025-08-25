@@ -16,7 +16,7 @@ import nodemailer from 'nodemailer';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
-  context: z.enum(['register', 'resetPassword', 'staffRegister', 'staffResetPassword']).optional().describe("The context for the OTP request."),
+  context: z.enum(['register', 'resetPassword', 'staffRegister', 'staffResetPassword', 'changeEmail']).optional().describe("The context for the OTP request."),
 });
 export type SendOtpInput = z.infer<typeof SendOtpInputSchema>;
 
@@ -107,6 +107,11 @@ const sendOtpFlow = ai.defineFlow(
             subject = 'Atur Ulang Kata Sandi Akun Baronda Anda';
             welcomeMessage = `<p>Kami menerima permintaan untuk mengatur ulang kata sandi akun Anda. Gunakan kode di bawah ini untuk melanjutkan.</p>`;
             securityWarning = `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak merasa meminta untuk mengatur ulang kata sandi, harap abaikan email ini dan segera amankan akun Anda.`;
+            break;
+        case 'changeEmail':
+            subject = 'Verifikasi Perubahan Email Akun Baronda Anda';
+            welcomeMessage = `<p>Gunakan kode di bawah ini untuk mengonfirmasi perubahan alamat email Anda.</p>`;
+            securityWarning = `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak meminta perubahan ini, segera amankan akun Anda dan hubungi admin.`;
             break;
         default: // 'register'
             subject = 'Kode Verifikasi Akun Baronda Anda';

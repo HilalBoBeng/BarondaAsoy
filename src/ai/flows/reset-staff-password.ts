@@ -2,16 +2,16 @@
 'use server';
 /**
  * @fileOverview This file defines a Genkit flow for resetting a staff member's password.
- * This flow generates a new access code, saves it, and sends it via email.
+ * This flow finds the existing access code and resends it via email.
  *
- * - resetStaffPassword - Generates a new access code and sends it to a staff member's email.
+ * - resetStaffPassword - Finds and resends a staff member's access code to their email.
  * - ResetStaffPasswordInput - The input type for the function.
  * - ResetStaffPasswordOutput - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
-import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 
@@ -48,17 +48,9 @@ const resetStaffPasswordFlow = ai.defineFlow(
 
       const staffDoc = staffSnapshot.docs[0];
       const staffData = staffDoc.data();
-      const { name } = staffData;
+      const { name, accessCode } = staffData;
 
-      // 2. Generate a new 15-character access code
-      const newAccessCode = Math.random().toString(36).substring(2, 17).toUpperCase();
-
-      // 3. Update the access code in Firestore
-      await updateDoc(staffDoc.ref, {
-        accessCode: newAccessCode
-      });
-
-      // 4. Send email with the new access code
+      // 2. Send email with the existing access code
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
@@ -72,7 +64,7 @@ const resetStaffPasswordFlow = ai.defineFlow(
       const mailOptions = {
         from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
         to: email,
-        subject: 'Reset Kode Akses Petugas Baronda Anda',
+        subject: 'Pengingat Kode Akses Petugas Baronda Anda',
         html: `
             <!DOCTYPE html>
             <html lang="id">
@@ -99,13 +91,13 @@ const resetStaffPasswordFlow = ai.defineFlow(
                             <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo">
                         </div>
                         <h2>Lupa Kode Akses, ${name}?</h2>
-                        <p>Kami menerima permintaan untuk mereset kode akses Anda. Berikut adalah kode akses **baru** Anda untuk masuk ke dasbor petugas:</p>
+                        <p>Kami menerima permintaan untuk mengirim ulang kode akses Anda. Berikut adalah kode akses Anda untuk masuk ke dasbor petugas:</p>
                         <div class="code-container">
-                          <span class="code-box">${newAccessCode}</span>
+                          <span class="code-box">${accessCode}</span>
                           <span class="copy-btn">SALIN</span>
                         </div>
                         <div class="warning">
-                           <strong>PERINGATAN KEAMANAN:</strong> Kode akses lama Anda tidak lagi berlaku. Jangan pernah membagikan kode baru ini kepada siapa pun. Jika Anda tidak meminta ini, segera hubungi admin.
+                           <strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Jika Anda tidak meminta ini, segera hubungi admin.
                         </div>
                     </div>
                     <div class="footer">
@@ -121,14 +113,14 @@ const resetStaffPasswordFlow = ai.defineFlow(
       await transporter.sendMail(mailOptions);
       return {
         success: true,
-        message: 'A new access code has been sent to your email.',
+        message: 'Your existing access code has been sent to your email.',
       };
     } catch (error) {
-      console.error('Failed to reset access code:', error);
+      console.error('Failed to send access code:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return {
         success: false,
-        message: `Failed to reset access code: ${errorMessage}`,
+        message: `Failed to send access code: ${errorMessage}`,
       };
     }
   }
