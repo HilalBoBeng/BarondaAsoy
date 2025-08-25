@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { db, app } from '@/lib/firebase/client';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, addDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, Mail, ShieldX, PlusCircle, Loader2 } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -42,31 +41,20 @@ const addStaffSchema = z.object({
 });
 type AddStaffFormValues = z.infer<typeof addStaffSchema>;
 
-const addUserSchema = z.object({
-    name: z.string().min(1, "Nama tidak boleh kosong."),
-    email: z.string().email("Format email tidak valid."),
-    password: z.string().min(8, "Kata sandi minimal 8 karakter."),
-});
-type AddUserFormValues = z.infer<typeof addUserSchema>;
-
-
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const auth = getAuth(app);
   
   // State for dialogs
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
-  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   const blockForm = useForm<BlockUserFormValues>({ resolver: zodResolver(blockUserSchema) });
   const staffForm = useForm<AddStaffFormValues>({ resolver: zodResolver(addStaffSchema) });
-  const userForm = useForm<AddUserFormValues>({ resolver: zodResolver(addUserSchema) });
 
   useEffect(() => {
     setLoading(true);
@@ -158,39 +146,6 @@ export default function UsersAdminPage() {
         setIsSubmitting(false);
     }
   };
-  
-  const handleAddUser = async (data: AddUserFormValues) => {
-      setIsSubmitting(true);
-      try {
-          // This creates the user in Firebase Authentication
-          const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-          
-          // This saves the user details to Firestore
-          await setDoc(doc(db, "users", userCredential.user.uid), {
-            displayName: data.name,
-            email: data.email,
-            photoURL: '', // or a default photo URL
-            createdAt: serverTimestamp(),
-            isBlocked: false,
-          });
-
-          await updateProfile(userCredential.user, {
-            displayName: data.name
-          });
-
-          toast({ title: "Berhasil", description: `Warga ${data.name} berhasil ditambahkan.` });
-          setIsAddUserDialogOpen(false);
-          userForm.reset();
-      } catch (error: any) {
-          console.error("Error adding user:", error);
-          const errorMessage = error.code === 'auth/email-already-in-use' 
-            ? 'Email ini sudah terdaftar.' 
-            : 'Gagal menambahkan warga.';
-          toast({ variant: "destructive", title: "Gagal", description: errorMessage });
-      } finally {
-          setIsSubmitting(false);
-      }
-  };
 
   const handleDeleteStaff = async (id: string) => {
      try {
@@ -217,7 +172,6 @@ export default function UsersAdminPage() {
               <TabsTrigger value="staff">Staf</TabsTrigger>
             </TabsList>
             <div className="flex gap-2">
-                <Button onClick={() => setIsAddUserDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Warga</Button>
                 <Button onClick={() => setIsAddStaffDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Staf</Button>
             </div>
           </div>
@@ -411,34 +365,6 @@ export default function UsersAdminPage() {
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Simpan Staf
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
-
-    <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Tambah Warga Baru</DialogTitle>
-            </DialogHeader>
-            <Form {...userForm}>
-                <form onSubmit={userForm.handleSubmit(handleAddUser)} className="space-y-4">
-                    <FormField control={userForm.control} name="name" render={({ field }) => (
-                        <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input placeholder="Nama Warga" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={userForm.control} name="email" render={({ field }) => (
-                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="email@warga.com" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={userForm.control} name="password" render={({ field }) => (
-                        <FormItem><FormLabel>Kata Sandi</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Simpan Warga
                         </Button>
                     </DialogFooter>
                 </form>

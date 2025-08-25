@@ -74,14 +74,16 @@ const sendOtpFlow = ai.defineFlow(
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; margin: 0; padding: 0; background-color: #f0f4f8; }
                     .container { background-color: #f0f4f8; padding: 30px; }
-                    .content { background-color: #ffffff; padding: 30px; border-radius: 8px; max-width: 500px; margin: auto; }
+                    .content { background-color: #ffffff; padding: 30px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
                     .header { text-align: center; border-bottom: 1px solid #e0e0e0; padding-bottom: 20px; margin-bottom: 20px; }
                     .header img { height: 50px; }
                     .otp-code { font-size: 36px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2C3E50; background-color: #f0f4f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                    .warning { font-size: 12px; color: #777; text-align: center; margin-top: 20px; }
+                    .warning { font-size: 12px; color: #777; text-align: center; margin-top: 20px; padding: 10px; background-color: #fffbe6; border: 1px solid #ffe58f; border-radius: 4px;}
                     .footer { font-size: 12px; color: #999; text-align: center; margin-top: 30px; }
+                    .contact-link { color: #1a73e8; text-decoration: none; display: inline-flex; align-items: center; margin-top: 15px; font-weight: 500;}
+                    .contact-link img { height: 16px; vertical-align: middle; margin-right: 8px; }
                 </style>
             </head>
             <body>
@@ -91,16 +93,20 @@ const sendOtpFlow = ai.defineFlow(
                             <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo">
                         </div>
                         <h2>Selamat Datang di Baronda!</h2>
-                        <p>Satu langkah lagi untuk mengamankan akun Anda. Silakan gunakan kode verifikasi di bawah ini.</p>
+                        <p>Terima kasih telah mendaftar. Satu langkah lagi untuk mengamankan akun Anda. Silakan gunakan kode verifikasi di bawah ini.</p>
                         <div class="otp-code">${otp}</div>
                         <p>Kode ini hanya berlaku selama <strong>10 menit</strong>.</p>
                         <div class="warning">
-                            <strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Tim kami tidak akan pernah meminta kode OTP Anda. Jika Anda tidak merasa meminta kode ini, harap abaikan email ini atau hubungi admin jika Anda merasa ada aktivitas mencurigakan.
+                            <strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Jika Anda tidak merasa meminta kode ini, harap abaikan email ini atau hubungi admin jika Anda merasa ada aktivitas mencurigakan.
                         </div>
                     </div>
                     <div class="footer">
-                        © ${new Date().getFullYear()} Baronda - Siskamling Digital Kelurahan Kilongan.<br>
-                        Email ini dibuat secara otomatis. Mohon tidak membalas email ini.
+                        © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.<br>
+                        Email ini dibuat secara otomatis. Mohon tidak membalas email ini.<br>
+                         <a href="mailto:admin@bobeng.icu" class="contact-link">
+                            <img src="https://iili.io/KJfW5uf.png" alt="Email Icon" data-ai-hint="email icon">
+                            <span>Hubungi Admin</span>
+                        </a>
                     </div>
                 </div>
             </body>
