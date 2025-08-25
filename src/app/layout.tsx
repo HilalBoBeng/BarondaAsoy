@@ -4,7 +4,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import CookieConsent from "@/components/cookie-consent";
-import ChatbotWidget from "@/components/chatbot/chatbot-widget";
 
 export const metadata: Metadata = {
   title: "Baronda - Siskamling Digital",
