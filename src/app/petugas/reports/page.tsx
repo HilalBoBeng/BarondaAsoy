@@ -59,8 +59,6 @@ export default function PetugasReportsPage() {
       let q;
       const reportsRef = collection(db, "reports");
 
-      // Petugas can see all reports, or only those assigned to them. Let's show all for now.
-      // Can be changed later with a filter.
       if (direction === 'next' && lastVisible) {
         q = query(reportsRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
       } else if (direction === 'prev' && firstVisible) {
@@ -147,8 +145,13 @@ export default function PetugasReportsPage() {
             await updateDoc(staffRef, { points: increment(1) });
             toast({ title: "Berhasil", description: "Anda telah mengambil alih laporan ini." });
         } else if (status === 'resolved' && reportToUpdate.status === 'in_progress') {
-            await updateDoc(docRef, { status });
-            toast({ title: "Berhasil", description: "Laporan ditandai sebagai selesai." });
+             // Only the assigned staff or an admin can resolve it. This logic can be refined with security rules.
+            if(reportToUpdate.handlerId === staffInfo.id) {
+                await updateDoc(docRef, { status });
+                toast({ title: "Berhasil", description: "Laporan ditandai sebagai selesai." });
+            } else {
+                toast({ variant: 'destructive', title: "Akses Ditolak", description: "Hanya petugas yang ditugaskan yang dapat menyelesaikan laporan ini." });
+            }
         }
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui status." });
@@ -191,15 +194,18 @@ export default function PetugasReportsPage() {
     }
   };
 
-  const ThreatLevelIcon = ({ level }: {level: 'low' | 'medium' | 'high' | undefined}) => {
-      if (!level) return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
-      const config = {
-          low: { icon: CheckCircle, className: 'text-green-500'},
-          medium: { icon: AlertTriangle, className: 'text-yellow-500' },
-          high: { icon: AlertTriangle, className: 'text-red-500' },
-      };
-      const { icon: Icon, className } = config[level];
-      return <Icon className={`h-4 w-4 ${className}`} />
+  const ThreatLevelBadge = ({ level }: { level: 'low' | 'medium' | 'high' | undefined }) => {
+    if (!level) return <Badge variant="secondary">N/A</Badge>;
+    const config = {
+      low: { icon: CheckCircle, className: 'bg-green-100 text-green-800', label: 'Rendah' },
+      medium: { icon: AlertTriangle, className: 'bg-yellow-100 text-yellow-800', label: 'Sedang' },
+      high: { icon: AlertTriangle, variant: 'destructive', label: 'Tinggi' },
+    } as const;
+    const { icon: Icon, variant, className, label } = config[level];
+    return <Badge variant={variant || 'secondary'} className={className}>
+      <Icon className="mr-1 h-3 w-3" />
+      {label}
+    </Badge>;
   }
 
   const ReplyCard = ({ reply }: { reply: Reply }) => (
@@ -220,10 +226,10 @@ export default function PetugasReportsPage() {
     </Card>
   );
   
-  const statusOptions: {value: ReportStatus; label: string; disabled?: (currentStatus: ReportStatus) => boolean}[] = [
-    { value: 'new', label: 'Baru', disabled: (currentStatus) => true }, // Staff cannot revert to new
-    { value: 'in_progress', label: 'Tangani', disabled: (currentStatus) => currentStatus !== 'new' },
-    { value: 'resolved', label: 'Selesai', disabled: (currentStatus) => currentStatus !== 'in_progress' },
+  const statusOptions: {value: ReportStatus; label: string; disabled?: (report: Report) => boolean}[] = [
+    { value: 'new', label: 'Baru', disabled: (report) => true }, // Staff cannot revert to new
+    { value: 'in_progress', label: 'Tangani', disabled: (report) => report.status !== 'new' },
+    { value: 'resolved', label: 'Selesai', disabled: (report) => report.status !== 'in_progress' || report.handlerId !== staffInfo?.id },
   ];
 
 
@@ -241,7 +247,7 @@ export default function PetugasReportsPage() {
                 </SelectTrigger>
                 <SelectContent>
                     {statusOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value} disabled={option.disabled && option.disabled(report.status)}>
+                        <SelectItem key={option.value} value={option.value} disabled={option.disabled && option.disabled(report)}>
                             {option.label}
                         </SelectItem>
                     ))}
@@ -274,10 +280,7 @@ export default function PetugasReportsPage() {
                     <CardContent>
                         <div className="flex items-center gap-2">
                             <span className="font-semibold text-sm">Ancaman:</span>
-                            <Badge variant={report.triageResult?.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
-                                <ThreatLevelIcon level={report.triageResult?.threatLevel} />
-                                <span className="ml-2">{report.triageResult?.threatLevel || 'N/A'}</span>
-                            </Badge>
+                            <ThreatLevelBadge level={report.triageResult?.threatLevel} />
                         </div>
                         {report.handlerName && (
                             <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
@@ -366,5 +369,3 @@ export default function PetugasReportsPage() {
     </>
   );
 }
-
-    

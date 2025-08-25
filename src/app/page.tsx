@@ -74,23 +74,29 @@ export default function Home() {
     }
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      
-      if (currentUser) {
-          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
-          const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
-              const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-              setNotifications(notifs);
-          });
-          return () => unsubscribeNotifications();
-      } else {
-          setNotifications([]);
-      }
+        setUser(currentUser);
+        setLoading(false);
+        if (currentUser) {
+            // Simplified query to avoid composite index requirement.
+            const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+            const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+                const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+                // Sort manually on the client-side
+                const sortedNotifs = notifs.sort((a, b) => 
+                    (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime()
+                );
+                setNotifications(sortedNotifs);
+            }, (error) => {
+                console.error("Error fetching notifications: ", error);
+            });
+            return () => unsubscribeNotifications();
+        } else {
+            setNotifications([]);
+        }
     });
 
     return () => unsubscribeAuth();
-  }, [auth, router]);
+}, [auth, router]);
 
   const handleLogout = async () => {
     try {

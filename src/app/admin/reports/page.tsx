@@ -264,15 +264,18 @@ export default function ReportsAdminPage() {
   );
 
 
-  const ThreatLevelIcon = ({ level }: {level: 'low' | 'medium' | 'high' | undefined}) => {
-      if (!level) return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
-      const config = {
-          low: { icon: CheckCircle, className: 'text-green-500'},
-          medium: { icon: AlertTriangle, className: 'text-yellow-500' },
-          high: { icon: AlertTriangle, className: 'text-red-500' },
-      };
-      const { icon: Icon, className } = config[level];
-      return <Icon className={`h-4 w-4 ${className}`} />
+  const ThreatLevelBadge = ({ level }: { level: 'low' | 'medium' | 'high' | undefined }) => {
+    if (!level) return <Badge variant="secondary">N/A</Badge>;
+    const config = {
+      low: { icon: CheckCircle, className: 'bg-green-100 text-green-800', label: 'Rendah' },
+      medium: { icon: AlertTriangle, className: 'bg-yellow-100 text-yellow-800', label: 'Sedang' },
+      high: { icon: AlertTriangle, variant: 'destructive', label: 'Tinggi' },
+    } as const;
+    const { icon: Icon, variant, className, label } = config[level];
+    return <Badge variant={variant || 'secondary'} className={className}>
+      <Icon className="mr-1 h-3 w-3" />
+      {label}
+    </Badge>;
   }
   
   const statusOptions: {value: ReportStatus; label: string; disabled?: (currentStatus: ReportStatus) => boolean}[] = [
@@ -346,10 +349,7 @@ export default function ReportsAdminPage() {
                 <CardContent>
                     <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">Ancaman:</span>
-                         <Badge variant={report.triageResult?.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
-                            <ThreatLevelIcon level={report.triageResult?.threatLevel} />
-                            <span className="ml-2">{report.triageResult?.threatLevel || 'N/A'}</span>
-                        </Badge>
+                         <ThreatLevelBadge level={report.triageResult?.threatLevel} />
                     </div>
                      {report.handlerName && (
                         <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
@@ -419,10 +419,7 @@ export default function ReportsAdminPage() {
                     </TableCell>
                     <TableCell>{report.handlerName || '-'}</TableCell>
                     <TableCell>
-                        <Badge variant={report.triageResult?.threatLevel === 'high' ? 'destructive' : 'secondary'} className="capitalize">
-                            <ThreatLevelIcon level={report.triageResult?.threatLevel} />
-                            <span className="ml-2">{report.triageResult?.threatLevel || 'N/A'}</span>
-                        </Badge>
+                       <ThreatLevelBadge level={report.triageResult?.threatLevel} />
                     </TableCell>
                     <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -549,5 +546,3 @@ export default function ReportsAdminPage() {
     </>
   );
 }
-
-    

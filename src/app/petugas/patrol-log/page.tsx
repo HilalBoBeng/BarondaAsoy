@@ -18,18 +18,26 @@ import type { PatrolLog, EquipmentStatus } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const logSchema = z.object({
   title: z.string().min(1, "Judul kejadian tidak boleh kosong."),
   description: z.string().min(10, "Deskripsi minimal 10 karakter."),
-  // photo: z.instanceof(File).optional(), // File upload handling is complex for this demo
 });
 type LogFormValues = z.infer<typeof logSchema>;
 
+const equipmentUpdateSchema = z.object({
+    equipmentId: z.string().min(1, "Peralatan harus dipilih"),
+    status: z.enum(['good', 'broken', 'missing'], { required_error: "Status harus dipilih"}),
+    notes: z.string().optional(),
+});
+type EquipmentUpdateFormValues = z.infer<typeof equipmentUpdateSchema>;
+
+
 const initialEquipment: EquipmentStatus[] = [
-    { id: 'senter', name: 'Senter', status: 'good', lastChecked: new Date() },
-    { id: 'borgol', name: 'Borgol', status: 'good', lastChecked: new Date() },
-    { id: 'tongkat', name: 'Tongkat', status: 'good', lastChecked: new Date() },
+    { id: 'senter', name: 'Senter', status: 'good', lastChecked: new Date(), notes: '' },
+    { id: 'borgol', name: 'Borgol', status: 'good', lastChecked: new Date(), notes: '' },
+    { id: 'tongkat', name: 'Tongkat', status: 'good', lastChecked: new Date(), notes: '' },
 ];
 
 
@@ -39,12 +47,18 @@ export default function PatrolLogPage() {
     const [loadingLogs, setLoadingLogs] = useState(true);
     const [loadingEquipment, setLoadingEquipment] = useState(true);
     const [isSubmittingLog, setIsSubmittingLog] = useState(false);
+    const [isSubmittingEquipment, setIsSubmittingEquipment] = useState(false);
     const [staffInfo, setStaffInfo] = useState<{name: string, id: string} | null>(null);
     const { toast } = useToast();
 
     const logForm = useForm<LogFormValues>({
         resolver: zodResolver(logSchema),
         defaultValues: { title: '', description: '' },
+    });
+    
+    const equipmentForm = useForm<EquipmentUpdateFormValues>({
+        resolver: zodResolver(equipmentUpdateSchema),
+        defaultValues: { notes: '' }
     });
 
     useEffect(() => {
@@ -71,8 +85,9 @@ export default function PatrolLogPage() {
                     // Initialize if not present
                     const batch = writeBatch(db);
                     initialEquipment.forEach(item => {
-                        const docRef = doc(db, 'equipment_status', item.id);
-                        batch.set(docRef, { ...item, lastChecked: serverTimestamp() });
+                        const { id, ...dataToSet } = item;
+                        const docRef = doc(db, 'equipment_status', id);
+                        batch.set(docRef, { ...dataToSet, lastChecked: serverTimestamp() });
                     });
                     batch.commit();
                     setEquipment(initialEquipment);
@@ -112,10 +127,23 @@ export default function PatrolLogPage() {
         }
     };
     
-    const handleEquipmentStatusChange = async (id: string, status: EquipmentStatus['status']) => {
-        const docRef = doc(db, 'equipment_status', id);
-        await updateDoc(docRef, { status, lastChecked: serverTimestamp() });
-        toast({title: 'Status Peralatan Diperbarui'});
+    const onEquipmentSubmit = async (values: EquipmentUpdateFormValues) => {
+        setIsSubmittingEquipment(true);
+        try {
+            const docRef = doc(db, 'equipment_status', values.equipmentId);
+            await updateDoc(docRef, { 
+                status: values.status,
+                notes: values.notes || '',
+                lastChecked: serverTimestamp(),
+                checkedBy: staffInfo?.name || 'Unknown'
+            });
+            toast({ title: 'Berhasil', description: 'Status peralatan berhasil diperbarui.' });
+            equipmentForm.reset();
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memperbarui status.' });
+        } finally {
+            setIsSubmittingEquipment(false);
+        }
     };
 
 
@@ -156,26 +184,54 @@ export default function PatrolLogPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Status Pos Ronda</CardTitle>
-                    <CardDescription>Periksa kondisi peralatan dan fasilitas di pos ronda.</CardDescription>
+                    <CardTitle>Perbarui Status Pos Ronda</CardTitle>
+                    <CardDescription>Laporkan kondisi peralatan dan fasilitas di pos ronda.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                     {loadingEquipment ? (
-                        Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
-                     ) : (
-                        equipment.map(item => (
-                            <div key={item.id} className="flex justify-between items-center p-2 border rounded-lg">
-                                <p className="font-medium">{item.name}</p>
-                                <div className="flex gap-1">
-                                    <Button variant={item.status === 'good' ? 'default' : 'ghost'} size="icon" onClick={() => handleEquipmentStatusChange(item.id, 'good')}><ShieldCheck/></Button>
-                                    <Button variant={item.status === 'broken' ? 'destructive' : 'ghost'} size="icon" onClick={() => handleEquipmentStatusChange(item.id, 'broken')}><Wrench/></Button>
-                                    <Button variant={item.status === 'missing' ? 'destructive' : 'ghost'} size="icon" onClick={() => handleEquipmentStatusChange(item.id, 'missing')}><ShieldOff/></Button>
-                                </div>
-                            </div>
-                        ))
-                     )}
-                     <Button className="w-full" variant="outline" disabled><Wrench className="mr-2 h-4 w-4" /> Laporkan Kerusakan Lain</Button>
-                </CardContent>
+                <Form {...equipmentForm}>
+                    <form onSubmit={equipmentForm.handleSubmit(onEquipmentSubmit)}>
+                        <CardContent className="space-y-4">
+                            <FormField control={equipmentForm.control} name="equipmentId" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Peralatan</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih peralatan..." /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {equipment.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={equipmentForm.control} name="status" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih status..." /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="good">Baik</SelectItem>
+                                            <SelectItem value="broken">Rusak</SelectItem>
+                                            <SelectItem value="missing">Hilang</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={equipmentForm.control} name="notes" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Catatan (Opsional)</FormLabel>
+                                    <FormControl><Textarea {...field} rows={2} placeholder="Contoh: Baterai lemah" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </CardContent>
+                        <CardFooter>
+                             <Button type="submit" disabled={isSubmittingEquipment || !staffInfo} className="w-full">
+                                {isSubmittingEquipment ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                                Perbarui Status
+                            </Button>
+                        </CardFooter>
+                    </form>
+                </Form>
             </Card>
         </div>
 

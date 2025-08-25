@@ -103,4 +103,6 @@ export interface EquipmentStatus {
     name: string;
     status: 'good' | 'broken' | 'missing';
     lastChecked: Timestamp | Date;
+    notes: string;
+    checkedBy?: string;
 }
