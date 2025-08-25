@@ -32,7 +32,6 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 
 const staffLoginSchema = z.object({
-  email: z.string().email("Email tidak valid."),
   accessCode: z.string().min(1, "Kode akses tidak boleh kosong."),
 });
 
@@ -54,14 +53,14 @@ export default function StaffLoginPage() {
 
   const form = useForm<StaffLoginFormValues>({
     resolver: zodResolver(staffLoginSchema),
-    defaultValues: { email: "", accessCode: "" },
+    defaultValues: { accessCode: "" },
   });
   
   const onSubmit = async (data: StaffLoginFormValues) => {
     setIsSubmitting(true);
     
     // Admin login check
-    if (data.email.toLowerCase() === "admin@baronda.app" && data.accessCode === "Admin123") {
+    if (data.accessCode === "Admin123") {
         localStorage.setItem('userRole', 'admin');
         toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
         router.push("/admin");
@@ -73,23 +72,23 @@ export default function StaffLoginPage() {
     try {
         const staffQuery = query(
             collection(db, "staff"), 
-            where("email", "==", data.email),
             where("accessCode", "==", data.accessCode)
         );
         const staffSnapshot = await getDocs(staffQuery);
 
         if (staffSnapshot.empty) {
-            throw new Error("Email atau kode akses salah.");
+            throw new Error("Kode akses salah.");
         }
 
-        const staffData = staffSnapshot.docs[0].data();
+        const staffDoc = staffSnapshot.docs[0];
+        const staffData = staffDoc.data();
 
         if (staffData.status !== 'active') {
-            throw new Error("Akun Anda belum disetujui oleh admin.");
+            throw new Error("Akun Anda belum disetujui oleh admin atau telah dinonaktifkan.");
         }
 
         localStorage.setItem('userRole', 'petugas');
-        localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffSnapshot.docs[0].id }));
+        localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id }));
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
         router.push("/petugas");
 
@@ -116,19 +115,12 @@ export default function StaffLoginPage() {
         <CardHeader>
           <CardTitle>Halaman Akses Staf & Admin</CardTitle>
           <CardDescription>
-             Masuk dengan email dan kode akses unik Anda.
+             Masuk dengan kode akses unik Anda.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
                 <CardContent className="space-y-4">
-                <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl><Input placeholder="email@anda.com" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
                 <FormField control={form.control} name="accessCode" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Kode Akses</FormLabel>
