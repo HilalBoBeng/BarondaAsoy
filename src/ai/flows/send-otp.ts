@@ -10,7 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 
@@ -53,15 +53,16 @@ const sendOtpFlow = ai.defineFlow(
       const batch = writeBatch(db);
 
       // 1. Invalidate all previous active OTPs for this email
-      const q = query(
-          collection(db, 'otps'),
-          where('email', '==', email),
-          where('used', '==', false),
-          where('expiresAt', '>', new Date())
-      );
+      const q = query(collection(db, 'otps'), where('email', '==', email));
       const oldOtpsSnapshot = await getDocs(q);
+      
       oldOtpsSnapshot.forEach(doc => {
-          batch.update(doc.ref, { used: true });
+          const data = doc.data();
+          const isExpired = data.expiresAt ? (data.expiresAt as Timestamp).toDate() < new Date() : true;
+          // Invalidate if it's not used and not expired
+          if (!data.used && !isExpired) {
+              batch.update(doc.ref, { used: true });
+          }
       });
       
       // 2. Generate a 6-digit OTP
@@ -130,7 +131,6 @@ const sendOtpFlow = ai.defineFlow(
                     </div>
                     <div class="footer">
                         © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.<br>
-                        Email ini dibuat secara otomatis. Mohon tidak membalas email ini.<br>
                          <a href="mailto:admin@bobeng.icu" class="contact-link">
                             <img src="https://iili.io/KJfW5uf.png" alt="Email Icon" data-ai-hint="email icon">
                             <span>Hubungi Admin</span>
