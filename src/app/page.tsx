@@ -86,6 +86,7 @@ export default function Home() {
   const handleNotificationDelete = async (notifId: string) => {
       try {
           await deleteDoc(doc(db, "notifications", notifId));
+          // The onSnapshot listener will automatically update the UI
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus notifikasi.' });
       }
@@ -142,7 +143,7 @@ export default function Home() {
                                    <div className="flex-grow">
                                         <p className="font-semibold">{notif.title}</p>
                                         <p className="text-xs text-muted-foreground">{notif.message}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id })}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleNotificationDelete(notif.id)}>
                                        <X className="h-4 w-4"/>

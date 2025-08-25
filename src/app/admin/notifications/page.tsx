@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, getDocs, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -19,7 +19,7 @@ import type { AppUser } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const notificationSchema = z.object({
-  userId: z.string().min(1, "Warga harus dipilih."),
+  userId: z.string().min(1, "Tujuan (warga atau 'Semua Warga') harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong."),
   message: z.string().min(1, "Pesan tidak boleh kosong."),
 });
@@ -64,13 +64,38 @@ export default function NotificationsAdminPage() {
   const onSubmit = async (values: NotificationFormValues) => {
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'notifications'), {
-        ...values,
-        read: false,
-        createdAt: serverTimestamp(),
-      });
-      toast({ title: "Berhasil", description: "Pemberitahuan berhasil dikirim." });
-      form.reset();
+      if (values.userId === 'all') {
+        // Send to all users
+        if (users.length === 0) {
+          toast({ variant: 'destructive', title: "Gagal", description: "Tidak ada warga terdaftar untuk dikirimi notifikasi." });
+          setIsSubmitting(false);
+          return;
+        }
+        const batch = writeBatch(db);
+        users.forEach(user => {
+          const newNotifRef = doc(collection(db, 'notifications'));
+          batch.set(newNotifRef, {
+            userId: user.uid,
+            title: values.title,
+            message: values.message,
+            read: false,
+            createdAt: serverTimestamp(),
+          });
+        });
+        await batch.commit();
+        toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${users.length} warga.` });
+      } else {
+        // Send to a single user
+        await addDoc(collection(db, 'notifications'), {
+          userId: values.userId,
+          title: values.title,
+          message: values.message,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+        toast({ title: "Berhasil", description: "Pemberitahuan berhasil dikirim." });
+      }
+      form.reset({ userId: '', title: '', message: '' });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mengirim pemberitahuan." });
       console.error(error);
@@ -83,7 +108,7 @@ export default function NotificationsAdminPage() {
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Kirim Pemberitahuan</CardTitle>
-        <CardDescription>Kirim pesan atau pemberitahuan pribadi ke warga tertentu.</CardDescription>
+        <CardDescription>Kirim pesan atau pemberitahuan ke warga tertentu atau ke semua warga.</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -102,13 +127,14 @@ export default function NotificationsAdminPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kirim Ke</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Pilih warga..." />
+                            <SelectValue placeholder="Pilih tujuan..." />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="all">Semua Warga</SelectItem>
                           {users.map(user => (
                             <SelectItem key={user.uid} value={user.uid}>
                               {user.displayName} ({user.email})
