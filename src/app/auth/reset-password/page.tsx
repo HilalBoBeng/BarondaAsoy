@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -26,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getAuth, confirmPasswordReset, sendPasswordResetEmail } from "firebase/auth";
+import { getAuth, updatePassword, type User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import Image from "next/image";
 
@@ -50,6 +51,7 @@ export default function ResetPasswordPage() {
   const auth = getAuth(app);
 
   useEffect(() => {
+    // This page should only be accessed after OTP verification for password reset.
     const storedEmail = localStorage.getItem('resetPasswordEmail');
     if (storedEmail) {
       setEmail(storedEmail);
@@ -69,28 +71,46 @@ export default function ResetPasswordPage() {
   });
 
   const onSubmit = async (data: ResetPasswordFormValues) => {
-    if (!email) return;
+    if (!auth.currentUser) {
+        toast({
+            variant: "destructive",
+            title: "Gagal",
+            description: "Anda harus masuk untuk mengubah kata sandi. Silakan coba masuk lagi.",
+        });
+        router.push('/auth/login');
+        return;
+    }
+    
+    // Double check if the logged in user email matches the one from OTP flow
+    if(auth.currentUser.email !== email) {
+        toast({
+            variant: "destructive",
+            title: "Gagal",
+            description: "Terjadi ketidakcocokan sesi. Silakan coba lagi dari awal.",
+        });
+        router.push('/auth/forgot-password');
+        return;
+    }
+
 
     setIsSubmitting(true);
     try {
-        // Firebase doesn't directly support reset after OTP.
-        // The common flow is to send a reset link. We'll trigger that here.
-        // The user would have already verified their identity via OTP.
-        await sendPasswordResetEmail(auth, email);
+        await updatePassword(auth.currentUser, data.password);
         
         toast({
-          title: "Tautan Terkirim",
-          description: "Tautan untuk mengatur ulang kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk.",
+          title: "Berhasil",
+          description: "Kata sandi Anda telah berhasil diperbarui. Silakan masuk kembali.",
         });
         
         localStorage.removeItem('resetPasswordEmail');
+        auth.signOut();
         router.push('/auth/login');
       
     } catch (error) {
        toast({
         variant: "destructive",
         title: "Gagal Mengatur Ulang",
-        description: error instanceof Error ? error.message : "Terjadi kesalahan.",
+        description: "Sesi Anda mungkin telah kedaluwarsa. Silakan coba masuk dan ubah kata sandi dari pengaturan, atau ulangi proses lupa kata sandi.",
       });
     } finally {
         setIsSubmitting(false);
@@ -146,7 +166,7 @@ export default function ResetPasswordPage() {
                  {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Kirim Tautan Atur Ulang Sandi
+                Atur Ulang Kata Sandi
               </Button>
               <div className="text-center text-sm">
                 <Link href="/auth/login" className="underline">
