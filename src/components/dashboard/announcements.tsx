@@ -20,6 +20,7 @@ import { getAuth } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -173,52 +174,55 @@ export default function Announcements() {
   return (
     <div>
        {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i}>
-                    <CardHeader>
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-4 w-1/2 mt-2" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full mt-2" />
-                        <Skeleton className="h-4 w-2/3 mt-2" />
-                    </CardContent>
-                     <CardFooter>
-                         <Skeleton className="h-8 w-24" />
-                    </CardFooter>
-                </Card>
-            ))}
+          <div className="flex items-center justify-center p-10">
+            <Skeleton className="h-48 w-full max-w-lg" />
+          </div>
+      ) : announcements.length === 0 ? (
+        <div className="text-center text-muted-foreground py-10">
+            Belum ada pengumuman.
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {announcements.map((announcement) => (
-            <Card key={announcement.id} className="flex flex-col">
-                <CardHeader>
-                <div className="flex items-start justify-between">
-                    <div>
-                    <CardTitle className="text-lg">{announcement.title}</CardTitle>
-                    <CardDescription className="mt-1 flex items-center gap-2 text-xs">
-                        <Calendar className="h-4 w-4" />
-                        <span>{announcement.date as string}</span>
-                    </CardDescription>
-                    </div>
-                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                        <Megaphone className="h-5 w-5" />
-                    </div>
-                </div>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                <p className="text-sm text-muted-foreground">{announcement.content}</p>
-                </CardContent>
-                <CardFooter className="flex items-center justify-end gap-2">
-                   <ReactionButton announcement={announcement} type="like" />
-                   <ReactionButton announcement={announcement} type="dislike" />
-                </CardFooter>
-            </Card>
-            ))}
-        </div>
+        <Carousel 
+            opts={{
+                align: "start",
+                loop: true,
+            }}
+            className="w-full"
+        >
+            <CarouselContent>
+                {announcements.map((announcement) => (
+                    <CarouselItem key={announcement.id} className="md:basis-1/2 lg:basis-1/3">
+                         <div className="p-1 h-full">
+                            <Card className="flex flex-col h-full">
+                                <CardHeader>
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                    <CardTitle className="text-lg">{announcement.title}</CardTitle>
+                                    <CardDescription className="mt-1 flex items-center gap-2 text-xs">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>{announcement.date as string}</span>
+                                    </CardDescription>
+                                    </div>
+                                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                                        <Megaphone className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">{announcement.content}</p>
+                                </CardContent>
+                                <CardFooter className="flex items-center justify-end gap-2">
+                                <ReactionButton announcement={announcement} type="like" />
+                                <ReactionButton announcement={announcement} type="dislike" />
+                                </CardFooter>
+                            </Card>
+                        </div>
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="ml-10" />
+            <CarouselNext className="mr-10" />
+        </Carousel>
       )}
     </div>
   );
