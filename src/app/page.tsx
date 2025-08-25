@@ -259,7 +259,7 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="mx-auto max-w-screen-2xl space-y-6">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 {greeting}, {user?.displayName || 'Warga'}!
@@ -282,46 +282,50 @@ export default function Home() {
                 </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ReportActivity user={user} />
-              </CardContent>
-            </Card>
-            
-            {user && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Riwayat Laporan Anda</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ReportHistory user={user} />
-                    </CardContent>
-                </Card>
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ReportActivity user={user} />
+                        </CardContent>
+                    </Card>
+                    
+                    {user && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Riwayat Laporan Anda</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ReportHistory user={user} />
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+                <div className="lg:col-span-1 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Jadwal Patroli</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="max-h-[500px] overflow-auto">
+                                <Schedule />
+                            </div>
+                        </CardContent>
+                    </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Jadwal Patroli</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="max-h-[500px] overflow-auto">
-                        <Schedule />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Kontak Darurat</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <EmergencyContacts />
-                </CardContent>
-            </Card>
-
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Kontak Darurat</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <EmergencyContacts />
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
           </div>
         </div>
       </main>
@@ -331,3 +335,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

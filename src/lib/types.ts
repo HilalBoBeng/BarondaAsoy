@@ -19,7 +19,8 @@ export interface ScheduleEntry {
   time: string;
   officer: string;
   area: string;
-  status: 'Completed' | 'Pending' | 'In Progress';
+  status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit';
+  reason?: string; // For Izin or Sakit
 }
 
 export interface EmergencyContact {
@@ -78,3 +79,5 @@ export interface Notification {
     recipientName?: string; // Added for display purposes
     recipientEmail?: string; // Added for display purposes
 }
+
+    
