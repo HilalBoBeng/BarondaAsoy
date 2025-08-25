@@ -70,15 +70,17 @@ export default function ReportHistory({ user }: { user: User | null }) {
         try {
             const reportsRef = collection(db, 'reports');
             let q;
+            
+            // This query requires a composite index on (userId, createdAt DESC). 
+            // Firestore should provide a link to create it in the console logs if it's missing.
+            const baseQuery = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
 
-            // Removing orderBy from the query to avoid composite index error.
-            // Sorting will be handled client-side.
             if (direction === 'next' && lastVisible) {
-                q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+                q = query(baseQuery, startAfter(lastVisible), limit(REPORTS_PER_PAGE));
             } else if (direction === 'prev' && firstVisible) {
-                q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+                q = query(baseQuery, endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
             } else {
-                q = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
+                q = query(baseQuery, limit(REPORTS_PER_PAGE));
             }
 
             const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -102,9 +104,6 @@ export default function ReportHistory({ user }: { user: User | null }) {
                     } as Report;
                 });
                 
-                // Client-side sorting
-                reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
-
                 setReports(reportsData);
                 setFirstVisible(snapshot.docs[0]);
                 setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
