@@ -204,7 +204,7 @@ export default function Home() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-80" align="end">
                         <DropdownMenuLabel>Pemberitahuan</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
+                        
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
                                 <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif)}} className="flex items-start gap-2 cursor-pointer">
