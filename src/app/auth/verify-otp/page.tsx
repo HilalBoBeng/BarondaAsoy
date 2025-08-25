@@ -31,7 +31,9 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app, db } from '@/lib/firebase/client';
-import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { setDoc, doc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { sendStaffAccessCode } from '@/ai/flows/send-staff-access-code';
+import { resetStaffPassword } from '@/ai/flows/reset-staff-password';
 import Image from 'next/image';
 
 const verifyOtpSchema = z.object({
@@ -44,6 +46,7 @@ export default function VerifyOtpPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationContext, setVerificationContext] = useState<any>(null);
+  const [otpVerified, setOtpVerified] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -53,12 +56,13 @@ export default function VerifyOtpPage() {
 
   // Function to get cooldown data from localStorage
   const getCooldownData = useCallback(() => {
+    if (typeof window === 'undefined') return null;
     const data = localStorage.getItem('otpCooldown');
     if (!data) return null;
     try {
       const parsed = JSON.parse(data);
       // Basic validation
-      if (parsed.email === verificationContext?.email && parsed.expiry && parsed.attempts) {
+      if (parsed.email === verificationContext?.email && parsed.expiry && typeof parsed.attempts !== 'undefined') {
         return parsed;
       }
     } catch (e) {
@@ -71,8 +75,10 @@ export default function VerifyOtpPage() {
     const contextStr = localStorage.getItem('verificationContext');
     if (contextStr) {
       setVerificationContext(JSON.parse(contextStr));
+    } else {
+        router.push('/auth/login');
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!verificationContext) return;
@@ -84,6 +90,8 @@ export default function VerifyOtpPage() {
         if (remaining > 0) {
             setCooldown(remaining);
             setResendAttempts(savedCooldown.attempts);
+        } else {
+            localStorage.removeItem('otpCooldown');
         }
     }
   }, [verificationContext, getCooldownData]);
@@ -202,10 +210,27 @@ export default function VerifyOtpPage() {
           
           toast({ title: 'Pendaftaran Berhasil', description: 'Akun Anda telah dibuat. Silakan masuk.' });
           router.push('/auth/login');
-
         } else if (verificationContext.flow === 'resetPassword') {
           localStorage.setItem('resetPasswordEmail', verificationContext.email);
           router.push('/auth/reset-password');
+        } else if (verificationContext.flow === 'staffRegister') {
+           // Create staff account and send access code
+            const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            await addDoc(collection(db, 'staff'), {
+                name: verificationContext.name,
+                email: verificationContext.email,
+                password: verificationContext.password,
+                accessCode: accessCode
+            });
+            await sendStaffAccessCode({
+                email: verificationContext.email,
+                name: verificationContext.name,
+                accessCode: accessCode,
+            });
+            setOtpVerified(true);
+        } else if (verificationContext.flow === 'staffResetPassword') {
+            await resetStaffPassword({ email: verificationContext.email });
+            setOtpVerified(true);
         }
 
       } else {
@@ -221,6 +246,31 @@ export default function VerifyOtpPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (otpVerified) {
+    return (
+        <>
+         <div className="flex flex-col items-center justify-center mb-6 text-center">
+            <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
+            <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
+            <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
+         </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Proses Selesai</CardTitle>
+              <CardDescription>
+                Informasi akses Anda telah dikirim ke email. Silakan periksa kotak masuk Anda.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button className="w-full" asChild>
+                <Link href="/auth/staff-login">Kembali ke Halaman Login</Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        </>
+    );
+  }
 
   return (
     <>
@@ -286,7 +336,7 @@ export default function VerifyOtpPage() {
                </div>
                <div className="text-center text-sm">
                   <Link href="/auth/login" className="underline">
-                      Kembali ke Halaman Masuk
+                      Bukan Anda? Kembali
                   </Link>
               </div>
             </CardFooter>

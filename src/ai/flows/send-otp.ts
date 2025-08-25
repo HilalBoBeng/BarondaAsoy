@@ -16,7 +16,7 @@ import nodemailer from 'nodemailer';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
-  context: z.enum(['register', 'resetPassword']).optional().describe("The context for the OTP request."),
+  context: z.enum(['register', 'resetPassword', 'staffRegister', 'staffResetPassword']).optional().describe("The context for the OTP request."),
 });
 export type SendOtpInput = z.infer<typeof SendOtpInputSchema>;
 
@@ -38,9 +38,10 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context = 'register' }) => {
     try {
-      // If the context is for resetting a password, check if the user exists first.
-      if (context === 'resetPassword') {
-        const userQuery = query(collection(db, 'users'), where('email', '==', email));
+      // Check if user/staff exists if it's a password reset context
+      if (context === 'resetPassword' || context === 'staffResetPassword') {
+        const collectionName = context === 'resetPassword' ? 'users' : 'staff';
+        const userQuery = query(collection(db, collectionName), where('email', '==', email));
         const userSnapshot = await getDocs(userQuery);
         if (userSnapshot.empty) {
           return {
@@ -91,20 +92,33 @@ const sendOtpFlow = ai.defineFlow(
               pass: process.env.SMTP_PASS,
           },
       });
+      
+      let subject = '';
+      let welcomeMessage = '';
+      let securityWarning = '';
 
-      const isResetPassword = context === 'resetPassword';
-      const subject = isResetPassword 
-        ? 'Atur Ulang Kata Sandi Akun Baronda Anda' 
-        : 'Kode Verifikasi Akun Baronda Anda';
-
-      const welcomeMessage = isResetPassword
-        ? `<p>Kami menerima permintaan untuk mengatur ulang kata sandi akun Anda. Gunakan kode di bawah ini untuk melanjutkan.</p>`
-        : `<h2>Selamat Datang di Baronda!</h2>
-           <p>Terima kasih telah mendaftar. Satu langkah lagi untuk mengamankan akun Anda. Silakan gunakan kode verifikasi di bawah ini.</p>`;
-
-      const securityWarning = isResetPassword
-        ? `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak merasa meminta untuk mengatur ulang kata sandi, harap abaikan email ini dan segera amankan akun Anda.`
-        : `<strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Jika Anda tidak merasa mendaftar, harap abaikan email ini.`;
+      switch (context) {
+        case 'staffRegister':
+            subject = 'Kode Verifikasi Pendaftaran Petugas Baronda';
+            welcomeMessage = `<h2>Pendaftaran Petugas Baronda</h2><p>Gunakan kode di bawah ini untuk menyelesaikan pendaftaran Anda sebagai petugas.</p>`;
+            securityWarning = `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak merasa mendaftar sebagai petugas, harap abaikan email ini.`;
+            break;
+        case 'staffResetPassword':
+            subject = 'Atur Ulang Akses Petugas Baronda';
+            welcomeMessage = `<p>Kami menerima permintaan untuk mengatur ulang akses akun petugas Anda. Gunakan kode di bawah ini untuk melanjutkan.</p>`;
+            securityWarning = `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak merasa meminta ini, harap abaikan email ini dan hubungi admin.`;
+            break;
+        case 'resetPassword':
+            subject = 'Atur Ulang Kata Sandi Akun Baronda Anda';
+            welcomeMessage = `<p>Kami menerima permintaan untuk mengatur ulang kata sandi akun Anda. Gunakan kode di bawah ini untuk melanjutkan.</p>`;
+            securityWarning = `<strong>PERINGATAN KEAMANAN:</strong> Jika Anda tidak merasa meminta untuk mengatur ulang kata sandi, harap abaikan email ini dan segera amankan akun Anda.`;
+            break;
+        default: // 'register'
+            subject = 'Kode Verifikasi Akun Baronda Anda';
+            welcomeMessage = `<h2>Selamat Datang di Baronda!</h2><p>Terima kasih telah mendaftar. Satu langkah lagi untuk mengamankan akun Anda. Silakan gunakan kode verifikasi di bawah ini.</p>`;
+            securityWarning = `<strong>PERINGATAN KEAMANAN:</strong> Jangan pernah membagikan kode ini kepada siapa pun. Jika Anda tidak merasa mendaftar, harap abaikan email ini.`;
+            break;
+      }
 
 
       const mailOptions = {

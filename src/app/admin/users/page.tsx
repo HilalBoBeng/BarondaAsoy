@@ -171,9 +171,6 @@ export default function UsersAdminPage() {
               <TabsTrigger value="users">Warga</TabsTrigger>
               <TabsTrigger value="staff">Staf</TabsTrigger>
             </TabsList>
-            <div className="flex gap-2">
-                <Button onClick={() => setIsAddStaffDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Staf</Button>
-            </div>
           </div>
 
           <TabsContent value="users">
@@ -240,7 +237,7 @@ export default function UsersAdminPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama</TableHead>
-                            <TableHead>No. HP</TableHead>
+                            <TableHead>Email</TableHead>
                             <TableHead>Kode Akses</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
@@ -259,7 +256,7 @@ export default function UsersAdminPage() {
                             staff.map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
-                                    <TableCell>{s.phone}</TableCell>
+                                    <TableCell>{s.email}</TableCell>
                                     <TableCell>{s.accessCode}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
@@ -337,34 +334,6 @@ export default function UsersAdminPage() {
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Blokir Pengguna
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
-    
-    <Dialog open={isAddStaffDialogOpen} onOpenChange={setIsAddStaffDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Tambah Staf Baru</DialogTitle>
-            </DialogHeader>
-            <Form {...staffForm}>
-                <form onSubmit={staffForm.handleSubmit(handleAddStaff)} className="space-y-4">
-                    <FormField control={staffForm.control} name="name" render={({ field }) => (
-                        <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField control={staffForm.control} name="phone" render={({ field }) => (
-                        <FormItem><FormLabel>Nomor HP</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField control={staffForm.control} name="accessCode" render={({ field }) => (
-                        <FormItem><FormLabel>Kode Akses</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Simpan Staf
                         </Button>
                     </DialogFooter>
                 </form>
