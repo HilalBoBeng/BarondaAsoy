@@ -13,6 +13,7 @@ import {
   Phone,
   Menu,
   UserCircle,
+  MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export default function AdminLayout({
     { href: "/admin", icon: Home, label: "Dasbor" },
     { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
+    { href: "/admin/notifications", icon: MessageSquare, label: "Pemberitahuan" },
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
@@ -130,7 +132,7 @@ export default function AdminLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                <SheetHeader className="p-4 border-b">
-                 <SheetTitle className="hidden">Menu Navigasi</SheetTitle>
+                 <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                  <NavHeader />
                </SheetHeader>
               <div className="flex-1 overflow-auto py-2">

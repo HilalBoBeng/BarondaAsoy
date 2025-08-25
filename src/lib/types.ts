@@ -43,3 +43,32 @@ export interface Report {
   status: 'new' | 'in_progress' | 'resolved';
   replies?: Reply[];
 }
+
+export interface AppUser {
+  uid: string;
+  email?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+  createdAt?: string;
+  isBlocked?: boolean;
+  blockReason?: string;
+  blockStarts?: string;
+  blockEnds?: string;
+}
+
+export interface Staff {
+  id: string;
+  name: string;
+  phone: string;
+  accessCode: string;
+}
+
+export interface Notification {
+    id: string;
+    userId: string;
+    title: string;
+    message: string;
+    createdAt: Timestamp;
+    read: boolean;
+    link?: string;
+}

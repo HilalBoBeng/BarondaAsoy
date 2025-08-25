@@ -25,25 +25,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { id } from 'date-fns/locale';
-
-interface AppUser {
-  uid: string;
-  email?: string | null;
-  displayName?: string | null;
-  photoURL?: string | null;
-  createdAt?: string; 
-  isBlocked?: boolean;
-  blockReason?: string;
-  blockStarts?: string;
-  blockEnds?: string;
-}
-
-interface Staff {
-  id: string;
-  name: string;
-  phone: string;
-  accessCode: string;
-}
+import type { AppUser, Staff } from '@/lib/types';
 
 const blockUserSchema = z.object({
   blockStarts: z.date({ required_error: "Tanggal mulai blokir harus diisi." }),
@@ -75,33 +57,36 @@ export default function UsersAdminPage() {
   const staffForm = useForm<AddStaffFormValues>({ resolver: zodResolver(addStaffSchema) });
 
   useEffect(() => {
-    const fetchAllData = async () => {
-        setLoading(true);
-        try {
-            // Fetch users
-            const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
-            const usersSnapshot = await getDocs(usersQuery);
-            const usersData = usersSnapshot.docs.map(doc => ({
-                uid: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID') || 'N/A'
-            })) as AppUser[];
-            setUsers(usersData);
+    setLoading(true);
+    const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
+    const staffQuery = query(collection(db, "staff"), orderBy("name"));
 
-            // Fetch staff
-            const staffQuery = query(collection(db, "staff"), orderBy("name"));
-            const staffSnapshot = await getDocs(staffQuery);
-            const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
-            setStaff(staffData);
-
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            toast({ variant: 'destructive', title: "Gagal Memuat Data", description: "Tidak dapat mengambil data pengguna atau staf." });
-        } finally {
-            setLoading(false);
-        }
+    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({
+            uid: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID') || 'N/A'
+        })) as AppUser[];
+        setUsers(usersData);
+        if (loading) setLoading(false);
+    }, (error) => {
+        console.error("Error fetching users:", error);
+        toast({ variant: 'destructive', title: "Gagal Memuat Warga", description: "Tidak dapat mengambil data warga." });
+    });
+    
+    const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
+        const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+        setStaff(staffData);
+         if (loading) setLoading(false);
+    }, (error) => {
+        console.error("Error fetching staff:", error);
+        toast({ variant: 'destructive', title: "Gagal Memuat Staf", description: "Tidak dapat mengambil data staf." });
+    });
+    
+    return () => {
+        unsubUsers();
+        unsubStaff();
     };
-    fetchAllData();
   }, [toast]);
 
   const handleOpenBlockDialog = (user: AppUser) => {
@@ -121,7 +106,7 @@ export default function UsersAdminPage() {
             blockStarts: format(data.blockStarts, 'PPP', { locale: id }),
             blockEnds: format(data.blockEnds, 'PPP', { locale: id }),
         });
-        setUsers(users.map(u => u.uid === currentUser.uid ? {...u, isBlocked: true, ...data } : u));
+        // The onSnapshot listener will update the state automatically
         toast({ title: "Berhasil", description: `${currentUser.displayName} telah diblokir.` });
         setIsBlockDialogOpen(false);
     } catch (error) {
@@ -141,7 +126,7 @@ export default function UsersAdminPage() {
             blockStarts: null,
             blockEnds: null,
         });
-        setUsers(users.map(u => u.uid === uid ? {...u, isBlocked: false } : u));
+        // The onSnapshot listener will update the state automatically
         toast({ title: "Berhasil", description: `Blokir telah dibuka.` });
     } catch (error) {
         console.error("Error unblocking user:", error);
@@ -152,8 +137,8 @@ export default function UsersAdminPage() {
   const handleAddStaff = async (data: AddStaffFormValues) => {
     setIsSubmitting(true);
     try {
-        const docRef = await addDoc(collection(db, 'staff'), data);
-        setStaff([...staff, { id: docRef.id, ...data }]);
+        await addDoc(collection(db, 'staff'), data);
+        // The onSnapshot listener will update the state automatically
         toast({ title: "Berhasil", description: "Staf baru berhasil ditambahkan."});
         setIsAddStaffDialogOpen(false);
         staffForm.reset();
@@ -168,7 +153,7 @@ export default function UsersAdminPage() {
   const handleDeleteStaff = async (id: string) => {
      try {
       await deleteDoc(doc(db, 'staff', id));
-      setStaff(staff.filter(s => s.id !== id));
+      // The onSnapshot listener will update the state automatically
       toast({ title: "Berhasil", description: "Staf berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal Menghapus", description: "Terjadi kesalahan saat menghapus data staf." });
