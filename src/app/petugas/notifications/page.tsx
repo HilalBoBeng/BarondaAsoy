@@ -11,6 +11,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Bell, Megaphone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 
 export default function PetugasNotificationsPage() {
@@ -18,56 +20,64 @@ export default function PetugasNotificationsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
   const [loadingAnns, setLoadingAnns] = useState(true);
-  const [petugasId, setPetugasId] = useState<string | null>(null); // Replace with actual staff ID from auth
+  const [petugasId, setPetugasId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Notification | Announcement | null>(null);
+  const [itemType, setItemType] = useState<'notification' | 'announcement' | null>(null);
 
   useEffect(() => {
-    // This should be replaced with actual staff ID from an auth context
-    const currentPetugasId = "petugas_1"; // Placeholder
-    setPetugasId(currentPetugasId);
+    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (staffInfo.id) {
+        setPetugasId(staffInfo.id);
+    } else {
+        // Handle case where staff info is not available, maybe redirect
+    }
 
-    // Listener for specific notifications to this officer
-    const notifsQuery = query(
-        collection(db, "notifications"),
-        where("userId", "in", [currentPetugasId, "all_staff"]),
-        orderBy("createdAt", "desc"),
-        limit(20)
-    );
-    const unsubNotifs = onSnapshot(notifsQuery, (snapshot) => {
-        const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-        setNotifications(notifsData);
-        setLoadingNotifs(false);
-    });
+    if (staffInfo.id) {
+      const notifsQuery = query(
+          collection(db, "notifications"),
+          where("userId", "in", [staffInfo.id, "all_staff"]),
+          orderBy("createdAt", "desc"),
+          limit(20)
+      );
+      const unsubNotifs = onSnapshot(notifsQuery, (snapshot) => {
+          const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+          setNotifications(notifsData);
+          setLoadingNotifs(false);
+      });
 
-    // Listener for announcements targeted to staff or all
-     const annsQuery = query(
-        collection(db, "announcements"),
-        where("target", "in", ["all", "staff"]),
-        limit(10)
-    );
-     const unsubAnns = onSnapshot(annsQuery, (snapshot) => {
-        const annsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
-        // Sort client-side
-        annsData.sort((a,b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
-        setAnnouncements(annsData);
-        setLoadingAnns(false);
-    }, (error) => {
-        console.error("Error fetching announcements:", error);
-        setLoadingAnns(false);
-    });
+      // Listener for announcements targeted to staff or all
+       const annsQuery = query(
+          collection(db, "announcements"),
+          orderBy("date", "desc"),
+          limit(10)
+      );
+       const unsubAnns = onSnapshot(annsQuery, (snapshot) => {
+          const annsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
+          setAnnouncements(annsData);
+          setLoadingAnns(false);
+      }, (error) => {
+          console.error("Error fetching announcements:", error);
+          setLoadingAnns(false);
+      });
 
-    return () => {
-        unsubNotifs();
-        unsubAnns();
-    };
+      return () => {
+          unsubNotifs();
+          unsubAnns();
+      };
+    }
   }, []);
 
-  const markAsRead = async (notifId: string) => {
-    const docRef = doc(db, 'notifications', notifId);
-    await updateDoc(docRef, { read: true });
-  }
+  const handleItemClick = async (item: Notification | Announcement, type: 'notification' | 'announcement') => {
+    setSelectedItem(item);
+    setItemType(type);
+    if (type === 'notification' && !(item as Notification).read) {
+        const docRef = doc(db, 'notifications', item.id);
+        await updateDoc(docRef, { read: true });
+    }
+  };
 
   const NotificationCard = ({ notif }: { notif: Notification }) => (
-    <Card className={!notif.read ? 'border-primary' : ''}>
+    <Card className={`cursor-pointer transition-all hover:shadow-md ${!notif.read ? 'border-primary' : ''}`} onClick={() => handleItemClick(notif, 'notification')}>
         <CardContent className="p-4">
             <div className="flex items-start gap-4">
                 <div className="mt-1">
@@ -75,13 +85,13 @@ export default function PetugasNotificationsPage() {
                 </div>
                 <div className="flex-grow">
                     <p className="font-bold">{notif.title}</p>
-                    <p className="text-sm text-muted-foreground">{notif.message.toUpperCase()}</p>
+                    <p className="text-sm text-muted-foreground truncate">{notif.message}</p>
                     <p className="text-xs text-muted-foreground mt-2">
                         {notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}
                     </p>
                 </div>
                 {!notif.read && (
-                    <Badge variant="default" className="cursor-pointer" onClick={() => markAsRead(notif.id)}>Baru</Badge>
+                    <Badge variant="default">Baru</Badge>
                 )}
             </div>
         </CardContent>
@@ -89,7 +99,7 @@ export default function PetugasNotificationsPage() {
   )
 
   const AnnouncementCard = ({ ann }: { ann: Announcement }) => (
-     <Card>
+     <Card className="cursor-pointer transition-all hover:shadow-md" onClick={() => handleItemClick(ann, 'announcement')}>
         <CardContent className="p-4">
             <div className="flex items-start gap-4">
                 <div className="mt-1">
@@ -97,50 +107,65 @@ export default function PetugasNotificationsPage() {
                 </div>
                 <div className="flex-grow">
                     <p className="font-bold">{ann.title}</p>
-                    <p className="text-sm text-muted-foreground">{ann.content}</p>
+                    <p className="text-sm text-muted-foreground truncate">{ann.content}</p>
                     <p className="text-xs text-muted-foreground mt-2">
-                         {ann.date ? formatDistanceToNow((ann.date as any).toDate(), { addSuffix: true, locale: id }) : ''}
+                         {ann.date ? formatDistanceToNow((ann.date as Timestamp).toDate(), { addSuffix: true, locale: id }) : ''}
                     </p>
                 </div>
-                <Badge variant="secondary">{ann.target === 'all' ? 'Publik' : 'Untuk Staf'}</Badge>
             </div>
         </CardContent>
     </Card>
   )
 
   return (
+    <>
     <div className="space-y-6">
         <Card>
             <CardHeader>
-                <CardTitle>Pemberitahuan Tugas</CardTitle>
-                <CardDescription>Pesan dan instruksi penting dari admin.</CardDescription>
+                <CardTitle>Pemberitahuan & Pengumuman</CardTitle>
+                <CardDescription>Pesan dan informasi penting untuk Anda.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-                {loadingNotifs ? (
-                     Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
-                ) : notifications.length > 0 ? (
-                    notifications.map(notif => <NotificationCard key={notif.id} notif={notif} />)
-                ) : (
-                    <p className="text-muted-foreground text-center py-4">Tidak ada pemberitahuan baru.</p>
-                )}
-            </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>Pengumuman</CardTitle>
-                <CardDescription>Pengumuman umum terkait jadwal atau informasi lainnya.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                {loadingAnns ? (
-                     Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
-                ) : announcements.length > 0 ? (
-                    announcements.map(ann => <AnnouncementCard key={ann.id} ann={ann} />)
-                ) : (
-                    <p className="text-muted-foreground text-center py-4">Tidak ada pengumuman.</p>
+                {loadingNotifs || loadingAnns ? (
+                     Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
+                ) : [...notifications, ...announcements]
+                    .sort((a,b) => {
+                        const dateA = (a.createdAt || (a as Announcement).date) as Timestamp;
+                        const dateB = (b.createdAt || (b as Announcement).date) as Timestamp;
+                        return dateB.toMillis() - dateA.toMillis();
+                    })
+                    .map(item => 'createdAt' in item ? <NotificationCard key={item.id} notif={item as Notification} /> : <AnnouncementCard key={item.id} ann={item as Announcement} />)
+                }
+                {(!loadingNotifs && !loadingAnns && notifications.length === 0 && announcements.length === 0) && (
+                    <p className="text-muted-foreground text-center py-4">Tidak ada pemberitahuan atau pengumuman baru.</p>
                 )}
             </CardContent>
         </Card>
     </div>
+    
+    <Dialog open={!!selectedItem} onOpenChange={(isOpen) => !isOpen && setSelectedItem(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{selectedItem?.title}</DialogTitle>
+                <DialogDescription>
+                    {itemType === 'notification' && selectedItem?.createdAt ? 
+                        new Date((selectedItem.createdAt as Timestamp).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : 
+                    itemType === 'announcement' && (selectedItem as Announcement).date ? 
+                        new Date(((selectedItem as Announcement).date as Timestamp).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <p>{itemType === 'notification' ? (selectedItem as Notification)?.message : (selectedItem as Announcement)?.content}</p>
+            </div>
+            <DialogFooter>
+                 <DialogClose asChild>
+                    <Button type="button" variant="secondary">
+                        Tutup
+                    </Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }

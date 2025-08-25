@@ -29,6 +29,7 @@ export default function PetugasLayout({
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [staffName, setStaffName] = useState("Petugas");
 
   useEffect(() => {
     setIsClient(true);
@@ -40,11 +41,17 @@ export default function PetugasLayout({
         title: "Akses Ditolak",
         description: "Anda harus masuk sebagai petugas untuk mengakses halaman ini.",
       });
+    } else {
+        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        if (staffInfo.name) {
+            setStaffName(staffInfo.name);
+        }
     }
   }, [router, toast]);
 
   const handleLogout = () => {
     localStorage.removeItem('userRole');
+    localStorage.removeItem('staffInfo');
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
     router.push('/auth/staff-login');
   };
@@ -69,7 +76,7 @@ export default function PetugasLayout({
             </AvatarFallback>
         </Avatar>
         <div>
-            <p className="font-bold text-base">Petugas</p>
+            <p className="font-bold text-base">{staffName}</p>
             <p className="text-sm text-muted-foreground">Role: Petugas</p>
         </div>
     </div>

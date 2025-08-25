@@ -18,10 +18,11 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, deleteDoc, orderBy, updateDoc } from 'firebase/firestore';
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2, Bell, X, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +38,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState("Selamat Datang");
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -109,6 +111,14 @@ export default function Home() {
     }
   };
 
+  const handleNotificationClick = async (notif: Notification) => {
+      setSelectedNotification(notif);
+      if (!notif.read) {
+          const docRef = doc(db, 'notifications', notif.id);
+          await updateDoc(docRef, { read: true });
+      }
+  }
+
   const handleNotificationDelete = async (notifId: string) => {
       try {
           await deleteDoc(doc(db, "notifications", notifId));
@@ -137,6 +147,7 @@ export default function Home() {
   }
 
   return (
+    <>
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <div className="flex items-center gap-3">
@@ -173,15 +184,15 @@ export default function Home() {
                         <DropdownMenuSeparator />
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => e.preventDefault()} className="flex items-start gap-2">
+                                <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className="flex items-start gap-2 cursor-pointer">
                                    <div className="flex-grow">
-                                        <p className="font-semibold">{notif.title}</p>
-                                        <p className="text-xs text-muted-foreground">{notif.message}</p>
+                                        <p className="font-semibold flex items-center gap-2">
+                                            {notif.title}
+                                            {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
-                                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleNotificationDelete(notif.id)}>
-                                       <X className="h-4 w-4"/>
-                                   </Button>
                                 </DropdownMenuItem>
                             ))
                         ) : (
@@ -341,7 +352,35 @@ export default function Home() {
         </div>
       </footer>
     </div>
+
+    <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{selectedNotification?.title}</DialogTitle>
+                <DialogDescription>
+                    {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt.toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <p>{selectedNotification?.message}</p>
+            </div>
+            <DialogFooter className="sm:justify-between flex-col-reverse sm:flex-row gap-2">
+                 <Button type="button" variant="destructive" size="sm" onClick={() => {
+                     if(selectedNotification) {
+                        handleNotificationDelete(selectedNotification.id)
+                        setSelectedNotification(null)
+                     }
+                 }}>
+                    <X className="mr-2 h-4 w-4" /> Hapus
+                 </Button>
+                 <DialogClose asChild>
+                    <Button type="button" variant="secondary">
+                        Tutup
+                    </Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
-
-    

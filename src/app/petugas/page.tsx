@@ -68,34 +68,38 @@ export default function PetugasPage() {
       setCurrentTime(now.toLocaleTimeString('id-ID'));
       setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     }, 1000);
+    
+    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (staffInfo.name) {
+      setPetugasName(staffInfo.name);
 
-     // TODO: This should be fetched from a proper auth session
-    const name = "Petugas A"; // Placeholder
-    setPetugasName(name);
+      const q = query(
+        collection(db, "schedules"),
+        where("officer", "==", staffInfo.name)
+      );
 
-    const q = query(
-      collection(db, "schedules"),
-      where("officer", "==", name)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allSchedules = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEntry))
-        .sort((a, b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const allSchedules = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEntry))
+          .sort((a, b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
+          
+        const todaySchedule = allSchedules.find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
         
-      const todaySchedule = allSchedules.find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
-      
-      setScheduleToday(todaySchedule || null);
-      setLoading(false);
-    }, (error) => {
-        console.error("Error fetching schedule:", error);
-        toast({variant: "destructive", title: "Gagal", description: "Tidak dapat memuat jadwal."})
+        setScheduleToday(todaySchedule || null);
         setLoading(false);
-    });
-
-    return () => {
-      clearInterval(timer);
-      unsubscribe();
+      }, (error) => {
+          console.error("Error fetching schedule:", error);
+          toast({variant: "destructive", title: "Gagal", description: "Tidak dapat memuat jadwal."})
+          setLoading(false);
+      });
+      
+      return () => {
+        clearInterval(timer);
+        unsubscribe();
+      }
+    } else {
+        setLoading(false);
+        return () => clearInterval(timer);
     }
   }, [toast]);
   

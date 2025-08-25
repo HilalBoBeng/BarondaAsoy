@@ -27,35 +27,38 @@ const statusConfig: Record<ScheduleEntry['status'], {
 export default function PetugasSchedulePage() {
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [petugasName, setPetugasName] = useState<string | null>(null); // Placeholder for auth
+  const [petugasName, setPetugasName] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: This should be fetched from a proper auth session
-    const name = "Petugas A"; // Placeholder
-    setPetugasName(name);
+    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (staffInfo.name) {
+      setPetugasName(staffInfo.name);
 
-    const q = query(
-      collection(db, "schedules"),
-      where("officer", "==", name)
-    );
+      const q = query(
+        collection(db, "schedules"),
+        where("officer", "==", staffInfo.name)
+      );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const scheduleData = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          date: (doc.data().date as Timestamp).toDate(),
-        }))
-        .sort((a, b) => b.date.getTime() - a.date.getTime()) as ScheduleEntry[];
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const scheduleData = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            date: (doc.data().date as Timestamp).toDate(),
+          }))
+          .sort((a, b) => b.date.getTime() - a.date.getTime()) as ScheduleEntry[];
 
-      setSchedules(scheduleData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching schedules:", error);
-      setLoading(false);
-    });
+        setSchedules(scheduleData);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching schedules:", error);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } else {
+        setLoading(false);
+    }
   }, []);
   
   const ScheduleCard = ({ schedule }: { schedule: ScheduleEntry }) => {

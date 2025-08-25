@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, getDocs, writeBatch, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -39,7 +39,7 @@ export default function PatrolLogPage() {
     const [loadingLogs, setLoadingLogs] = useState(true);
     const [loadingEquipment, setLoadingEquipment] = useState(true);
     const [isSubmittingLog, setIsSubmittingLog] = useState(false);
-    const [petugasName, setPetugasName] = useState("Petugas A"); // Placeholder
+    const [staffInfo, setStaffInfo] = useState<{name: string, id: string} | null>(null);
     const { toast } = useToast();
 
     const logForm = useForm<LogFormValues>({
@@ -48,47 +48,59 @@ export default function PatrolLogPage() {
     });
 
     useEffect(() => {
-        // Fetch logs
-        const logsQuery = query(collection(db, "patrol_logs"), where("officerName", "==", petugasName));
-        const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-            const logsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PatrolLog))
-                .sort((a, b) => (b.createdAt as any).toDate() - (a.createdAt as any).toDate());
-            setLogs(logsData);
+        const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        setStaffInfo(info);
+
+        if (info.name) {
+            // Fetch logs
+            const logsQuery = query(
+                collection(db, "patrol_logs"),
+                where("officerName", "==", info.name),
+                orderBy("createdAt", "desc")
+            );
+            const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
+                const logsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PatrolLog));
+                setLogs(logsData);
+                setLoadingLogs(false);
+            });
+
+            // Fetch or initialize equipment status
+            const equipmentRef = collection(db, 'equipment_status');
+            const unsubEquipment = onSnapshot(equipmentRef, (snapshot) => {
+                if (snapshot.empty) {
+                    // Initialize if not present
+                    const batch = writeBatch(db);
+                    initialEquipment.forEach(item => {
+                        const docRef = doc(db, 'equipment_status', item.id);
+                        batch.set(docRef, { ...item, lastChecked: serverTimestamp() });
+                    });
+                    batch.commit();
+                    setEquipment(initialEquipment);
+                } else {
+                    const equipmentData = snapshot.docs.map(d => ({...d.data() as EquipmentStatus, id: d.id }));
+                    setEquipment(equipmentData);
+                }
+                setLoadingEquipment(false);
+            });
+
+            return () => {
+                unsubLogs();
+                unsubEquipment();
+            };
+        } else {
             setLoadingLogs(false);
-        });
-
-        // Fetch or initialize equipment status
-        const equipmentRef = collection(db, 'equipment_status');
-        const unsubEquipment = onSnapshot(equipmentRef, (snapshot) => {
-            if (snapshot.empty) {
-                // Initialize if not present
-                const batch = writeBatch(db);
-                initialEquipment.forEach(item => {
-                    const docRef = doc(db, 'equipment_status', item.id);
-                    batch.set(docRef, { ...item, lastChecked: serverTimestamp() });
-                });
-                batch.commit();
-                setEquipment(initialEquipment);
-            } else {
-                const equipmentData = snapshot.docs.map(d => ({...d.data() as EquipmentStatus, id: d.id }));
-                setEquipment(equipmentData);
-            }
             setLoadingEquipment(false);
-        });
-
-        return () => {
-            unsubLogs();
-            unsubEquipment();
-        };
-    }, [petugasName]);
+        }
+    }, []);
 
     const onLogSubmit = async (values: LogFormValues) => {
+        if (!staffInfo) return;
         setIsSubmittingLog(true);
         try {
             await addDoc(collection(db, 'patrol_logs'), {
                 ...values,
-                officerName: petugasName,
-                officerId: 'petugas_1', // Placeholder
+                officerName: staffInfo.name,
+                officerId: staffInfo.id,
                 createdAt: serverTimestamp()
             });
             toast({ title: 'Berhasil', description: 'Laporan patroli berhasil dikirim.' });
@@ -133,7 +145,7 @@ export default function PatrolLogPage() {
                             </FormItem>
                         </CardContent>
                         <CardFooter>
-                            <Button type="submit" disabled={isSubmittingLog} className="w-full">
+                            <Button type="submit" disabled={isSubmittingLog || !staffInfo} className="w-full">
                                 {isSubmittingLog ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                 Kirim Laporan
                             </Button>
