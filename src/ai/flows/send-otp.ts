@@ -53,17 +53,12 @@ const sendOtpFlow = ai.defineFlow(
 
       const batch = writeBatch(db);
 
-      // 1. Invalidate all previous active OTPs for this email
+      // 1. Delete all previous active OTPs for this email to prevent reuse
       const q = query(collection(db, 'otps'), where('email', '==', email));
       const oldOtpsSnapshot = await getDocs(q);
       
       oldOtpsSnapshot.forEach(doc => {
-          const data = doc.data();
-          const isExpired = data.expiresAt ? (data.expiresAt as Timestamp).toDate() < new Date() : true;
-          // Invalidate if it's not used and not expired
-          if (!data.used && !isExpired) {
-              batch.update(doc.ref, { used: true });
-          }
+          batch.delete(doc.ref);
       });
       
       // 2. Generate a 6-digit OTP
