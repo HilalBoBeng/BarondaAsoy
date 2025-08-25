@@ -56,10 +56,8 @@ export default function ReportHistory({ user }: { user: User | null }) {
     const { toast } = useToast();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [isLastPage, setIsLastPage] = useState(false);
-
+    
     const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
         if (!user) {
             setLoading(false);
@@ -71,62 +69,47 @@ export default function ReportHistory({ user }: { user: User | null }) {
             const reportsRef = collection(db, 'reports');
             let q;
             
-            // This query requires a composite index on (userId, createdAt DESC). 
-            // Firestore should provide a link to create it in the console logs if it's missing.
-            const baseQuery = query(reportsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+            const baseQuery = where('userId', '==', user.uid);
 
             if (direction === 'next' && lastVisible) {
-                q = query(baseQuery, startAfter(lastVisible), limit(REPORTS_PER_PAGE));
-            } else if (direction === 'prev' && firstVisible) {
-                q = query(baseQuery, endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+                // To go to the next page, we need to order by creation time to know where to start from
+                q = query(reportsRef, baseQuery, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
             } else {
-                q = query(baseQuery, limit(REPORTS_PER_PAGE));
+                // For initial load or any other case
+                q = query(reportsRef, baseQuery, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
             }
 
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                if (snapshot.empty && direction !== 'initial') {
-                    setIsLastPage(true);
-                    setLoading(false);
-                    if (direction === 'next') setCurrentPage(prev => prev > 1 ? prev - 1 : 1);
-                    return;
-                }
+            const documentSnapshots = await getDocs(q);
 
-                const reportsData = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const repliesObject = data.replies || {};
-                    const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+            const reportsData = documentSnapshots.docs.map(doc => {
+                const data = doc.data();
+                const repliesObject = data.replies || {};
+                const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
-                    return {
-                        id: doc.id,
-                        ...data,
-                        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-                        replies: repliesArray
-                    } as Report;
-                });
-                
-                setReports(reportsData);
-                setFirstVisible(snapshot.docs[0]);
-                setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-                setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
-                setLoading(false);
-            }, (error) => {
-                 console.error("Error fetching reports:", error);
-                 toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
-                 setLoading(false);
+                return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+                    replies: repliesArray
+                } as Report;
             });
+            
+            // Client-side sort as a fallback and for initial load without pagination
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
-            return unsubscribe;
-        } catch (error) {
-            console.error("Error fetching reports:", error);
-            toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+            setReports(reportsData);
+            setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
             setLoading(false);
+        } catch (error) {
+             console.error("Error fetching reports:", error);
+             toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+             setLoading(false);
         }
     };
     
     useEffect(() => {
         if (user) {
-            const unsub = fetchReports(1);
-            return () => { unsub.then(u => u && u()) };
+            fetchReports(1);
         } else {
             setLoading(false);
         }
@@ -140,10 +123,9 @@ export default function ReportHistory({ user }: { user: User | null }) {
     };
 
     const goToPrevPage = () => {
-        if (currentPage === 1) return;
-        const newPage = currentPage - 1;
-        setCurrentPage(newPage);
-        fetchReports(newPage, 'prev');
+        // Simple prev page is hard with firestore cursors without ordering, so just reload first page
+        setCurrentPage(1);
+        fetchReports(1, 'initial');
     };
 
 
@@ -151,7 +133,8 @@ export default function ReportHistory({ user }: { user: User | null }) {
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
-            // The onSnapshot listener will auto-update the UI
+            // Re-fetch to update the view
+            fetchReports(currentPage, 'initial');
         } catch (error) {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
@@ -266,7 +249,7 @@ export default function ReportHistory({ user }: { user: User | null }) {
                         variant="outline"
                         size="sm"
                         onClick={goToNextPage}
-                        disabled={isLastPage || loading}
+                        disabled={!lastVisible || loading}
                     >
                         Berikutnya
                     </Button>

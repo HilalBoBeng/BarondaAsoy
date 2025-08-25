@@ -63,9 +63,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
                     .content { background-color: #ffffff; padding: 30px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
                     .header { text-align: center; border-bottom: 1px solid #e0e0e0; padding-bottom: 20px; margin-bottom: 20px; }
                     .header img { height: 50px; }
-                    .code-container { display: flex; align-items: center; justify-content: space-between; background-color: #f0f4f8; border-radius: 5px; padding: 10px 15px; margin: 20px 0; border: 1px dashed #ccc; }
-                    .code-box { font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #2C3E50; font-family: monospace; }
-                    .copy-btn { padding: 8px 12px; background-color: #3498DB; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; border: none; cursor: default; }
+                    .code-box { font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #2C3E50; font-family: monospace; text-align: center; background-color: #f0f4f8; border-radius: 5px; padding: 15px; margin: 20px 0; border: 1px dashed #ccc; }
                     .warning { font-size: 12px; color: #777; text-align: center; margin-top: 20px; padding: 10px; background-color: #fffbe6; border: 1px solid #ffe58f; border-radius: 4px;}
                     .footer { font-size: 12px; color: #999; text-align: center; margin-top: 30px; }
                 </style>
@@ -80,10 +78,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
                         <p>Pendaftaran Anda sebagai petugas Baronda telah berhasil disetujui. Gunakan informasi di bawah ini untuk masuk ke akun Anda.</p>
                         <p><strong>Email:</strong> ${email}</p>
                         <p><strong>Kode Akses Anda:</strong></p>
-                        <div class="code-container">
-                          <span class="code-box">${accessCode}</span>
-                          <span class="copy-btn">SALIN</span>
-                        </div>
+                        <div class="code-box">${accessCode}</div>
                         <div class="warning">
                            <strong>PERINGATAN KEAMANAN:</strong> Jaga kerahasiaan Kode Akses Anda. Jangan pernah membagikan kode ini kepada siapa pun, termasuk admin. Simpan email ini di tempat yang aman.
                         </div>
