@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import type { Announcement } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -51,6 +51,8 @@ export default function AnnouncementsAdminPage() {
             title: data.title,
             content: data.content,
             date: date instanceof Timestamp ? date.toDate() : date,
+            likes: data.likes || 0,
+            dislikes: data.dislikes || 0,
         }
       }) as Announcement[];
       setAnnouncements(announcementsData);
@@ -85,6 +87,10 @@ export default function AnnouncementsAdminPage() {
         await addDoc(collection(db, 'announcements'), {
           ...values,
           date: serverTimestamp(),
+          likes: 0,
+          dislikes: 0,
+          likesBy: [],
+          dislikesBy: [],
         });
         toast({ title: "Berhasil", description: "Pengumuman berhasil dibuat." });
       }
@@ -149,7 +155,7 @@ export default function AnnouncementsAdminPage() {
         {/* Mobile View */}
         <div className="sm:hidden space-y-4">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
+            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
           ) : announcements.length > 0 ? (
             announcements.map((ann) => (
               <Card key={ann.id}>
@@ -159,6 +165,10 @@ export default function AnnouncementsAdminPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-3">{ann.content}</p>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1"><ThumbsUp className="h-4 w-4 text-green-500" /> {ann.likes}</div>
+                    <div className="flex items-center gap-1"><ThumbsDown className="h-4 w-4 text-red-500" /> {ann.dislikes}</div>
+                  </div>
                 </CardContent>
                 <CardFooter>
                   {renderActions(ann)}
@@ -178,6 +188,7 @@ export default function AnnouncementsAdminPage() {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Judul</TableHead>
                 <TableHead>Isi</TableHead>
+                <TableHead>Respons</TableHead>
                 <TableHead className="text-right w-[100px]">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -188,6 +199,7 @@ export default function AnnouncementsAdminPage() {
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -197,6 +209,12 @@ export default function AnnouncementsAdminPage() {
                     <TableCell>{ann.date instanceof Date ? ann.date.toLocaleDateString('id-ID') : 'N/A'}</TableCell>
                     <TableCell className="font-medium">{ann.title}</TableCell>
                     <TableCell className="max-w-md truncate">{ann.content}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3 text-green-500" /> {ann.likes}</span>
+                        <span className="flex items-center gap-1"><ThumbsDown className="h-3 w-3 text-red-500" /> {ann.dislikes}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
                       {renderActions(ann)}
                     </TableCell>
@@ -204,7 +222,7 @@ export default function AnnouncementsAdminPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center h-24">
+                  <TableCell colSpan={5} className="text-center h-24">
                     Belum ada pengumuman.
                   </TableCell>
                 </TableRow>

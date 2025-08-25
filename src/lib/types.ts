@@ -7,6 +7,10 @@ export interface Announcement {
   title: string;
   content: string;
   date: string | Date | Timestamp;
+  likes?: number;
+  dislikes?: number;
+  likesBy?: string[];
+  dislikesBy?: string[];
 }
 
 export interface ScheduleEntry {
