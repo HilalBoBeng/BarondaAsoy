@@ -91,14 +91,26 @@ export default {
         },
         'logo-pulse': {
           '50%': {
-            opacity: '0.7',
+            transform: 'scale(0.95)',
+            opacity: '0.8',
           },
         },
+        'fade-in-up': {
+            '0%': {
+                opacity: '0',
+                transform: 'translateY(10px)'
+            },
+            '100%': {
+                opacity: '1',
+                transform: 'translateY(0)'
+            },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'logo-pulse': 'logo-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'logo-pulse': 'logo-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
       },
     },
   },
