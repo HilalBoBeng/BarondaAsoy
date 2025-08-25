@@ -59,7 +59,6 @@ export default function PetugasLayout({
   };
 
   const navItems = [
-    { href: "/petugas", icon: Home, label: "Dasbor" },
     { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga" },
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya" },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
@@ -84,13 +83,23 @@ export default function PetugasLayout({
   const NavContent = () => (
     <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+         <Link
+            href="/petugas"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+              pathname === "/petugas" && "bg-muted text-primary"
+            )}
+          >
+            <Home className="h-4 w-4" />
+            Dasbor
+          </Link>
         {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/petugas')) && "bg-muted text-primary"
+              pathname.startsWith(item.href) && "bg-muted text-primary"
             )}
           >
             <item.icon className="h-4 w-4" />
@@ -106,6 +115,12 @@ export default function PetugasLayout({
       </div>
     </div>
   );
+
+  const getPageTitle = () => {
+    if (pathname === '/petugas') return 'Dasbor Petugas';
+    const activeItem = navItems.find(item => pathname.startsWith(item.href));
+    return activeItem?.label || 'Dasbor Petugas';
+  }
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -143,7 +158,7 @@ export default function PetugasLayout({
 
            <div className="w-full flex-1">
              <h1 className="text-lg font-semibold md:text-2xl truncate">
-              {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dasbor Petugas'}
+              {getPageTitle()}
             </h1>
           </div>
            <Button variant="outline" size="icon" className="ml-auto h-8 w-8 asChild">
