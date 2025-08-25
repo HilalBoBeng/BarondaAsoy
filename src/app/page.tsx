@@ -36,6 +36,7 @@ export default function Home() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [greeting, setGreeting] = useState("Selamat Datang");
   const [currentTime, setCurrentTime] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -52,7 +53,9 @@ export default function Home() {
     setGreeting(getGreeting());
 
     const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString('id-ID'));
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('id-ID'));
+      setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     }, 1000);
 
     return () => clearInterval(timer);
@@ -126,7 +129,7 @@ export default function Home() {
             alt="Loading Logo" 
             width={120} 
             height={120} 
-            className="animate-pulse"
+            className="animate-logo-pulse"
             priority
         />
       </div>
@@ -264,8 +267,8 @@ export default function Home() {
             <p className="text-muted-foreground text-sm sm:text-base mt-1">
                 Selamat datang di Baronda Kelurahan Kilongan
             </p>
-            <p className="text-muted-foreground text-sm sm:text-base">
-                {currentTime}
+             <p className="text-muted-foreground text-sm sm:text-base">
+                {currentDate} | {currentTime}
             </p>
           </div>
 
@@ -287,15 +290,17 @@ export default function Home() {
                 <ReportActivity user={user} />
               </CardContent>
             </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Riwayat Laporan Anda</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ReportHistory user={user} />
-                </CardContent>
-            </Card>
+            
+            {user && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Riwayat Laporan Anda</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ReportHistory user={user} />
+                    </CardContent>
+                </Card>
+            )}
 
             <Card>
                 <CardHeader>
@@ -326,5 +331,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
