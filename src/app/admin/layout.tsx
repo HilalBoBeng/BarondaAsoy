@@ -51,7 +51,7 @@ export default function AdminLayout({
 
   const navItems = [
     { href: "/admin", icon: Home, label: "Dasbor" },
-    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: 6 },
+    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
@@ -67,8 +67,8 @@ export default function AdminLayout({
       <div className="hidden border-r bg-muted/40 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
-              <BarondaLogo className="h-8 w-8" />
+            <Link href="/admin" className="flex items-center gap-2 font-semibold">
+              <BarondaLogo className="h-6 w-6" />
               <span className="">Baronda Admin</span>
             </Link>
           </div>
@@ -80,16 +80,11 @@ export default function AdminLayout({
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                    pathname === item.href && "bg-muted text-primary"
+                    (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin')) && "bg-muted text-primary"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}
-                  {item.badge && (
-                     <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                        {item.badge}
-                     </Badge>
-                  )}
                 </Link>
               ))}
             </nav>
@@ -106,7 +101,7 @@ export default function AdminLayout({
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <div className="w-full flex-1">
             <h1 className="text-lg font-semibold md:text-2xl">
-              {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dasbor Admin'}
+              {navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/'))?.label || 'Dasbor Admin'}
             </h1>
           </div>
           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">

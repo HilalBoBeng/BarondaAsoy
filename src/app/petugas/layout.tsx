@@ -47,8 +47,8 @@ export default function PetugasLayout({
 
   const navItems = [
     { href: "/petugas", icon: Home, label: "Dasbor" },
-    { href: "/petugas/laporan", icon: ShieldAlert, label: "Laporan" },
-    { href: "/petugas/jadwal", icon: Calendar, label: "Jadwal Saya" },
+    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan" },
+    { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya" },
   ];
 
   if (!isClient) {
@@ -61,7 +61,7 @@ export default function PetugasLayout({
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/petugas" className="flex items-center gap-2 font-semibold">
-              <BarondaLogo className="h-8 w-8" />
+              <BarondaLogo className="h-6 w-6" />
               <span className="">Dasbor Petugas</span>
             </Link>
           </div>
@@ -73,7 +73,7 @@ export default function PetugasLayout({
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                    pathname === item.href && "bg-muted text-primary"
+                    (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/petugas')) && "bg-muted text-primary"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
