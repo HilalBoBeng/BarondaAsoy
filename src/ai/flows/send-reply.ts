@@ -13,7 +13,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 
 const SendReplyInputSchema = z.object({
@@ -81,13 +81,16 @@ const sendReplyFlow = ai.defineFlow(
 
       // 2. Save reply to Firestore document
       const reportRef = doc(db, 'reports', reportId);
-      await updateDoc(reportRef, {
-          replies: arrayUnion({
-              message: replyMessage,
-              replierRole: replierRole,
-              timestamp: serverTimestamp(),
-          })
-      });
+      const replyId = doc(collection(db, 'reports')).id; // Generate a unique ID for the reply
+      const updateData: { [key: string]: any } = {};
+      
+      updateData[`replies.${replyId}`] = {
+          message: replyMessage,
+          replierRole: replierRole,
+          timestamp: serverTimestamp(),
+      };
+
+      await updateDoc(reportRef, updateData);
 
       return {
         success: true,

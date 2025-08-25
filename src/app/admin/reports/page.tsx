@@ -97,22 +97,22 @@ export default function ReportsAdminPage() {
   };
   
   useEffect(() => {
-    fetchReports(true);
-    
-    // Set up a real-time listener for status updates on currently loaded reports
-    if (reports.length > 0) {
-        const unsubscribes = reports.map(report => {
-            const docRef = doc(db, 'reports', report.id);
-            return onSnapshot(docRef, (doc) => {
-                if (doc.exists()) {
-                    const updatedData = { id: doc.id, ...doc.data(), createdAt: doc.data().createdAt.toDate() } as Report;
-                     setReports(prev => prev.map(r => r.id === doc.id ? updatedData : r));
-                }
-            });
-        });
-        return () => unsubscribes.forEach(unsub => unsub());
-    }
-  }, []);
+    const unsub = onSnapshot(query(collection(db, "reports"), orderBy('createdAt', 'desc')), (snapshot) => {
+        const reportsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+        })) as Report[];
+        setReports(reportsData);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching reports:", error);
+        toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+        setLoading(false);
+    });
+
+    return () => unsub();
+  }, [toast]);
 
   const handleStatusChange = async (id: string, status: ReportStatus) => {
     try {

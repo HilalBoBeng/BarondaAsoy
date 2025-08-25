@@ -47,7 +47,7 @@ export interface Report {
   createdAt: string | Date | Timestamp;
   triageResult: TriageReportOutput;
   status: 'new' | 'in_progress' | 'resolved';
-  replies?: Reply[];
+  replies?: Reply[] | Record<string, Reply>;
 }
 
 export interface AppUser {

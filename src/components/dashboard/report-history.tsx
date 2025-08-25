@@ -73,13 +73,15 @@ export default function ReportHistory({ user }: { user: User | null }) {
             if (initial) {
                  q = query(
                     reportsRef, 
-                    where('userId', '==', user.uid), 
+                    where('userId', '==', user.uid),
+                    orderBy('createdAt', 'desc'),
                     limit(REPORTS_PER_PAGE)
                 );
             } else if(lastVisible) {
                 q = query(
                     reportsRef,
                     where('userId', '==', user.uid),
+                    orderBy('createdAt', 'desc'),
                     startAfter(lastVisible),
                     limit(REPORTS_PER_PAGE)
                 );
@@ -91,19 +93,16 @@ export default function ReportHistory({ user }: { user: User | null }) {
 
             const documentSnapshots = await getDocs(q);
             
-            // Sort client-side
-            const sortedDocs = documentSnapshots.docs.sort((a,b) => b.data().createdAt.toDate().getTime() - a.data().createdAt.toDate().getTime());
-            
-            const newReports = sortedDocs.map(doc => {
+            const newReports = documentSnapshots.docs.map(doc => {
                  const data = doc.data();
+                 const repliesObject = data.replies || {};
+                 const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+                 
                  return {
                     id: doc.id,
                     ...data,
                     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-                    replies: (data.replies || []).map((r: any) => ({
-                        ...r,
-                        timestamp: r.timestamp instanceof Timestamp ? r.timestamp.toDate() : new Date(),
-                    })),
+                    replies: repliesArray
                 } as Report;
             });
 
@@ -130,13 +129,40 @@ export default function ReportHistory({ user }: { user: User | null }) {
     };
     
     useEffect(() => {
-        fetchReports(true);
+        if (user) {
+            const reportsRef = collection(db, 'reports');
+            const q = query(
+                reportsRef,
+                where('userId', '==', user.uid),
+                orderBy('createdAt', 'desc')
+            );
+            
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const reportsData = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const repliesObject = data.replies || {};
+                    const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
+                    return {
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+                        replies: repliesArray
+                    } as Report;
+                });
+                setReports(reportsData);
+                setLoading(false);
+            });
+
+            return () => unsubscribe();
+        } else {
+            setLoading(false);
+        }
     }, [user]);
 
     const handleDelete = async (reportId: string) => {
         try {
             await deleteDoc(doc(db, "reports", reportId));
-            setReports(prev => prev.filter(r => r.id !== reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
         } catch (error) {
             console.error("Error deleting report:", error);
