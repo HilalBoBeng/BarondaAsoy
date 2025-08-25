@@ -53,9 +53,12 @@ export default function Home() {
       setLoading(false);
       
       if (currentUser) {
-          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+          // The query requires an index. Removing orderBy and sorting on the client.
+          const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
           const unsubNotifications = onSnapshot(q, (snapshot) => {
               const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+              // Sort client-side
+              notifs.sort((a, b) => (b.createdAt as any).toDate().getTime() - (a.createdAt as any).toDate().getTime());
               setNotifications(notifs);
           });
           return () => unsubNotifications();
@@ -87,6 +90,7 @@ export default function Home() {
       try {
           await deleteDoc(doc(db, "notifications", notifId));
           // The onSnapshot listener will automatically update the UI
+          toast({ title: 'Berhasil', description: 'Notifikasi telah dihapus.' });
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus notifikasi.' });
       }
