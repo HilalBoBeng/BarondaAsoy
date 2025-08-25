@@ -178,7 +178,7 @@ export default function Home() {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2"><ShieldBan className="h-6 w-6 text-destructive"/>Akun Anda Diblokir</AlertDialogTitle>
-                    <AlertDialogDescription>
+                     <AlertDialogDescription>
                        <div className="text-sm text-muted-foreground">
                             Akun Anda telah ditangguhkan oleh admin.
                             {userInfo.blockReason && <div className="mt-2"><strong>Alasan:</strong> {userInfo.blockReason}</div>}
@@ -203,7 +203,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <div className="flex items-center gap-3">
-           <Link href="/auth/staff-login" className="flex items-center gap-2 sm:gap-3">
+           <Link href={!user ? "/auth/staff-login" : "/"} className="flex items-center gap-2 sm:gap-3">
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
@@ -437,5 +437,3 @@ export default function Home() {
     </>
   );
 }
-
-    
