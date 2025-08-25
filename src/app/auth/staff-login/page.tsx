@@ -52,12 +52,15 @@ export default function StaffLoginPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (data.accessCode === "Admin123") {
+      localStorage.setItem('userRole', 'admin');
       toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
       router.push("/admin");
     } else if (data.accessCode === "Petugas123") {
+      localStorage.setItem('userRole', 'petugas');
       toast({ title: "Berhasil", description: "Selamat datang, Petugas!" });
       router.push("/petugas");
     } else {
+      localStorage.removeItem('userRole');
       toast({
         variant: "destructive",
         title: "Gagal Masuk",

@@ -13,16 +13,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { BarondaLogo } from "@/components/icons";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminLayout({
   children,
@@ -30,6 +25,28 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    const userRole = localStorage.getItem('userRole');
+    if (userRole !== 'admin') {
+      router.replace('/auth/staff-login');
+      toast({
+        variant: "destructive",
+        title: "Akses Ditolak",
+        description: "Anda harus masuk sebagai admin untuk mengakses halaman ini.",
+      });
+    }
+  }, [router, toast]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('userRole');
+    toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
+    router.push('/auth/staff-login');
+  };
 
   const navItems = [
     { href: "/admin", icon: Home, label: "Dasbor" },
@@ -38,6 +55,10 @@ export default function AdminLayout({
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
   ];
+  
+  if (!isClient) {
+      return null;
+  }
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -72,7 +93,7 @@ export default function AdminLayout({
             </nav>
           </div>
           <div className="mt-auto p-4">
-             <Button size="sm" className="w-full">
+             <Button size="sm" className="w-full" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Keluar
               </Button>
