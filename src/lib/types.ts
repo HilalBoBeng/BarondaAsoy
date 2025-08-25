@@ -59,6 +59,9 @@ export interface AppUser {
   displayName?: string | null;
   photoURL?: string | null;
   createdAt?: string;
+  phone?: string;
+  address?: string;
+  isBlocked?: boolean;
 }
 
 export interface Staff {

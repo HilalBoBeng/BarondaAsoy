@@ -131,7 +131,7 @@ export default function PetugasLayout({
       <div className="mt-auto p-4">
          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
-            Keluar
+            {isLoggingOut ? 'Keluar...' : 'Keluar'}
           </Button>
       </div>
     </div>
@@ -187,12 +187,13 @@ export default function PetugasLayout({
                   <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
               </div>
-              <Image 
-                src="https://iili.io/KJ4aGxp.png" 
-                alt="Logo" 
-                width={32} 
+               <Image
+                src="https://iili.io/KJ4aGxp.png"
+                alt="Logo"
+                width={32}
                 height={32}
                 className="h-8 w-8"
+                priority
               />
           </div>
         </header>

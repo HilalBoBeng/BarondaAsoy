@@ -213,6 +213,8 @@ export default function VerifyOtpPage() {
           await setDoc(doc(db, "users", userCredential.user.uid), {
             displayName: verificationContext.name,
             email: verificationContext.email,
+            phone: '',
+            address: '',
             photoURL: '',
             createdAt: serverTimestamp(),
             isBlocked: false,

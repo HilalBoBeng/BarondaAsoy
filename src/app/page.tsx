@@ -107,15 +107,10 @@ export default function Home() {
           setLoading(false);
         });
 
-        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
           const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
-          const sortedNotifs = notifsData.sort((a, b) => {
-            const dateA = a.createdAt ? (a.createdAt as any).toDate() : 0;
-            const dateB = b.createdAt ? (b.createdAt as any).toDate() : 0;
-            return dateB - dateA;
-          });
-          setNotifications(sortedNotifs);
+          setNotifications(notifsData);
         }, (error) => {
           console.error("Error fetching notifications: ", error);
         });
@@ -271,7 +266,7 @@ export default function Home() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                         <Link href="/settings">
+                         <Link href="/profile">
                            <UserIcon className="mr-2 h-4 w-4" />
                            <span>Profil Saya</span>
                          </Link>
