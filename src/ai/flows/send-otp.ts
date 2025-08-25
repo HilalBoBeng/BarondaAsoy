@@ -11,6 +11,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { z } from 'genkit';
+import nodemailer from 'nodemailer';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -27,8 +28,6 @@ export async function sendOtp(input: SendOtpInput): Promise<SendOtpOutput> {
   return sendOtpFlow(input);
 }
 
-// NOTE: The actual email sending logic (e.g., via SMTP) is not implemented here.
-// This flow currently only generates and stores the OTP in Firestore.
 const sendOtpFlow = ai.defineFlow(
   {
     name: 'sendOtpFlow',
@@ -52,10 +51,36 @@ const sendOtpFlow = ai.defineFlow(
         used: false,
       });
 
-      // 4. Send email (simulation - actual implementation needed)
-      console.log(`Sending OTP ${otp} to ${email}`);
-      // In a real implementation, you would use a service like Nodemailer
-      // with the credentials from .env to send the email.
+      // 4. Send email using nodemailer
+      const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: false, // true for 465, false for other ports
+          auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+          },
+      });
+
+      const mailOptions = {
+          from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
+          to: email,
+          subject: 'Kode OTP Verifikasi Anda',
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                <h2>Kode Verifikasi Anda</h2>
+                <p>Gunakan kode berikut untuk menyelesaikan proses Anda. Kode ini berlaku selama 10 menit.</p>
+                <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background-color: #f2f2f2; padding: 10px 15px; display: inline-block;">
+                    ${otp}
+                </p>
+                <p>Jika Anda tidak meminta kode ini, harap abaikan email ini.</p>
+                <p>Terima kasih,<br/>Tim Baronda Siskamling</p>
+            </div>
+          `,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`Successfully sent OTP to ${email}`);
 
       return {
         success: true,
