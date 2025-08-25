@@ -3,22 +3,17 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { Phone, Shield, Flame, HeartPulse, Building } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase/client';
 import type { EmergencyContact } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { Card, CardContent } from '../ui/card';
 
 const iconMap: Record<EmergencyContact['type'], React.ReactElement> = {
-  police: <Shield className="h-6 w-6 text-accent" />,
-  fire: <Flame className="h-6 w-6 text-destructive" />,
-  medical: <HeartPulse className="h-6 w-6 text-green-500" />,
-  other: <Building className="h-6 w-6 text-muted-foreground" />,
+  police: <Shield className="h-5 w-5 text-blue-500" />,
+  fire: <Flame className="h-5 w-5 text-red-500" />,
+  medical: <HeartPulse className="h-5 w-5 text-green-500" />,
+  other: <Building className="h-5 w-5 text-gray-500" />,
 };
 
 export default function EmergencyContacts() {
@@ -39,46 +34,46 @@ export default function EmergencyContacts() {
         return () => unsubscribe();
     }, []);
 
+    const renderSkeleton = () => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="p-3">
+                    <div className="flex items-center justify-between">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-8 w-8" />
+                    </div>
+                </Card>
+            ))}
+        </div>
+    );
+
 
   return (
     <div>
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <Skeleton className="h-5 w-3/4" />
-                         <Skeleton className="h-6 w-6 rounded-full" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-7 w-1/2 mt-2" />
-                        <Skeleton className="h-9 w-full mt-4" />
-                    </CardContent>
-                </Card>
+        renderSkeleton()
+        ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {contacts.map((contact) => (
+            <Card key={contact.id}>
+                <CardContent className="p-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                         {iconMap[contact.type]}
+                        <div>
+                            <p className="font-semibold text-sm">{contact.name}</p>
+                            <p className="text-muted-foreground text-xs">{contact.number}</p>
+                        </div>
+                    </div>
+                    <Button size="icon" variant="outline" asChild>
+                       <a href={`tel:${contact.number}`}>
+                           <Phone className="h-4 w-4" />
+                           <span className="sr-only">Telepon {contact.name}</span>
+                       </a>
+                    </Button>
+                </CardContent>
+            </Card>
             ))}
         </div>
-        ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {contacts.map((contact) => (
-                <Card key={contact.id}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base font-medium">
-                        {contact.name}
-                    </CardTitle>
-                    {iconMap[contact.type]}
-                    </CardHeader>
-                    <CardContent>
-                    <div className="text-xl font-bold text-primary">{contact.number}</div>
-                    <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
-                        <a href={`tel:${contact.number}`}>
-                        <Phone className="mr-2 h-4 w-4" />
-                        Telepon Sekarang
-                        </a>
-                    </Button>
-                    </CardContent>
-                </Card>
-                ))}
-            </div>
       )}
     </div>
   );
