@@ -21,6 +21,28 @@ export default function AdminPage() {
     const [recentReports, setRecentReports] = useState<Report[]>([]);
     const [loadingStats, setLoadingStats] = useState(true);
     const [loadingReports, setLoadingReports] = useState(true);
+    const [greeting, setGreeting] = useState("Selamat Datang");
+    const [currentTime, setCurrentTime] = useState("");
+    const [currentDate, setCurrentDate] = useState("");
+
+    useEffect(() => {
+        const getGreeting = () => {
+          const hour = new Date().getHours();
+          if (hour >= 5 && hour < 12) return "Selamat Pagi";
+          if (hour >= 12 && hour < 15) return "Selamat Siang";
+          if (hour >= 15 && hour < 19) return "Selamat Sore";
+          return "Selamat Malam";
+        };
+        setGreeting(getGreeting());
+
+        const timer = setInterval(() => {
+          const now = new Date();
+          setCurrentTime(now.toLocaleTimeString('id-ID'));
+          setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         // Fetch stats
@@ -86,6 +108,17 @@ export default function AdminPage() {
 
     return (
         <div className="space-y-6">
+            <div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                    {greeting}, Admin!
+                </h1>
+                <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                    Selamat datang di Dasbor Admin Baronda.
+                </p>
+                <p className="text-muted-foreground text-sm sm:text-base">
+                    {currentDate} | {currentTime}
+                </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {loadingStats ? (
                     Array.from({ length: 4 }).map((_, i) => (

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -47,11 +47,29 @@ export default function PetugasPage() {
   const [absenceType, setAbsenceType] = useState<AbsenceType>('Izin');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const [greeting, setGreeting] = useState("Selamat Datang");
+  const [currentTime, setCurrentTime] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
 
   const reasonForm = useForm<ReasonFormValues>({ resolver: zodResolver(reasonSchema) });
 
   useEffect(() => {
-    // TODO: This should be fetched from a proper auth session
+    const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) return "Selamat Pagi";
+      if (hour >= 12 && hour < 15) return "Selamat Siang";
+      if (hour >= 15 && hour < 19) return "Selamat Sore";
+      return "Selamat Malam";
+    };
+    setGreeting(getGreeting());
+
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('id-ID'));
+      setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+    }, 1000);
+
+     // TODO: This should be fetched from a proper auth session
     const name = "Petugas A"; // Placeholder
     setPetugasName(name);
 
@@ -64,7 +82,7 @@ export default function PetugasPage() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const todaySchedule = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEntry))
-        .find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date));
+        .find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
       
       setScheduleToday(todaySchedule || null);
       setLoading(false);
@@ -74,7 +92,10 @@ export default function PetugasPage() {
         setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearInterval(timer);
+      unsubscribe();
+    }
   }, [toast]);
   
   const handleUpdateStatus = async (status: ScheduleEntry['status'], reason?: string) => {
@@ -179,10 +200,17 @@ export default function PetugasPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Selamat Datang, {petugasName || 'Petugas'}!</h1>
-      <p className="text-muted-foreground">
-        Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.
-      </p>
+      <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              {greeting}, {petugasName || 'Petugas'}!
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base mt-1">
+              Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.
+          </p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+              {currentDate} | {currentTime}
+          </p>
+      </div>
       
       <div className="pt-4">
          {renderScheduleCard()}
@@ -222,5 +250,3 @@ export default function PetugasPage() {
     </div>
   );
 }
-
-    
