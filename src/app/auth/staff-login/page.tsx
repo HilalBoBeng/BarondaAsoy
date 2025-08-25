@@ -41,7 +41,6 @@ type StaffLoginFormValues = z.infer<typeof staffLoginSchema>;
 export default function StaffLoginPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginAsAdmin, setLoginAsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,24 +60,16 @@ export default function StaffLoginPage() {
   const onSubmit = async (data: StaffLoginFormValues) => {
     setIsSubmitting(true);
     
-    // Admin login with access code
-    if (loginAsAdmin) {
-        if (data.accessCode === "Admin123") {
-            localStorage.setItem('userRole', 'admin');
-            toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
-            router.push("/admin");
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Gagal Masuk",
-                description: "Kode akses Admin tidak valid.",
-            });
-            setIsSubmitting(false);
-        }
+    // Admin login check
+    if (data.email.toLowerCase() === "admin@baronda.app" && data.accessCode === "Admin123") {
+        localStorage.setItem('userRole', 'admin');
+        toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
+        router.push("/admin");
+        setIsSubmitting(false);
         return;
     }
 
-    // Petugas login with email and access code
+    // Petugas login check
     try {
         const staffQuery = query(
             collection(db, "staff"), 
@@ -97,7 +88,6 @@ export default function StaffLoginPage() {
             throw new Error("Akun Anda belum disetujui oleh admin.");
         }
 
-
         localStorage.setItem('userRole', 'petugas');
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffSnapshot.docs[0].id }));
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
@@ -115,69 +105,6 @@ export default function StaffLoginPage() {
     }
   };
 
-  const renderAdminForm = () => (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
-        <CardContent>
-          <FormField
-            control={form.control}
-            name="accessCode"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Kode Akses Admin</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </CardContent>
-        <CardFooter className="flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Masuk sebagai Admin
-            </Button>
-            <Button variant="link" onClick={() => setLoginAsAdmin(false)}>Masuk sebagai Petugas</Button>
-            <Link href="/" className="underline text-sm">Kembali ke Halaman Utama</Link>
-        </CardFooter>
-    </form>
-  )
-
-  const renderPetugasForm = () => (
-     <form onSubmit={form.handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <FormField control={form.control} name="email" render={({ field }) => (
-              <FormItem>
-                  <FormLabel>Email Petugas</FormLabel>
-                  <FormControl><Input placeholder="email@petugas.com" {...field} /></FormControl>
-                  <FormMessage />
-              </FormItem>
-          )} />
-          <FormField control={form.control} name="accessCode" render={({ field }) => (
-              <FormItem>
-                  <FormLabel>Kode Akses</FormLabel>
-                  <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
-                  <FormMessage />
-              </FormItem>
-          )} />
-        </CardContent>
-        <CardFooter className="flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Masuk
-            </Button>
-            <div className="text-center text-sm text-muted-foreground w-full flex justify-between">
-                <Link href="/auth/staff-register" className="underline text-primary">Daftar Petugas</Link>
-                <Link href="/auth/staff-forgot-password" className="underline">Lupa Kode Akses?</Link>
-            </div>
-            <hr className="w-full border-t" />
-            <Button variant="link" onClick={() => setLoginAsAdmin(true)}>Masuk sebagai Admin</Button>
-            <Link href="/" className="underline text-sm">Kembali ke Halaman Utama</Link>
-        </CardFooter>
-    </form>
-  )
-
-
   return (
     <>
       <div className="flex flex-col items-center justify-center mb-6 text-center">
@@ -187,13 +114,41 @@ export default function StaffLoginPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Halaman Akses Staf</CardTitle>
+          <CardTitle>Halaman Akses Staf & Admin</CardTitle>
           <CardDescription>
-             {loginAsAdmin ? "Masukkan kode akses super-admin." : "Masuk dengan email dan kode akses unik Anda."}
+             Masuk dengan email dan kode akses unik Anda.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
-            {loginAsAdmin ? renderAdminForm() : renderPetugasForm()}
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardContent className="space-y-4">
+                <FormField control={form.control} name="email" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl><Input placeholder="email@anda.com" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="accessCode" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Kode Akses</FormLabel>
+                        <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                </CardContent>
+                <CardFooter className="flex-col gap-4">
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Masuk
+                    </Button>
+                    <div className="text-center text-sm text-muted-foreground w-full flex justify-between">
+                        <Link href="/auth/staff-register" className="underline text-primary">Daftar sebagai Petugas</Link>
+                        <Link href="/auth/staff-forgot-password" className="underline">Lupa Kode Akses?</Link>
+                    </div>
+                     <Link href="/" className="underline text-sm mt-2">Kembali ke Halaman Utama</Link>
+                </CardFooter>
+            </form>
         </Form>
       </Card>
     </>

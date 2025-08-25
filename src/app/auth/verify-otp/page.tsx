@@ -271,7 +271,7 @@ export default function VerifyOtpPage() {
             </CardHeader>
             <CardFooter>
               <Button className="w-full" asChild>
-                <Link href="/auth/staff-login">Kembali ke Halaman Login</Link>
+                <Link href="/">Kembali ke Halaman Utama</Link>
               </Button>
             </CardFooter>
           </Card>
