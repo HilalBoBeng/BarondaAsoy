@@ -72,7 +72,9 @@ export interface Notification {
     userId: string;
     title: string;
     message: string;
-    createdAt: Timestamp;
+    createdAt: Timestamp | Date;
     read: boolean;
     link?: string;
+    recipientName?: string; // Added for display purposes
+    recipientEmail?: string; // Added for display purposes
 }

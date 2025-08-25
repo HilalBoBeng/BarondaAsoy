@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, limit, startAfter, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,9 +29,14 @@ const replySchema = z.object({
 });
 type ReplyFormValues = z.infer<typeof replySchema>;
 
+const REPORTS_PER_PAGE = 5;
+
 export default function ReportsAdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
@@ -42,27 +47,79 @@ export default function ReportsAdminPage() {
     defaultValues: { replyMessage: '' },
   });
 
+  const fetchReports = async (initial = false) => {
+    if (initial) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+        const reportsRef = collection(db, 'reports');
+        let q;
+        const constraints = [orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE)];
+        
+        if (initial) {
+            q = query(reportsRef, ...constraints);
+        } else if (lastVisible) {
+            q = query(reportsRef, ...constraints, startAfter(lastVisible));
+        } else {
+             if (initial) setLoading(false);
+             else setLoadingMore(false);
+             setHasMore(false);
+             return;
+        }
+        
+        const documentSnapshots = await getDocs(q);
+        const newReports = documentSnapshots.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+        })) as Report[];
+
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setLastVisible(lastDoc || null);
+
+        if (initial) {
+            setReports(newReports);
+        } else {
+            setReports(prev => [...prev, ...newReports]);
+        }
+
+        if (documentSnapshots.docs.length < REPORTS_PER_PAGE) {
+            setHasMore(false);
+        }
+
+    } catch (error) {
+        console.error("Error fetching reports:", error);
+        toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+    } finally {
+        if (initial) setLoading(false);
+        else setLoadingMore(false);
+    }
+  };
+  
   useEffect(() => {
-    const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const reportsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-      })) as Report[];
-      setReports(reportsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching reports:", error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    fetchReports(true);
+    
+    // Set up a real-time listener for status updates on currently loaded reports
+    if (reports.length > 0) {
+        const unsubscribes = reports.map(report => {
+            const docRef = doc(db, 'reports', report.id);
+            return onSnapshot(docRef, (doc) => {
+                if (doc.exists()) {
+                    const updatedData = { id: doc.id, ...doc.data(), createdAt: doc.data().createdAt.toDate() } as Report;
+                     setReports(prev => prev.map(r => r.id === doc.id ? updatedData : r));
+                }
+            });
+        });
+        return () => unsubscribes.forEach(unsub => unsub());
+    }
   }, []);
 
   const handleStatusChange = async (id: string, status: ReportStatus) => {
     try {
       const docRef = doc(db, 'reports', id);
       await updateDoc(docRef, { status });
+       // Optimistic update
+      setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       toast({ title: "Berhasil", description: "Status laporan berhasil diperbarui." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat memperbarui status." });
@@ -72,6 +129,7 @@ export default function ReportsAdminPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'reports', id));
+      setReports(prev => prev.filter(r => r.id !== id));
       toast({ title: "Berhasil", description: "Laporan berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus laporan." });
@@ -251,6 +309,14 @@ export default function ReportsAdminPage() {
             </TableBody>
           </Table>
         </div>
+        {hasMore && !loading && (
+            <div className="text-center mt-6">
+                <Button onClick={() => fetchReports(false)} disabled={loadingMore}>
+                    {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Muat Lebih Banyak
+                </Button>
+            </div>
+        )}
       </CardContent>
     </Card>
 
