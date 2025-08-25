@@ -22,12 +22,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { BarondaLogo } from "@/components/icons";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 
 const registerSchema = z
@@ -84,7 +84,7 @@ export default function RegisterPage() {
   return (
     <>
       <div className="flex justify-center mb-6">
-          <BarondaLogo className="h-16 w-auto" />
+          <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={80} height={80} className="h-20 w-auto" />
       </div>
       <Card>
         <CardHeader>
