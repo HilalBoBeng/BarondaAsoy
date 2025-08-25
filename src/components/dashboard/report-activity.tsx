@@ -42,7 +42,7 @@ import { Input } from '../ui/input';
 
 const reportSchema = z.object({
   reporterName: z.string().min(1, "Nama pelapor tidak boleh kosong."),
-  reportText: z.string().min(10, 'Mohon berikan laporan yang lebih detail.'),
+  reportText: z.string().min(10, 'Mohon berikan laporan yang lebih detail (minimal 10 karakter).'),
   category: z.enum(['theft', 'vandalism', 'suspicious_person', 'other'], {
       errorMap: () => ({ message: "Kategori harus dipilih." }),
   }),
@@ -87,9 +87,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
     setIsSubmitting(true);
     setTriageResult(null);
     try {
-      // Omit location from the data sent to triageReport
-      const { ...dataForTriage } = data;
-      const result = await triageReport(dataForTriage);
+      const result = await triageReport(data);
       setTriageResult(result);
       
       await addDoc(collection(db, 'reports'), {
@@ -97,6 +95,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
         triageResult: result,
         userId: user?.uid,
         createdAt: serverTimestamp(),
+        status: 'new'
       });
 
       toast({
@@ -142,7 +141,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
     <Card className="w-full">
       <CardHeader>
         <CardDescription>
-          Laporan Anda akan dianalisis oleh AI kami untuk penilaian segera dan disimpan.
+          Laporan Anda akan dianalisis oleh AI untuk penilaian segera dan disimpan.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -231,3 +230,5 @@ export default function ReportActivity({ user }: { user: User | null }) {
     </Card>
   );
 }
+
+    

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -53,9 +53,10 @@ export default function AnnouncementsAdminPage() {
     }, (error) => {
       console.error("Error fetching announcements:", error);
       setLoading(false);
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memuat pengumuman.' });
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
   
   useEffect(() => {
     if (isDialogOpen) {
@@ -72,12 +73,10 @@ export default function AnnouncementsAdminPage() {
     setIsSubmitting(true);
     try {
       if (currentAnnouncement) {
-        // Update existing announcement
         const docRef = doc(db, 'announcements', currentAnnouncement.id);
         await updateDoc(docRef, { ...values });
         toast({ title: "Berhasil", description: "Pengumuman berhasil diperbarui." });
       } else {
-        // Add new announcement
         await addDoc(collection(db, 'announcements'), {
           ...values,
           date: serverTimestamp(),
@@ -103,27 +102,78 @@ export default function AnnouncementsAdminPage() {
     }
   };
 
+  const renderActions = (ann: Announcement) => (
+    <div className="flex gap-2 justify-end">
+      <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)}>
+        <Edit className="h-4 w-4" />
+        <span className="sr-only">Edit</span>
+      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /><span className="sr-only">Hapus</span></Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengumuman secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleDelete(ann.id)}>Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <CardTitle>Manajemen Pengumuman</CardTitle>
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
         </div>
         <Button onClick={() => handleDialogOpen()}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Buat Pengumuman Baru
+          Buat Pengumuman
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="rounded-lg border">
+        {/* Mobile View */}
+        <div className="sm:hidden space-y-4">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
+          ) : announcements.length > 0 ? (
+            announcements.map((ann) => (
+              <Card key={ann.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">{ann.title}</CardTitle>
+                  <CardDescription>{ann.date instanceof Date ? ann.date.toLocaleDateString('id-ID') : 'N/A'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{ann.content}</p>
+                </CardContent>
+                <CardFooter>
+                  {renderActions(ann)}
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+             <div className="text-center py-12 text-muted-foreground">Belum ada pengumuman.</div>
+          )}
+        </div>
+
+        {/* Desktop View */}
+        <div className="hidden sm:block rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Judul</TableHead>
                 <TableHead>Isi</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="text-right w-[100px]">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,7 +183,7 @@ export default function AnnouncementsAdminPage() {
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : announcements.length > 0 ? (
@@ -143,28 +193,7 @@ export default function AnnouncementsAdminPage() {
                     <TableCell className="font-medium">{ann.title}</TableCell>
                     <TableCell className="max-w-md truncate">{ann.content}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengumuman secara permanen.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(ann.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                      {renderActions(ann)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -180,7 +209,7 @@ export default function AnnouncementsAdminPage() {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
             <DialogHeader>
               <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
             </DialogHeader>
@@ -225,3 +254,5 @@ export default function AnnouncementsAdminPage() {
     </Card>
   );
 }
+
+    

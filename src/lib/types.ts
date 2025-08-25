@@ -29,9 +29,11 @@ export interface Report {
   id: string;
   reporterName: string;
   reportText: string;
-  category: string;
+  category: 'theft' | 'vandalism' | 'suspicious_person' | 'other';
   userId?: string;
   createdAt: string | Date | Timestamp;
   triageResult: TriageReportOutput;
   status: 'new' | 'in_progress' | 'resolved';
 }
+
+    

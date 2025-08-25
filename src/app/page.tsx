@@ -18,11 +18,12 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
-import { LogIn, LogOut, UserPlus, UserCircle, Settings } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function Home() {
@@ -33,20 +34,20 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect admin/petugas if they land on the home page
     const userRole = localStorage.getItem('userRole');
     if (userRole === 'admin') {
       router.replace('/admin');
+      return; 
     } else if (userRole === 'petugas') {
       router.replace('/petugas');
-    } else {
-      // Only set loading to false if not redirecting
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-        setLoading(false);
-      });
-      return () => unsubscribe();
+      return;
     }
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, [auth, router]);
 
   const handleLogout = async () => {
@@ -65,26 +66,36 @@ export default function Home() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <div className="flex items-center gap-3">
-           <Link href="/" className="flex items-center gap-3">
+           <Link href="/" className="flex items-center gap-2 sm:gap-3">
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
               width={40} 
               height={40}
-              className="h-10 w-10"
+              className="h-8 w-8 sm:h-10 sm:w-10"
             />
-            <div>
-              <span className="text-lg font-bold text-primary">Baronda</span>
-              <p className="text-xs text-muted-foreground">Kelurahan Kilongan</p>
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-bold text-primary leading-tight">Baronda</span>
+              <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
             </div>
           </Link>
         </div>
         <div className="flex items-center gap-2">
-           {!loading && (
+           {loading ? (
+             <Skeleton className="h-10 w-10 rounded-full" />
+           ) : (
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -101,10 +112,10 @@ export default function Home() {
                     <>
                      <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">
+                          <p className="text-sm font-medium leading-none truncate">
                             {user.displayName || "Pengguna"}
                           </p>
-                          <p className="text-xs leading-none text-muted-foreground">
+                          <p className="text-xs leading-none text-muted-foreground truncate">
                             {user.email}
                           </p>
                         </div>
@@ -151,10 +162,10 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
-        <div className="mx-auto max-w-7xl space-y-8">
+        <div className="mx-auto max-w-7xl space-y-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Selamat Datang di Siskamling Digital</h1>
-            <p className="text-muted-foreground">Sistem Keamanan Lingkungan berbasis digital untuk lingkungan yang lebih aman.</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Selamat Datang di Siskamling Digital</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Sistem Keamanan Lingkungan berbasis digital untuk lingkungan yang lebih aman.</p>
           </div>
 
           <div className="space-y-6">
@@ -178,10 +189,10 @@ export default function Home() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">Riwayat Laporan</CardTitle>
+                    <CardTitle className="text-lg">Riwayat Laporan Anda</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ReportHistory />
+                    <ReportHistory user={user} />
                 </CardContent>
             </Card>
 
@@ -208,7 +219,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="border-t bg-background py-4 text-center text-sm text-muted-foreground">
+      <footer className="border-t bg-background py-4 text-center text-sm text-muted-foreground px-4">
         © {new Date().getFullYear()} Baronda - Siskamling Digital Kelurahan Kilongan.
       </footer>
     </div>

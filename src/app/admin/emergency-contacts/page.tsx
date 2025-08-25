@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Shield, Flame, HeartPulse, Building } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Shield, Flame, HeartPulse, Building, Phone } from 'lucide-react';
 import type { EmergencyContact } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -101,82 +101,109 @@ export default function EmergencyContactsAdminPage() {
     }
   };
 
+  const renderActions = (contact: EmergencyContact) => (
+      <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => handleDialogOpen(contact)}>
+              <Edit className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+              <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                      <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(contact.id)}>Hapus</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
+      </div>
+  );
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <CardTitle>Manajemen Kontak Darurat</CardTitle>
           <CardDescription>Tambah, edit, atau hapus kontak penting.</CardDescription>
         </div>
         <Button onClick={() => handleDialogOpen()}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Tambah Kontak Baru
+          Tambah Kontak
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tipe</TableHead>
-                <TableHead>Nama</TableHead>
-                <TableHead>Nomor Telepon</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {/* Mobile View */}
+          <div className="sm:hidden grid grid-cols-1 gap-4">
               {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-6 w-6 rounded-sm" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
+                  Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
               ) : contacts.length > 0 ? (
-                contacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>{iconMap[contact.type]}</TableCell>
-                    <TableCell className="font-medium">{contact.name}</TableCell>
-                    <TableCell>{contact.number}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="sm" onClick={() => handleDialogOpen(contact)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                              <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(contact.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                  contacts.map((contact) => (
+                      <Card key={contact.id}>
+                          <CardHeader className="flex flex-row items-center justify-between pb-2">
+                               <CardTitle className="text-base flex items-center gap-2">{iconMap[contact.type]} {contact.name}</CardTitle>
+                               {renderActions(contact)}
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-lg font-bold text-primary">{contact.number}</p>
+                            <Button variant="outline" size="sm" className="mt-2 w-full" asChild>
+                                <a href={`tel:${contact.number}`}><Phone className="mr-2 h-4 w-4" /> Telepon</a>
+                            </Button>
+                          </CardContent>
+                      </Card>
+                  ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center h-24">
-                    Belum ada kontak darurat.
-                  </TableCell>
-                </TableRow>
+                  <div className="text-center py-12 text-muted-foreground">Belum ada kontak.</div>
               )}
-            </TableBody>
-          </Table>
-        </div>
+          </div>
+
+          {/* Desktop View */}
+          <div className="hidden sm:block rounded-lg border">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead className="w-[50px]">Tipe</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Nomor Telepon</TableHead>
+                    <TableHead className="text-right w-[100px]">Aksi</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-6 w-6 rounded-sm" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
+                    </TableRow>
+                    ))
+                ) : contacts.length > 0 ? (
+                    contacts.map((contact) => (
+                    <TableRow key={contact.id}>
+                        <TableCell>{iconMap[contact.type]}</TableCell>
+                        <TableCell className="font-medium">{contact.name}</TableCell>
+                        <TableCell>{contact.number}</TableCell>
+                        <TableCell className="text-right">{renderActions(contact)}</TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                    <TableCell colSpan={4} className="text-center h-24">
+                        Belum ada kontak darurat.
+                    </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
+          </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
             <DialogHeader>
               <DialogTitle>{currentContact ? 'Edit' : 'Tambah'} Kontak</DialogTitle>
             </DialogHeader>
@@ -186,7 +213,7 @@ export default function EmergencyContactsAdminPage() {
                   <FormItem><FormLabel>Nama Kontak</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="number" render={({ field }) => (
-                  <FormItem><FormLabel>Nomor Telepon</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Nomor Telepon</FormLabel><FormControl><Input {...field} type="tel" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="type" render={({ field }) => (
                     <FormItem>
@@ -218,3 +245,5 @@ export default function EmergencyContactsAdminPage() {
     </Card>
   );
 }
+
+    
