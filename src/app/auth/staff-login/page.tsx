@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -40,6 +40,15 @@ export default function StaffLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   
+  useEffect(() => {
+    const userRole = localStorage.getItem('userRole');
+    if (userRole === 'admin') {
+      router.replace('/admin');
+    } else if (userRole === 'petugas') {
+      router.replace('/petugas');
+    }
+  }, [router]);
+
   const form = useForm<StaffLoginFormValues>({
     resolver: zodResolver(staffLoginSchema),
     defaultValues: { accessCode: "" },
