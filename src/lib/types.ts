@@ -33,4 +33,5 @@ export interface Report {
   userId?: string;
   createdAt: string | Date | Timestamp;
   triageResult: TriageReportOutput;
+  status: 'new' | 'in_progress' | 'resolved';
 }

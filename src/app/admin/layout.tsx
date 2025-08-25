@@ -10,6 +10,7 @@ import {
   Calendar,
   LogOut,
   ShieldAlert,
+  Phone,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export default function AdminLayout({
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
     { href: "/admin/users", icon: Users, label: "Manajemen Warga" },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
+    { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
   ];
   
   if (!isClient) {
@@ -104,7 +106,7 @@ export default function AdminLayout({
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <div className="w-full flex-1">
             <h1 className="text-lg font-semibold md:text-2xl">
-              {navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/'))?.label || 'Dasbor Admin'}
+              {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dasbor Admin'}
             </h1>
           </div>
           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
