@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -153,7 +153,7 @@ export default function Announcements() {
             "flex items-center gap-1.5",
             hasReacted && (type === 'like' ? "text-green-600 border-green-300 bg-green-50 dark:bg-green-900/50 dark:text-green-400 dark:border-green-800" : "text-red-600 border-red-300 bg-red-50 dark:bg-red-900/50 dark:text-red-400 dark:border-red-800")
           )}
-          onClick={() => handleReaction(announcement.id, type)}
+          onClick={(e) => { e.stopPropagation(); handleReaction(announcement.id, type)}}
           disabled={reacting === announcement.id}
         >
           <Icon className="h-4 w-4" /> {count}
@@ -224,7 +224,7 @@ export default function Announcements() {
                         <Calendar className="h-4 w-4" />
                         <span>{announcement.date as string}</span>
                     </p>
-                    <Button variant="secondary" size="sm" className="w-full" onClick={() => setSelectedAnnouncement(announcement)}>
+                    <Button variant="secondary" size="sm" className="w-full" onClick={(e) => {e.stopPropagation(); setSelectedAnnouncement(announcement)}}>
                         Baca Selengkapnya
                     </Button>
                 </CardFooter>
@@ -252,11 +252,14 @@ export default function Announcements() {
                         <div className="py-4 whitespace-pre-wrap text-sm text-muted-foreground">
                             {selectedAnnouncement.content}
                         </div>
-                        <DialogFooter className="flex-col-reverse items-center sm:flex-row sm:justify-end w-full pt-4 border-t gap-4">
+                        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t gap-4">
                              <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />
                                 <ReactionButton announcement={selectedAnnouncement} type="dislike" />
                             </div>
+                            <DialogClose asChild>
+                               <Button type="button">Tutup</Button>
+                            </DialogClose>
                         </DialogFooter>
                     </>
                 )}
