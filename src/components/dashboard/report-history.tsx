@@ -65,17 +65,18 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             const reportsRef = collection(db, 'reports');
             let q;
 
-            // Base query with optional user filter
+            // Base query with optional user filter. Sorting will be done client-side.
             const baseQuery = user 
-                ? [where('userId', '==', user.uid)]
-                : [where('visibility', '==', 'public')];
+                ? [where('userId', '==', user.uid), orderBy('createdAt', 'desc')]
+                : [where('visibility', '==', 'public'), orderBy('createdAt', 'desc')];
+
 
             if (direction === 'next' && lastVisible) {
-                q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+                q = query(reportsRef, ...baseQuery, startAfter(lastVisible), limit(REPORTS_PER_PAGE));
             } else if (direction === 'prev' && firstVisible) {
-                 q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+                 q = query(reportsRef, ...baseQuery, endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
             } else {
-                q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
+                q = query(reportsRef, ...baseQuery, limit(REPORTS_PER_PAGE));
             }
             
             const snapshot = await getDocs(q);
@@ -90,7 +91,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                 return;
             }
             
-            const reportsData = snapshot.docs.map(doc => {
+             const reportsData = snapshot.docs.map(doc => {
                  const data = doc.data();
                  const repliesObject = data.replies || {};
                  const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
@@ -101,6 +102,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      replies: repliesArray
                  } as Report;
              });
+
 
             setReports(reportsData);
             setFirstVisible(snapshot.docs[0]);

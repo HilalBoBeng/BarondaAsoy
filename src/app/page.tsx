@@ -106,7 +106,7 @@ export default function Home() {
           setLoading(false);
         });
 
-        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
           const notifsData: Notification[] = [];
            snapshot.forEach(doc => {
