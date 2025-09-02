@@ -122,7 +122,7 @@ export default function RecordDuesPage() {
   };
   
   const filteredUsers = useMemo(() => {
-    if (!searchValue) return users;
+    if (!searchValue) return [];
     return users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()));
   }, [searchValue, users]);
 
@@ -130,7 +130,6 @@ export default function RecordDuesPage() {
   return (
     <Card>
         <CardHeader>
-           {/* This is handled by the layout now */}
         </CardHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -144,52 +143,48 @@ export default function RecordDuesPage() {
                         <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                             <PopoverTrigger asChild>
                                 <FormControl>
-                                   <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn(
-                                        "w-full justify-between",
-                                        !field.value && "text-muted-foreground"
-                                        )}
-                                    >
-                                        {field.value
-                                        ? users.find(
-                                            (user) => user.uid === field.value
-                                            )?.displayName
-                                        : "Pilih warga"}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
+                                   <Input
+                                        placeholder="Ketik nama warga..."
+                                        className="w-full"
+                                        value={searchValue}
+                                        onChange={(e) => {
+                                            setSearchValue(e.target.value);
+                                            if (!comboboxOpen) setComboboxOpen(true);
+                                        }}
+                                    />
                                 </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                <Command>
-                                    <CommandInput placeholder="Cari nama warga..." />
-                                    <CommandList>
-                                        <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
-                                        <CommandGroup>
-                                            {users.map((user) => (
-                                                <CommandItem
-                                                    value={user.displayName || user.uid}
-                                                    key={user.uid}
-                                                    onSelect={() => {
-                                                        form.setValue("userId", user.uid);
-                                                        setComboboxOpen(false);
-                                                    }}
-                                                >
-                                                    <Check
-                                                    className={cn(
-                                                        "mr-2 h-4 w-4",
-                                                        user.uid === field.value
-                                                        ? "opacity-100"
-                                                        : "opacity-0"
-                                                    )}
-                                                    />
-                                                    {user.displayName}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
+                                {searchValue && (
+                                     <Command>
+                                        <CommandList>
+                                            <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                                            <CommandGroup>
+                                                {filteredUsers.map((user) => (
+                                                    <CommandItem
+                                                        value={user.displayName || user.uid}
+                                                        key={user.uid}
+                                                        onSelect={() => {
+                                                            form.setValue("userId", user.uid);
+                                                            setSearchValue(user.displayName || '');
+                                                            setComboboxOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            user.uid === field.value
+                                                            ? "opacity-100"
+                                                            : "opacity-0"
+                                                        )}
+                                                        />
+                                                        {user.displayName}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                )}
                             </PopoverContent>
                         </Popover>
                         <FormMessage />
