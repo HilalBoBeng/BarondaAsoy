@@ -57,7 +57,9 @@ export default function DuesPetugasPage() {
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   const { toast } = useToast();
-  const editForm = useForm<EditDuesFormValues>();
+  const editForm = useForm<EditDuesFormValues>({
+    resolver: zodResolver(editDuesSchema),
+  });
 
 
   useEffect(() => {
