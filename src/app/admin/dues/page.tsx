@@ -126,14 +126,14 @@ export default function DuesAdminPage() {
 
             await addDoc(collection(db, 'notifications'), {
                 userId: user.uid,
-                title: \`Pengingat Iuran \${selectedMonth} \${selectedYear}\`,
+                title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
                 message: formattedMessage,
                 read: false,
                 createdAt: serverTimestamp(),
                 link: '/profile',
             });
         }
-        toast({ title: "Berhasil", description: \`Pengingat iuran berhasil dikirim ke \${usersToRemind.length} warga.\` });
+        toast({ title: "Berhasil", description: `Pengingat iuran berhasil dikirim ke ${usersToRemind.length} warga.` });
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal mengirim pengingat massal." });
     } finally {
@@ -239,7 +239,7 @@ export default function DuesAdminPage() {
                 paginatedUsers.map((user) => (
                   <TableRow key={user.uid}>
                     <TableCell>
-                        <Link href={\`/admin/dues/\${user.uid}\`} className="font-medium text-primary hover:underline text-left">
+                        <Link href={`/admin/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
                             {user.displayName}
                         </Link>
                     </TableCell>
