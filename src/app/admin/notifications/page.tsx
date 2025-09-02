@@ -286,7 +286,7 @@ export default function NotificationsAdminPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent>
+                                <AlertDialogContent className="rounded-lg">
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Hapus Pemberitahuan?</AlertDialogTitle>
                                         <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>

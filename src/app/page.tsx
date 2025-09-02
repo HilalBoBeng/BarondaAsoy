@@ -30,7 +30,6 @@ import type { Notification, AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -107,7 +106,7 @@ export default function Home() {
           setLoading(false);
         });
 
-        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
+        const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
         const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
           const notifsData: Notification[] = [];
            snapshot.forEach(doc => {
@@ -327,10 +326,7 @@ export default function Home() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 {greeting}, {user?.displayName || 'Warga'}!
             </h1>
-            <p className="text-muted-foreground text-sm sm:text-base mt-1">
-                Selamat datang di Baronda Kelurahan Kilongan.
-            </p>
-             <p className="text-muted-foreground text-sm sm:text-base mt-2">
+            <p className="text-muted-foreground text-sm sm:text-base mt-2">
                 {currentDate} | {currentTime}
             </p>
           </div>
@@ -419,7 +415,7 @@ export default function Home() {
             <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
             <div className="flex justify-center">
                  <a href="mailto:admin@bobeng.icu" className="inline-flex items-center gap-2 text-primary hover:underline">
-                    <Mail className="h-4 w-4" />
+                    <Mail className="mr-2 h-4 w-4" />
                     <span>Hubungi Admin</span>
                 </a>
             </div>
@@ -428,7 +424,7 @@ export default function Home() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-        <DialogContent>
+        <DialogContent className="rounded-lg">
             <DialogHeader>
                  <div className="flex justify-between items-start">
                     <div className="flex-grow pr-10">

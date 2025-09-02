@@ -116,7 +116,7 @@ export default function EmergencyContactsAdminPage() {
                     {isDeleting === contact.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
                   </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="rounded-lg">
                   <AlertDialogHeader>
                       <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                       <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
@@ -251,5 +251,3 @@ export default function EmergencyContactsAdminPage() {
     </Card>
   );
 }
-
-    

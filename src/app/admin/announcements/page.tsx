@@ -135,7 +135,7 @@ export default function AnnouncementsAdminPage() {
             <span className="sr-only">Hapus</span>
           </Button>
         </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>

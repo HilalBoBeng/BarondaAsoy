@@ -252,7 +252,7 @@ export default function Announcements() {
                         <div className="py-4 whitespace-pre-wrap text-sm text-muted-foreground">
                             {selectedAnnouncement.content}
                         </div>
-                        <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center sm:items-center w-full pt-4 border-t">
+                        <DialogFooter className="flex-col-reverse items-center sm:flex-row sm:justify-between w-full pt-4 border-t gap-4">
                              <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />
                                 <ReactionButton announcement={selectedAnnouncement} type="dislike" />

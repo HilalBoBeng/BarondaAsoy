@@ -309,7 +309,7 @@ export default function ReportsAdminPage() {
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="rounded-lg">
                         <AlertDialogHeader>
                             <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                             <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>

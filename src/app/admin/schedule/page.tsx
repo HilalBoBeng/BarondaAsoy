@@ -182,7 +182,7 @@ export default function ScheduleAdminPage() {
         <AlertDialogTrigger asChild>
           <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
         </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>

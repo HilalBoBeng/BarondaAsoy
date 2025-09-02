@@ -3,7 +3,6 @@ import { PT_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import CookieConsent from "@/components/cookie-consent";
 
 export const metadata: Metadata = {
   title: "Baronda - Siskamling Digital",
@@ -37,7 +36,6 @@ export default function RootLayout({
         >
             {children}
             <Toaster />
-            <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

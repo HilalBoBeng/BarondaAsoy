@@ -169,7 +169,7 @@ export default function UsersAdminPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent>
+                                <AlertDialogContent className="rounded-lg">
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
                                         <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
@@ -233,7 +233,7 @@ export default function UsersAdminPage() {
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
                                             </AlertDialogTrigger>
-                                            <AlertDialogContent>
+                                            <AlertDialogContent className="rounded-lg">
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Hapus Staf?</AlertDialogTitle>
                                                     <AlertDialogDescription>Tindakan ini akan menghapus staf secara permanen.</AlertDialogDescription>

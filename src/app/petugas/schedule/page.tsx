@@ -182,7 +182,7 @@ export default function PetugasSchedulePage() {
         </Card>
         </div>
         <Dialog open={isAbsenceDialogOpen} onOpenChange={setIsAbsenceDialogOpen}>
-            <DialogContent>
+            <DialogContent className="rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Formulir Pengajuan {absenceType}</DialogTitle>
                 </DialogHeader>

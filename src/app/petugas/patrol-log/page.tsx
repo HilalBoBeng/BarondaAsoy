@@ -60,11 +60,11 @@ export default function PatrolLogPage() {
             // Fetch logs
             const logsQuery = query(
                 collection(db, "patrol_logs"),
+                orderBy("createdAt", "desc"),
                 where("officerName", "==", info.name)
             );
             const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
                 const logsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PatrolLog))
-                  .sort((a, b) => (b.createdAt as any).toMillis() - (a.createdAt as any).toMillis());
                 setLogs(logsData);
                 setLoadingLogs(false);
             });
@@ -162,7 +162,7 @@ export default function PatrolLogPage() {
                             <FormField control={equipmentForm.control} name="equipmentName" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Nama Peralatan</FormLabel>
-                                    <FormControl><Input {...field} placeholder="Contoh: Senter" /></FormControl>
+                                    <FormControl><Input {...field} placeholder="Contoh: Senter, Borgol, HT" /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
