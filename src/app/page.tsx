@@ -200,12 +200,12 @@ export default function Home() {
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
-              width={32}
-              height={32}
+              width={40}
+              height={40}
               className="h-10 w-10 rounded-full object-cover"
             />
             <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-bold text-primary leading-tight">Baronda</span>
+              <span className="text-lg font-bold text-primary leading-tight">Baronda</span>
               <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
             </div>
           </Link>
@@ -229,7 +229,7 @@ export default function Home() {
                         
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault();}} className="flex items-start gap-2 justify-between cursor-pointer p-0">
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault();}} className="flex items-start justify-between cursor-pointer p-0">
                                    <div className="flex-grow py-1.5 pl-2 pr-1" onClick={() => handleNotificationClick(notif)}>
                                         <div className="font-semibold flex items-center gap-2">
                                             {notif.title}

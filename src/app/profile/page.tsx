@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy, serverTimestamp } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -137,15 +137,15 @@ export default function ProfilePage() {
             </Button>
              <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
-                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                  <span className="text-lg font-bold text-primary leading-tight">Baronda</span>
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
               </div>
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 
-                width={32} 
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
+                width={40} 
+                height={40}
+                className="h-10 w-10 rounded-full object-cover"
               />
           </div>
        </header>
@@ -170,7 +170,7 @@ export default function ProfilePage() {
                      <CardContent className="space-y-4">
                         <div className="flex justify-between items-center p-3 rounded-md border">
                             <span className="text-sm font-medium text-muted-foreground">Bergabung Sejak</span>
-                             <span className="text-sm font-semibold">{user?.createdAt ? format((user.createdAt as Timestamp).toDate(), "d MMMM yyyy", { locale: id }) : 'N/A'}</span>
+                             <span className="text-sm font-semibold">{user?.createdAt && user.createdAt instanceof Timestamp ? format(user.createdAt.toDate(), "d MMMM yyyy", { locale: id }) : 'N/A'}</span>
                         </div>
                          <div className="flex justify-between items-center p-3 rounded-md border">
                             <span className="text-sm font-medium text-muted-foreground">Status Akun</span>
