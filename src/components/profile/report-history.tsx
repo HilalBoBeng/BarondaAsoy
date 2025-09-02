@@ -9,16 +9,18 @@ import { Skeleton } from '../ui/skeleton';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { MessageSquare, Trash } from 'lucide-react';
+import { MessageSquare, Trash, Info } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const REPORTS_PER_PAGE = 5;
+const TWENTY_FOUR_HOURS_IN_MS = 24 * 60 * 60 * 1000;
 
 const statusDisplay: Record<string, { text: string; className: string }> = {
   new: { text: 'Baru', className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400' },
@@ -78,6 +80,9 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
                      replies: repliesArray
                  } as Report;
+            }).filter(report => {
+                const reportAge = Date.now() - (report.createdAt as Date).getTime();
+                return reportAge < TWENTY_FOUR_HOURS_IN_MS;
             });
 
             reportsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -141,98 +146,106 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             </div>
         )
     }
-    
-    if (!loading && paginatedReports.length === 0) {
-        return (
-             <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                    Anda belum pernah membuat laporan.
-                </CardContent>
-            </Card>
-        );
-    }
 
     return (
         <div className="space-y-4">
-            {paginatedReports.map((report) => (
-                <Card key={report.id}>
-                    <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2 gap-2">
-                            <div className="flex-grow">
-                                <p className="text-sm text-foreground/90 break-word">
-                                    {report.reportText}
-                                </p>
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                    {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-2 items-end flex-shrink-0">
-                                <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
-                                    {statusDisplay[report.status]?.text || report.status}
-                                </Badge>
-                            </div>
-                        </div>
+            <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Informasi</AlertTitle>
+                <AlertDescription>
+                    Laporan yang lebih lama dari 24 jam akan dihapus secara otomatis dari riwayat ini untuk menjaga privasi.
+                </AlertDescription>
+            </Alert>
+            
+            {paginatedReports.length === 0 ? (
+                 <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                        Anda tidak memiliki laporan dalam 24 jam terakhir.
                     </CardContent>
-                    
-                    <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
-                        {report.replies && report.replies.length > 0 && (
-                            <div className="w-full">
-                                <h4 className="text-xs font-semibold flex items-center gap-1 mb-2">
-                                    <MessageSquare className="h-3 w-3" />
-                                    Balasan:
-                                </h4>
-                                {report.replies.map((reply, index) => (
-                                    <ReplyCard key={index} reply={reply} />
-                                ))}
-                            </div>
-                        )}
-
-                        {report.userId === user?.uid && (
-                            <div className="w-full flex justify-end mt-2">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm">
-                                            <Trash className="h-4 w-4 mr-2" />
-                                            Hapus
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        )}
-                    </CardFooter>
                 </Card>
-            ))}
-            <div className="flex items-center justify-end space-x-2 pt-4">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToPrevPage}
-                    disabled={currentPage === 1 || loading}
-                >
-                    Sebelumnya
-                </Button>
-                 <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToNextPage}
-                    disabled={currentPage * REPORTS_PER_PAGE >= allReports.length || loading}
-                >
-                    Berikutnya
-                </Button>
-            </div>
+            ) : (
+                <>
+                {paginatedReports.map((report) => (
+                    <Card key={report.id}>
+                        <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2 gap-2">
+                                <div className="flex-grow">
+                                    <p className="text-sm text-foreground/90 break-word">
+                                        {report.reportText}
+                                    </p>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                        {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-2 items-end flex-shrink-0">
+                                    <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
+                                        {statusDisplay[report.status]?.text || report.status}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </CardContent>
+                        
+                        <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
+                            {report.replies && report.replies.length > 0 && (
+                                <div className="w-full">
+                                    <h4 className="text-xs font-semibold flex items-center gap-1 mb-2">
+                                        <MessageSquare className="h-3 w-3" />
+                                        Balasan:
+                                    </h4>
+                                    {report.replies.map((reply, index) => (
+                                        <ReplyCard key={index} reply={reply} />
+                                    ))}
+                                </div>
+                            )}
+
+                            {report.userId === user?.uid && (
+                                <div className="w-full flex justify-end mt-2">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm">
+                                                <Trash className="h-4 w-4 mr-2" />
+                                                Hapus
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            )}
+                        </CardFooter>
+                    </Card>
+                ))}
+                <div className="flex items-center justify-end space-x-2 pt-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={currentPage === 1 || loading}
+                    >
+                        Sebelumnya
+                    </Button>
+                    <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={currentPage * REPORTS_PER_PAGE >= allReports.length || loading}
+                    >
+                        Berikutnya
+                    </Button>
+                </div>
+                </>
+            )}
         </div>
     );
 }

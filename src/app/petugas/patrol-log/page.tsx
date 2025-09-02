@@ -26,30 +26,17 @@ const logSchema = z.object({
 });
 type LogFormValues = z.infer<typeof logSchema>;
 
-const equipmentUpdateSchema = z.object({
-    equipmentName: z.string().min(1, "Nama peralatan harus diisi."),
-    status: z.enum(['good', 'broken', 'missing'], { required_error: "Status harus dipilih"}),
-    notes: z.string().optional(),
-});
-type EquipmentUpdateFormValues = z.infer<typeof equipmentUpdateSchema>;
-
 
 export default function PatrolLogPage() {
     const [logs, setLogs] = useState<PatrolLog[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
     const [isSubmittingLog, setIsSubmittingLog] = useState(false);
-    const [isSubmittingEquipment, setIsSubmittingEquipment] = useState(false);
     const [staffInfo, setStaffInfo] = useState<{name: string, id: string} | null>(null);
     const { toast } = useToast();
 
     const logForm = useForm<LogFormValues>({
         resolver: zodResolver(logSchema),
         defaultValues: { title: '', description: '' },
-    });
-    
-    const equipmentForm = useForm<EquipmentUpdateFormValues>({
-        resolver: zodResolver(equipmentUpdateSchema),
-        defaultValues: { notes: '', equipmentName: '' }
     });
 
     useEffect(() => {
@@ -101,26 +88,6 @@ export default function PatrolLogPage() {
             setIsSubmittingLog(false);
         }
     };
-    
-    const onEquipmentSubmit = async (values: EquipmentUpdateFormValues) => {
-        setIsSubmittingEquipment(true);
-        try {
-            await addDoc(collection(db, 'equipment_logs'), { 
-                equipmentName: values.equipmentName,
-                status: values.status,
-                notes: values.notes || '',
-                checkedAt: serverTimestamp(),
-                checkedBy: staffInfo?.name || 'Unknown',
-                officerId: staffInfo?.id || 'Unknown',
-            });
-            toast({ title: 'Berhasil', description: 'Status peralatan berhasil dilaporkan.' });
-            equipmentForm.reset();
-        } catch (error) {
-             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal melaporkan status.' });
-        } finally {
-            setIsSubmittingEquipment(false);
-        }
-    };
 
 
   return (
@@ -152,53 +119,6 @@ export default function PatrolLogPage() {
                             <Button type="submit" disabled={isSubmittingLog || !staffInfo} className="w-full">
                                 {isSubmittingLog ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                 Kirim Laporan
-                            </Button>
-                        </CardFooter>
-                    </form>
-                </Form>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Perbarui Status Pos Ronda</CardTitle>
-                    <CardDescription>Laporkan kondisi peralatan dan fasilitas di pos ronda.</CardDescription>
-                </CardHeader>
-                <Form {...equipmentForm}>
-                    <form onSubmit={equipmentForm.handleSubmit(onEquipmentSubmit)}>
-                        <CardContent className="space-y-4">
-                            <FormField control={equipmentForm.control} name="equipmentName" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nama Peralatan</FormLabel>
-                                    <FormControl><Input {...field} placeholder="Contoh: Senter, Borgol, HT" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={equipmentForm.control} name="status" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih status..." /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="good">Baik</SelectItem>
-                                            <SelectItem value="broken">Rusak</SelectItem>
-                                            <SelectItem value="missing">Hilang</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={equipmentForm.control} name="notes" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Catatan (Opsional)</FormLabel>
-                                    <FormControl><Textarea {...field} rows={2} placeholder="Contoh: Baterai lemah" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        </CardContent>
-                        <CardFooter>
-                             <Button type="submit" disabled={isSubmittingEquipment || !staffInfo} className="w-full">
-                                {isSubmittingEquipment ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                                Perbarui Status
                             </Button>
                         </CardFooter>
                     </form>

@@ -128,7 +128,7 @@ export default function PetugasSchedulePage() {
   }
   
   const ScheduleCard = ({ schedule }: { schedule: ScheduleEntry }) => {
-    const { status, area, time, date, officer } = schedule;
+    const { status, area, time, date } = schedule;
     const config = statusConfig[status] || statusConfig['Pending'];
 
     return (
@@ -140,14 +140,13 @@ export default function PetugasSchedulePage() {
             </CardTitle>
             <Badge variant={config.variant} className={cn(config.className, "text-xs")}>{config.label}</Badge>
           </div>
-          <CardDescription className="flex items-center gap-2 pt-1">
+           <CardDescription className="flex items-center gap-2 pt-1">
              <Calendar className="h-4 w-4" />
              {format(date as Date, "EEEE, d MMMM yyyy", { locale: id })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> {time}</p>
-           <p className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> {officer}</p>
         </CardContent>
          <CardFooter className="flex-col sm:flex-row gap-2">
             {schedule.status === 'Pending' && (
