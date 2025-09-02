@@ -48,7 +48,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     const userId = params.userId;
     if (!userId) return;
 
-    setLoading(true);
     const fetchUserData = async () => {
       const userRef = doc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
@@ -129,12 +128,18 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
+  const formatNumberInput = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    if (!numericValue) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-           <CardTitle>Riwayat Pembayaran: {loading ? 'Memuat...' : user?.displayName}</CardTitle>
-           <CardDescription>Berikut adalah semua catatan pembayaran iuran untuk warga ini.</CardDescription>
+           <CardTitle>Riwayat Pembayaran</CardTitle>
+           <CardDescription>{loading ? 'Memuat...' : user?.displayName}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
@@ -144,7 +149,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                   <TableHead>Tanggal Bayar</TableHead>
                   <TableHead>Periode</TableHead>
                   <TableHead>Jumlah</TableHead>
-                  <TableHead>Dicatat Oleh</TableHead>
                   <TableHead>Catatan</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -153,7 +157,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
@@ -169,7 +172,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                       </TableCell>
                       <TableCell>{formatCurrency(due.amount)}</TableCell>
-                      <TableCell>{due.recordedBy}</TableCell>
                       <TableCell className="max-w-xs truncate">{due.notes || '-'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
@@ -197,7 +199,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       Warga ini belum memiliki riwayat iuran.
                     </TableCell>
                   </TableRow>
@@ -224,7 +226,20 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Jumlah (Rp)</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormControl>
+                        <Input 
+                            type="text"
+                            inputMode="numeric"
+                            value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                            onChange={(e) => {
+                                const formattedValue = formatNumberInput(e.target.value);
+                                e.target.value = formattedValue;
+                                const numericValue = parseInt(formattedValue.replace(/[^0-9]/g, ''), 10) || 0;
+                                field.onChange(numericValue);
+                            }}
+                            placeholder="20.000"
+                        />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

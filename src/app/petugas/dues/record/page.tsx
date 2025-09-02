@@ -125,6 +125,14 @@ export default function RecordDuesPage() {
     setComboboxOpen(false);
   }
 
+  const formatNumberInput = (value: string) => {
+    // Remove all non-digit characters
+    const numericValue = value.replace(/[^0-9]/g, '');
+    if (!numericValue) return '';
+    // Format with dots for thousands
+    return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
+  };
+
   return (
     <Card>
         <Form {...form}>
@@ -150,41 +158,41 @@ export default function RecordDuesPage() {
                                 />
                             </FormControl>
                             </PopoverTrigger>
+                            {searchValue && (
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                     <CommandList>
-                                        {searchValue && users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase())).length === 0 && (
+                                        {users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase())).length === 0 && (
                                             <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
                                         )}
-                                        {searchValue && (
-                                            <CommandGroup>
-                                                {users
-                                                  .filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()))
-                                                  .map((user) => (
-                                                    <CommandItem
-                                                        value={user.displayName || user.uid}
-                                                        key={user.uid}
-                                                        onSelect={() => handleUserSelect(user.uid)}
-                                                    >
-                                                        <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            user.uid === field.value
-                                                            ? "opacity-100"
-                                                            : "opacity-0"
-                                                        )}
-                                                        />
-                                                        <div>
-                                                           <p>{user.displayName}</p>
-                                                           <p className="text-xs text-muted-foreground">{user.email}</p>
-                                                        </div>
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        )}
+                                        <CommandGroup>
+                                            {users
+                                              .filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()))
+                                              .map((user) => (
+                                                <CommandItem
+                                                    value={user.displayName || user.uid}
+                                                    key={user.uid}
+                                                    onSelect={() => handleUserSelect(user.uid)}
+                                                >
+                                                    <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        user.uid === field.value
+                                                        ? "opacity-100"
+                                                        : "opacity-0"
+                                                    )}
+                                                    />
+                                                    <div>
+                                                       <p>{user.displayName}</p>
+                                                       <p className="text-xs text-muted-foreground">{user.email}</p>
+                                                    </div>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
+                            )}
                         </Popover>
                         <FormMessage />
                         </FormItem>
@@ -219,7 +227,20 @@ export default function RecordDuesPage() {
                     <FormField control={form.control} name="amount" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Jumlah (Rp)</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
+                        <FormControl>
+                            <Input 
+                                type="text"
+                                inputMode="numeric"
+                                value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                                onChange={(e) => {
+                                    const formattedValue = formatNumberInput(e.target.value);
+                                    e.target.value = formattedValue;
+                                    const numericValue = parseInt(formattedValue.replace(/[^0-9]/g, ''), 10) || 0;
+                                    field.onChange(numericValue);
+                                }}
+                                placeholder="20.000"
+                            />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                 )} />
