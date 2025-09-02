@@ -33,7 +33,7 @@ import { useTheme } from "next-themes";
 
 const accessCodeSchema = z.object({
   currentAccessCode: z.string().min(1, "Kode akses saat ini diperlukan."),
-  newAccessCode: z.string().length(15, "Kode akses baru harus 15 karakter."),
+  newAccessCode: z.string().min(1, "Kode akses baru tidak boleh kosong."),
   confirmNewAccessCode: z.string(),
 }).refine(data => data.newAccessCode === data.confirmNewAccessCode, {
     message: "Konfirmasi kode akses baru tidak cocok.",
@@ -129,9 +129,9 @@ export default function StaffSettingsPage() {
               name="newAccessCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Kode Akses Baru (15 Karakter)</FormLabel>
+                  <FormLabel>Kode Akses Baru</FormLabel>
                   <FormControl>
-                    <Input {...field} readOnly={passwordChanged} />
+                    <Input type="password" {...field} readOnly={passwordChanged} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -144,7 +144,7 @@ export default function StaffSettingsPage() {
                 <FormItem>
                   <FormLabel>Konfirmasi Kode Akses Baru</FormLabel>
                   <FormControl>
-                    <Input {...field} readOnly={passwordChanged} />
+                    <Input type="password" {...field} readOnly={passwordChanged} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
