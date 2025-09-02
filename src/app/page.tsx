@@ -60,10 +60,10 @@ export default function Home() {
       if (hour >= 15 && hour < 19) return "Selamat Sore";
       return "Selamat Malam";
     };
-    setGreeting(getGreeting());
 
     const timer = setInterval(() => {
       const now = new Date();
+      setGreeting(getGreeting());
       setCurrentTime(now.toLocaleTimeString('id-ID'));
       setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     }, 1000);

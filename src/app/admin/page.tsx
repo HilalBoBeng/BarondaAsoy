@@ -40,10 +40,10 @@ export default function AdminPage() {
           if (hour >= 15 && hour < 19) return "Selamat Sore";
           return "Selamat Malam";
         };
-        setGreeting(getGreeting());
 
         const timer = setInterval(() => {
           const now = new Date();
+          setGreeting(getGreeting());
           setCurrentTime(now.toLocaleTimeString('id-ID'));
           setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
         }, 1000);
@@ -142,7 +142,7 @@ export default function AdminPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                     {greeting}, Admin!
                 </h1>
                 <p className="text-muted-foreground text-sm sm:text-base mt-1">

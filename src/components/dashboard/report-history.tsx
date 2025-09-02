@@ -21,18 +21,12 @@ import { cn } from '@/lib/utils';
 
 const REPORTS_PER_PAGE = 5;
 
-const categoryDisplay: Record<string, string> = {
-    theft: "Pencurian",
-    vandalism: "Vandalisme",
-    suspicious_person: "Orang Mencurigakan",
-    other: "Lainnya",
+const statusDisplay: Record<string, { text: string; className: string }> = {
+  new: { text: 'Baru', className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400' },
+  in_progress: { text: 'Ditangani', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400' },
+  resolved: { text: 'Selesai', className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400' },
 };
 
-const statusDisplay: Record<string, { text: string; className: string }> = {
-  new: { text: 'Baru', className: 'bg-red-100 text-red-800' },
-  in_progress: { text: 'Ditangani', className: 'bg-yellow-100 text-yellow-800' },
-  resolved: { text: 'Selesai', className: 'bg-green-100 text-green-800' },
-};
 
 const ReplyCard = ({ reply }: { reply: Reply }) => (
     <Card className="mt-2 bg-muted/50">
@@ -65,14 +59,24 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     const fetchReports = useCallback(async () => {
         setLoading(true);
         try {
-            let q;
-            if (user && user.uid) { 
-                q = query(collection(db, 'reports'), where('userId', '==', user.uid));
+            let reportsQuery;
+            if (user && isUserOnProfilePage) { 
+                // On profile page, get all reports for the user
+                reportsQuery = query(
+                    collection(db, 'reports'), 
+                    where('userId', '==', user.uid),
+                    orderBy('createdAt', 'desc')
+                );
             } else {
-                q = query(collection(db, 'reports'), where('visibility', '==', 'public'));
+                // On public dashboard, only get public reports
+                reportsQuery = query(
+                    collection(db, 'reports'), 
+                    where('visibility', '==', 'public'),
+                    orderBy('createdAt', 'desc')
+                );
             }
             
-            const snapshot = await getDocs(q);
+            const snapshot = await getDocs(reportsQuery);
             
             const reportsData = snapshot.docs.map(doc => {
                  const data = doc.data();
@@ -86,8 +90,6 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                  } as Report;
             });
             
-            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
-            
             setAllReports(reportsData);
 
         } catch (error) {
@@ -96,9 +98,10 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         } finally {
             setLoading(false);
         }
-    }, [user, toast]);
+    }, [user, toast, isUserOnProfilePage]);
     
     useEffect(() => {
+        // user !== undefined check is to prevent running on initial render before auth state is known
         if(user !== undefined) {
            fetchReports();
         }
@@ -135,8 +138,6 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         }
     };
 
-    const showDeleteButton = user && pathname.startsWith('/profile');
-
     if (loading) {
         return (
             <div className="space-y-4">
@@ -171,7 +172,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                     <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2 gap-2">
                             <div className="flex-grow">
-                                {!user && <p className="text-xs font-bold">{report.reporterName}</p>}
+                                {!isUserOnProfilePage && <p className="text-xs font-bold">{report.reporterName}</p>}
                                 <p className="text-sm text-foreground/90 break-word">
                                     {report.reportText}
                                 </p>
@@ -200,7 +201,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                             </div>
                         )}
 
-                        {showDeleteButton && report.userId === user.uid && (
+                        {isUserOnProfilePage && report.userId === user.uid && (
                             <div className="w-full flex justify-end mt-2">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
