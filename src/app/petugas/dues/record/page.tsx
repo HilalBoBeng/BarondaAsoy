@@ -113,25 +113,27 @@ export default function RecordDuesPage() {
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
       form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
       setSearchValue("");
+      form.setValue('userId','');
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
       setIsSubmitting(false);
     }
   };
+  
+  const handleUserSelect = (uid: string) => {
+    form.setValue("userId", uid);
+    const user = users.find(u => u.uid === uid);
+    setSearchValue(user?.displayName || '');
+    setComboboxOpen(false);
+  }
 
   return (
     <Card>
         <CardHeader>
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                    <Link href="/petugas/dues"><ArrowLeft className="h-4 w-4" /></Link>
-                </Button>
-                <div>
-                    <CardTitle>Catat Iuran Warga</CardTitle>
-                    <CardDescription>Masukkan data pembayaran iuran warga.</CardDescription>
-                </div>
-            </div>
+             <Button variant="outline" size="sm" className="w-fit" asChild>
+                  <Link href="/petugas/dues"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Link>
+              </Button>
         </CardHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -145,61 +147,50 @@ export default function RecordDuesPage() {
                         <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                             <PopoverTrigger asChild>
                             <FormControl>
-                                <Button
-                                variant="outline"
-                                role="combobox"
-                                className={cn(
-                                    "w-full justify-between",
-                                    !field.value && "text-muted-foreground"
-                                )}
-                                >
-                                {field.value
-                                    ? users.find((user) => user.uid === field.value)?.displayName
-                                    : "Pilih warga"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
+                                <Input
+                                  placeholder="Ketik nama warga untuk mencari..."
+                                  value={searchValue}
+                                  onChange={(e) => setSearchValue(e.target.value)}
+                                  onClick={() => setComboboxOpen(true)}
+                                />
                             </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
-                                    <CommandInput 
-                                      placeholder="Cari nama warga..."
-                                      value={searchValue}
-                                      onValueChange={setSearchValue}
-                                    />
-                                    {searchValue && (
-                                      <CommandList>
-                                          <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
-                                          <CommandGroup>
-                                              {users
-                                                .filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()))
-                                                .map((user) => (
-                                                  <CommandItem
-                                                      value={user.displayName || user.uid}
-                                                      key={user.uid}
-                                                      onSelect={() => {
-                                                          form.setValue("userId", user.uid);
-                                                          setComboboxOpen(false);
-                                                      }}
-                                                  >
-                                                      <Check
-                                                      className={cn(
-                                                          "mr-2 h-4 w-4",
-                                                          user.uid === field.value
-                                                          ? "opacity-100"
-                                                          : "opacity-0"
-                                                      )}
-                                                      />
-                                                      {user.displayName}
-                                                  </CommandItem>
-                                              ))}
-                                          </CommandGroup>
-                                      </CommandList>
-                                    )}
+                                    <CommandList>
+                                        {searchValue && users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase())).length === 0 && (
+                                            <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                                        )}
+                                        {searchValue && (
+                                            <CommandGroup>
+                                                {users
+                                                  .filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()))
+                                                  .map((user) => (
+                                                    <CommandItem
+                                                        value={user.displayName || user.uid}
+                                                        key={user.uid}
+                                                        onSelect={() => handleUserSelect(user.uid)}
+                                                    >
+                                                        <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            user.uid === field.value
+                                                            ? "opacity-100"
+                                                            : "opacity-0"
+                                                        )}
+                                                        />
+                                                        <div>
+                                                           <p>{user.displayName}</p>
+                                                           <p className="text-xs text-muted-foreground">{user.email}</p>
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
+                                    </CommandList>
                                 </Command>
                             </PopoverContent>
                         </Popover>
-                        {selectedUser && <p className="text-xs text-muted-foreground pt-1">{selectedUser.email}</p>}
                         <FormMessage />
                         </FormItem>
                     )}
@@ -256,5 +247,3 @@ export default function RecordDuesPage() {
     </Card>
   );
 }
-
-    

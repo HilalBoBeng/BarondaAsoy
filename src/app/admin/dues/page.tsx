@@ -129,6 +129,12 @@ export default function DuesAdminPage() {
         setIsBroadcasting(false);
     }
   };
+  
+  const canBroadcast = useMemo(() => {
+    if (filterStatus === 'paid') return false;
+    return unpaidUsers.length > 0;
+  }, [filterStatus, unpaidUsers]);
+
 
   return (
     <Card>
@@ -181,7 +187,7 @@ export default function DuesAdminPage() {
           
           <AlertDialog>
               <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={isBroadcasting || unpaidUsers.length === 0}>
+                  <Button variant="outline" disabled={isBroadcasting || !canBroadcast}>
                       {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
                       Broadcast Pengingat
                   </Button>
