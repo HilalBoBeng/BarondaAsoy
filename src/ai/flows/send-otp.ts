@@ -38,7 +38,6 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context = 'register' }) => {
     try {
-      // Check if user/staff exists if it's a password reset context
       if (context === 'resetPassword' || context === 'staffResetPassword') {
         const collectionName = context === 'resetPassword' ? 'users' : 'staff';
         const userQuery = query(collection(db, collectionName), where('email', '==', email));
@@ -53,18 +52,15 @@ const sendOtpFlow = ai.defineFlow(
       
       const batch = writeBatch(db);
 
-      // 1. Delete all previous active OTPs for this email
       const q = query(collection(db, 'otps'), where('email', '==', email));
       const oldOtpsSnapshot = await getDocs(q);
       oldOtpsSnapshot.forEach(doc => {
           batch.delete(doc.ref);
       });
       
-      // 2. Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-      // 3. Save new OTP to Firestore
       const newOtpRef = doc(collection(db, 'otps'));
       batch.set(newOtpRef, {
         email,
@@ -76,12 +72,11 @@ const sendOtpFlow = ai.defineFlow(
       
       await batch.commit();
 
-      // 4. Send email with Nodemailer
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS, 
+          user: "bobeng.icu@gmail.com",
+          pass: "hrll wccf slpw shmt", 
         },
       });
 
@@ -103,7 +98,7 @@ const sendOtpFlow = ai.defineFlow(
           `;
 
       await transporter.sendMail({
-        from: `"Baronda" <${process.env.SMTP_USER}>`,
+        from: `"Baronda" <bobeng.icu@gmail.com>`,
         to: email,
         subject: 'Kode Verifikasi Anda',
         html: emailHtml,

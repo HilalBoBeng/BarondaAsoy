@@ -36,8 +36,8 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: "bobeng.icu@gmail.com",
+          pass: "hrll wccf slpw shmt",
         },
       });
 
@@ -59,7 +59,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
           `;
 
       await transporter.sendMail({
-        from: `"Baronda" <${process.env.SMTP_USER}>`,
+        from: `"Baronda" <bobeng.icu@gmail.com>`,
         to: email,
         subject: 'Pendaftaran Petugas Baronda Disetujui',
         html: emailHtml,
