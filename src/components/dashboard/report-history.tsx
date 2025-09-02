@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -49,42 +50,41 @@ export default function ReportHistory() {
     
     const [currentPage, setCurrentPage] = useState(1);
     
-    const fetchReports = useCallback(async () => {
-        setLoading(true);
-        try {
-            const reportsQuery = query(
-                collection(db, 'reports'), 
-                where('visibility', '==', 'public'),
-                orderBy('createdAt', 'desc')
-            );
-            
-            const snapshot = await getDocs(reportsQuery);
-            
-            const reportsData = snapshot.docs.map(doc => {
-                 const data = doc.data();
-                 const repliesObject = data.replies || {};
-                 const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                 return {
-                     id: doc.id,
-                     ...data,
-                     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-                     replies: repliesArray
-                 } as Report;
-            });
-            
-            setAllReports(reportsData);
-
-        } catch (error) {
-            console.error("Error fetching reports:", error);
-            toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
-        } finally {
-            setLoading(false);
-        }
-    }, [toast]);
-    
     useEffect(() => {
+        const fetchReports = async () => {
+            setLoading(true);
+            try {
+                const reportsQuery = query(
+                    collection(db, 'reports'), 
+                    where('visibility', '==', 'public'),
+                    orderBy('createdAt', 'desc')
+                );
+                
+                const snapshot = await getDocs(reportsQuery);
+                
+                const reportsData = snapshot.docs.map(doc => {
+                     const data = doc.data();
+                     const repliesObject = data.replies || {};
+                     const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
+                     return {
+                         id: doc.id,
+                         ...data,
+                         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+                         replies: repliesArray
+                     } as Report;
+                });
+                
+                setAllReports(reportsData);
+
+            } catch (error) {
+                console.error("Error fetching reports:", error);
+                toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
+            } finally {
+                setLoading(false);
+            }
+        };
         fetchReports();
-    }, [fetchReports]); 
+    }, [toast]); 
 
     useEffect(() => {
         const start = (currentPage - 1) * REPORTS_PER_PAGE;
