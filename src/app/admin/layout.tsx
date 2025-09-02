@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import Image from "next/image";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 
@@ -82,12 +82,26 @@ export default function AdminLayout({
   }, [router, toast]);
   
   useEffect(() => {
-    const isDuesDetail = /^\/admin\/dues\/(.+)$/.test(pathname);
-    setIsDetailPage(isDuesDetail);
+    const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
+    const duesDetailMatch = pathname.match(duesDetailRegex);
 
-    const activeItem = navItems.find(item => pathname.startsWith(item.href));
-    setPageTitle(activeItem?.label || 'Dasbor Admin');
-  }, [pathname]);
+    if (duesDetailMatch) {
+        setIsDetailPage(true);
+        const userId = duesDetailMatch[1];
+        const userRef = doc(db, 'users', userId);
+        getDoc(userRef).then(userSnap => {
+            if (userSnap.exists()) {
+                setPageTitle(`Riwayat Iuran: ${userSnap.data().displayName}`);
+            } else {
+                 setPageTitle('Riwayat Iuran');
+            }
+        });
+    } else {
+        setIsDetailPage(false);
+        const activeItem = navItems.find(item => pathname.startsWith(item.href));
+        setPageTitle(activeItem?.label || 'Dasbor Admin');
+    }
+}, [pathname]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -172,7 +186,7 @@ export default function AdminLayout({
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           {isDetailPage ? (
-             <Button variant="outline" size="icon" className="shrink-0 md:hidden" onClick={() => router.back()}>
+             <Button variant="outline" size="icon" className="shrink-0" onClick={() => router.back()}>
                 <ArrowLeft className="h-5 w-5" />
                 <span className="sr-only">Kembali</span>
               </Button>

@@ -52,7 +52,7 @@ export default function RecordDuesPage() {
         setStaffInfo(info);
     }
     
-    const usersQuery = query(collection(db, "users"), orderBy("displayName"));
+    const usersQuery = query(collection(db, "users"), orderBy("displayName", "asc"));
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
       setUsers(usersData);
@@ -114,7 +114,7 @@ export default function RecordDuesPage() {
   };
   
   const formatNumberInput = (value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, '');
+    const numericValue = value.replace(/\D/g, '');
     if (!numericValue) return '';
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
@@ -186,8 +186,7 @@ export default function RecordDuesPage() {
                       value={field.value ? formatNumberInput(field.value.toString()) : ''}
                       onChange={(e) => {
                           const formattedValue = formatNumberInput(e.target.value);
-                          e.target.value = formattedValue;
-                          const numericValue = parseInt(formattedValue.replace(/[^0-9]/g, ''), 10) || 0;
+                          const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
                           field.onChange(numericValue);
                       }}
                       placeholder="20.000"

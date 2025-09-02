@@ -134,7 +134,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
 
   const formatNumberInput = (value: string) => {
     // Only allows numbers and removes leading zeros
-    const numericValue = value.replace(/[^0-9]/g, '');
+    const numericValue = value.replace(/\D/g, '');
     if (!numericValue) return '';
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
@@ -144,7 +144,10 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     <>
       <Card>
         <CardHeader>
-           {/* This is now handled by layout.tsx */}
+          <CardTitle>Riwayat Pembayaran</CardTitle>
+          <CardDescription>
+             {loading ? <Skeleton className="h-5 w-32" /> : user?.displayName}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
@@ -238,8 +241,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                             value={field.value ? formatNumberInput(field.value.toString()) : ''}
                             onChange={(e) => {
                                 const formattedValue = formatNumberInput(e.target.value);
-                                e.target.value = formattedValue;
-                                const numericValue = parseInt(formattedValue.replace(/[^0-9]/g, ''), 10) || 0;
+                                const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
                                 field.onChange(numericValue);
                             }}
                             placeholder="20.000"

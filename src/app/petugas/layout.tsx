@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
@@ -81,12 +81,28 @@ export default function PetugasLayout({
   }, [router, toast]);
   
   useEffect(() => {
-    const isDuesDetail = /^\/petugas\/dues\/(.+)$/.test(pathname);
+    const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
+    const duesDetailMatch = pathname.match(duesDetailRegex);
     const isDuesRecord = pathname === '/petugas/dues/record';
-    setIsDetailPage(isDuesDetail || isDuesRecord);
+    
+    setIsDetailPage(isDuesRecord || !!duesDetailMatch);
 
-    const activeItem = navItems.find(item => pathname.startsWith(item.href));
-    setPageTitle(activeItem?.label || 'Dasbor Petugas');
+    if (duesDetailMatch) {
+        const userId = duesDetailMatch[1];
+        const userRef = doc(db, 'users', userId);
+        getDoc(userRef).then(userSnap => {
+            if (userSnap.exists()) {
+                setPageTitle(`Riwayat Iuran: ${userSnap.data().displayName}`);
+            } else {
+                setPageTitle('Riwayat Iuran');
+            }
+        });
+    } else if (isDuesRecord) {
+        setPageTitle("Catat Iuran Warga");
+    } else {
+        const activeItem = navItems.find(item => pathname.startsWith(item.href));
+        setPageTitle(activeItem?.label || 'Dasbor Petugas');
+    }
     
   }, [pathname]);
 
