@@ -80,8 +80,8 @@ const sendOtpFlow = ai.defineFlow(
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt", 
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS, 
         },
       });
 
@@ -103,7 +103,7 @@ const sendOtpFlow = ai.defineFlow(
           `;
 
       await transporter.sendMail({
-        from: `"Baronda" <bobeng.icu@gmail.com>`,
+        from: `"Baronda" <${process.env.SMTP_USER}>`,
         to: email,
         subject: 'Kode Verifikasi Anda',
         html: emailHtml,
@@ -116,16 +116,9 @@ const sendOtpFlow = ai.defineFlow(
     } catch (error) {
       console.error('Failed to send OTP:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      // Return a more specific error message in development
-      if (process.env.NODE_ENV !== 'production') {
-        return {
-          success: false,
-          message: `Gagal mengirim OTP: ${errorMessage}`,
-        };
-      }
       return {
           success: false,
-          message: `Terjadi kesalahan saat mengirim OTP.`,
+          message: `Gagal mengirim OTP: ${errorMessage}`,
       }
     }
   }
