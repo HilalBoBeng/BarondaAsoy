@@ -107,8 +107,8 @@ const resetStaffPasswordFlow = ai.defineFlow(
       });
 
       if (!emailResponse.ok) {
-        const errorResult = await emailResponse.json();
-        throw new Error(`Email API failed: ${errorResult.details || emailResponse.statusText}`);
+        const errorResult = await emailResponse.text();
+        throw new Error(`Email API failed with status ${emailResponse.status}: ${errorResult}`);
       }
       
       return {

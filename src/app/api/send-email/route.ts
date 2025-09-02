@@ -1,3 +1,4 @@
+
 // src/app/api/send-email/route.ts
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
@@ -37,11 +38,17 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('API Send Email Error:', error);
     // Memberikan pesan error yang lebih spesifik untuk debugging di production
-    return NextResponse.json({ 
-        error: 'Failed to send email.', 
-        details: error.message,
-        code: error.code,
-        response: error.response,
-    }, { status: 500 });
+    return new NextResponse(
+        JSON.stringify({ 
+            error: 'Failed to send email.', 
+            details: error.message,
+            code: error.code,
+            response: error.response,
+        }), 
+        { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        }
+    );
   }
 }

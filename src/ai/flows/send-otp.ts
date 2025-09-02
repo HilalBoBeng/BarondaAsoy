@@ -167,9 +167,9 @@ const sendOtpFlow = ai.defineFlow(
       });
 
       if (!emailResponse.ok) {
-        const errorResult = await emailResponse.json();
+        const errorResult = await emailResponse.text();
         // Melemparkan error yang lebih deskriptif untuk debugging
-        throw new Error(`Email API failed with status ${emailResponse.status}: ${errorResult.details || errorResult.error || 'Unknown error'}`);
+        throw new Error(`Email API failed with status ${emailResponse.status}: ${errorResult}`);
       }
 
       // 7. Commit all database changes
