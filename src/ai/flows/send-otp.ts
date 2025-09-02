@@ -12,7 +12,6 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -77,19 +76,8 @@ const sendOtpFlow = ai.defineFlow(
         used: false,
       });
 
-      // 5. Send email using nodemailer
-      const transporter = nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-              user: "bobeng.icu@gmail.com",
-              pass: "hrll wccf slpw shmt",
-          },
-      });
-
+      // 5. Prepare email content
       const senderName = "Baronda";
-      
       let subject = '';
       let welcomeMessage = '';
       let securityWarning = '';
@@ -122,11 +110,7 @@ const sendOtpFlow = ai.defineFlow(
             break;
       }
 
-      const mailOptions = {
-          from: `"${senderName}" <bobeng.icu@gmail.com>`,
-          to: email,
-          subject: subject,
-          html: `
+      const emailHtml = `
             <!DOCTYPE html>
             <html lang="id">
             <head>
@@ -163,13 +147,26 @@ const sendOtpFlow = ai.defineFlow(
                 </div>
             </body>
             </html>
-          `,
-      };
+          `;
 
-      await transporter.sendMail(mailOptions);
-      console.log(`Successfully sent OTP to ${email}`);
+      // 6. Call the new API route to send the email
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: `"${senderName}" <bobeng.icu@gmail.com>`,
+          to: email,
+          subject: subject,
+          html: emailHtml,
+        }),
+      });
 
-      // 6. Commit all database changes
+      if (!emailResponse.ok) {
+        const errorResult = await emailResponse.json();
+        throw new Error(`Email API failed: ${errorResult.details || emailResponse.statusText}`);
+      }
+
+      // 7. Commit all database changes
       await batch.commit();
 
       return {
@@ -186,4 +183,3 @@ const sendOtpFlow = ai.defineFlow(
     }
   }
 );
-    

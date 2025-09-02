@@ -13,7 +13,6 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
 
 const ResetStaffPasswordInputSchema = z.object({
   email: z.string().email(),
@@ -51,23 +50,9 @@ const resetStaffPasswordFlow = ai.defineFlow(
       const { name, accessCode } = staffData;
 
       // 2. Send email with the existing access code
-      const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
-        },
-      });
-
       const senderName = "Baronda";
 
-      const mailOptions = {
-        from: `"${senderName}" <bobeng.icu@gmail.com>`,
-        to: email,
-        subject: 'Pengingat Kode Akses Petugas Baronda Anda',
-        html: `
+      const emailHtml = `
             <!DOCTYPE html>
             <html lang="id">
             <head>
@@ -104,10 +89,24 @@ const resetStaffPasswordFlow = ai.defineFlow(
                 </div>
             </body>
             </html>
-          `,
-      };
+          `;
 
-      await transporter.sendMail(mailOptions);
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: `"${senderName}" <bobeng.icu@gmail.com>`,
+          to: email,
+          subject: 'Pengingat Kode Akses Petugas Baronda Anda',
+          html: emailHtml,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorResult = await emailResponse.json();
+        throw new Error(`Email API failed: ${errorResult.details || emailResponse.statusText}`);
+      }
+      
       return {
         success: true,
         message: 'Your existing access code has been sent to your email.',
@@ -122,4 +121,3 @@ const resetStaffPasswordFlow = ai.defineFlow(
     }
   }
 );
-    

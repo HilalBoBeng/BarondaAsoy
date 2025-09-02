@@ -10,7 +10,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
 
 const SendStaffAccessCodeInputSchema = z.object({
   email: z.string().email(),
@@ -37,23 +36,9 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
   },
   async ({ email, name, accessCode }) => {
     try {
-      const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
-        },
-      });
-
       const senderName = "Baronda";
 
-      const mailOptions = {
-        from: `"${senderName}" <bobeng.icu@gmail.com>`,
-        to: email,
-        subject: 'Informasi Akun Petugas Baronda Anda',
-        html: `
+      const emailHtml = `
             <!DOCTYPE html>
             <html lang="id">
             <head>
@@ -92,10 +77,24 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
                 </div>
             </body>
             </html>
-          `,
-      };
+          `;
 
-      await transporter.sendMail(mailOptions);
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: `"${senderName}" <bobeng.icu@gmail.com>`,
+          to: email,
+          subject: 'Informasi Akun Petugas Baronda Anda',
+          html: emailHtml,
+        }),
+      });
+
+       if (!emailResponse.ok) {
+        const errorResult = await emailResponse.json();
+        throw new Error(`Email API failed: ${errorResult.details || emailResponse.statusText}`);
+      }
+      
       return {
         success: true,
         message: 'Access code has been sent successfully.',
@@ -110,4 +109,3 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
     }
   }
 );
-    

@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, serverTimestamp, collection, getDoc, addDoc } from 'firebase/firestore';
 
@@ -55,24 +54,9 @@ const sendReplyFlow = ai.defineFlow(
 
       const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\n${replyMessage}\n\nTerima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.\n\nHormat kami,\n${replierRole}, Tim Baronda`;
       
-      // 1. Send email notification
-      const transporter = nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-              user: "bobeng.icu@gmail.com",
-              pass: "hrll wccf slpw shmt",
-          },
-      });
-
       const senderName = "Baronda";
 
-      const mailOptions = {
-          from: `"${senderName}" <bobeng.icu@gmail.com>`,
-          to: recipientEmail,
-          subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
-          html: `
+      const emailHtml = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Tanggapan dari ${replierRole}</h2>
                 <div style="background-color: #f9f9f9; border-left: 4px solid #f9a825; margin: 1em 0; padding: 10px 20px;">
@@ -88,11 +72,24 @@ const sendReplyFlow = ai.defineFlow(
                     <p style="margin-top: 10px;">Ini adalah email yang dibuat secara otomatis. Mohon untuk tidak membalas email ini.</p>
                 </div>
             </div>
-          `,
-      };
+          `;
 
-      await transporter.sendMail(mailOptions);
-      console.log(`Successfully sent reply notification to ${recipientEmail}`);
+      // 1. Send email notification via API route
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: `"${senderName}" <bobeng.icu@gmail.com>`,
+          to: recipientEmail,
+          subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
+          html: emailHtml,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorResult = await emailResponse.json();
+        throw new Error(`Email API failed: ${errorResult.details || emailResponse.statusText}`);
+      }
 
       // 2. Save reply to Firestore document
       const reportRef = doc(db, 'reports', reportId);
@@ -117,7 +114,6 @@ const sendReplyFlow = ai.defineFlow(
         });
       }
 
-
       await updateDoc(reportRef, updateData);
 
       return {
@@ -134,4 +130,3 @@ const sendReplyFlow = ai.defineFlow(
     }
   }
 );
-    
