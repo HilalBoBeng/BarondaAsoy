@@ -48,6 +48,7 @@ export interface Report {
   createdAt: string | Date | Timestamp;
   triageResult: TriageReportOutput;
   status: 'new' | 'in_progress' | 'resolved';
+  visibility: 'public' | 'private';
   replies?: Reply[] | Record<string, Reply>;
   handlerName?: string;
   handlerId?: string;

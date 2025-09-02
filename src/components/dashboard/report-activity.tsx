@@ -32,13 +32,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, AlertTriangle, CheckCircle, LogIn } from 'lucide-react';
+import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { User } from 'firebase/auth';
 import Link from 'next/link';
 import { Input } from '../ui/input';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 const reportSchema = z.object({
   reporterName: z.string().min(1, "Nama pelapor tidak boleh kosong."),
@@ -46,6 +47,7 @@ const reportSchema = z.object({
   category: z.enum(['theft', 'vandalism', 'suspicious_person', 'other'], {
       errorMap: () => ({ message: "Kategori harus dipilih." }),
   }),
+  visibility: z.enum(['public', 'private'], { required_error: "Visibilitas laporan harus dipilih." }),
 });
 
 type ReportFormValues = z.infer<typeof reportSchema>;
@@ -73,6 +75,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
     defaultValues: {
       reporterName: '',
       reportText: '',
+      visibility: 'public',
     },
   });
 
@@ -107,6 +110,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
         reporterName: user?.displayName || user?.email || '',
         reportText: '',
         category: undefined,
+        visibility: 'public',
       });
     } catch (error) {
       console.error('Pengiriman gagal', error);
@@ -202,6 +206,49 @@ export default function ReportActivity({ user }: { user: User | null }) {
                   </FormItem>
                 )}
               />
+
+            <FormField
+              control={form.control}
+              name="visibility"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Visibilitas Laporan</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-col space-y-1"
+                    >
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="public" />
+                        </FormControl>
+                        <FormLabel className="font-normal flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          <div>
+                            <p>Publik</p>
+                            <p className="text-xs text-muted-foreground">Bisa dilihat oleh semua warga di dasbor.</p>
+                          </div>
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="private" />
+                        </FormControl>
+                        <FormLabel className="font-normal flex items-center gap-2">
+                           <Eye className="h-4 w-4" />
+                           <div>
+                                <p>Privat</p>
+                                <p className="text-xs text-muted-foreground">Hanya bisa dilihat oleh Anda dan petugas.</p>
+                           </div>
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
            
             {triageResult && (
                 <Card className="bg-secondary/50">

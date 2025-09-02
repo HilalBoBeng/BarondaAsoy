@@ -212,7 +212,7 @@ export default function Announcements() {
     return (
        <div className="flex space-x-4 overflow-x-auto pb-4 -mx-1 px-1">
         {announcements.map((announcement) => (
-            <Card key={announcement.id} className="min-w-[300px] w-[300px] flex flex-col hover:shadow-lg transition-shadow">
+            <Card key={announcement.id} className="min-w-[300px] w-[300px] flex flex-col hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedAnnouncement(announcement)}>
                 <CardHeader>
                     <CardTitle className="text-base line-clamp-2">{announcement.title}</CardTitle>
                 </CardHeader>
@@ -252,12 +252,11 @@ export default function Announcements() {
                         <div className="py-4 whitespace-pre-wrap text-sm text-muted-foreground">
                             {selectedAnnouncement.content}
                         </div>
-                        <DialogFooter className="flex-col-reverse items-center sm:flex-row sm:justify-between w-full pt-4 border-t gap-4">
+                        <DialogFooter className="flex-col-reverse items-center sm:flex-row sm:justify-end w-full pt-4 border-t gap-4">
                              <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />
                                 <ReactionButton announcement={selectedAnnouncement} type="dislike" />
                             </div>
-                            <Button variant="secondary" onClick={() => setSelectedAnnouncement(null)}>Tutup</Button>
                         </DialogFooter>
                     </>
                 )}

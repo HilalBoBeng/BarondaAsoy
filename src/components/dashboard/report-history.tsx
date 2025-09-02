@@ -68,7 +68,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             // Base query with optional user filter
             const baseQuery = user 
                 ? [where('userId', '==', user.uid)]
-                : [];
+                : [where('visibility', '==', 'public')];
 
             if (direction === 'next' && lastVisible) {
                 q = query(reportsRef, ...baseQuery, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
