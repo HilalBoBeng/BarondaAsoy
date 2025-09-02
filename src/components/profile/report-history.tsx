@@ -65,7 +65,8 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('userId', '==', user.uid)
+                where('userId', '==', user.uid),
+                orderBy('createdAt', 'desc')
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -82,7 +83,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                  } as Report;
             });
 
-            reportsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            // No client-side sort needed as it's handled by orderBy
             setAllReports(reportsData);
 
         } catch (error) {
@@ -112,7 +113,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
 
     const goToPrevPage = () => {
         if (currentPage > 1) {
-            setCurrentPage(prev => prev + 1);
+            setCurrentPage(prev => prev - 1);
         }
     };
 
