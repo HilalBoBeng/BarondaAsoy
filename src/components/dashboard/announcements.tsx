@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -243,30 +242,24 @@ export default function Announcements() {
                 {selectedAnnouncement && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="text-xl pr-10">{selectedAnnouncement.title}</DialogTitle>
-                             <DialogClose asChild>
+                            <DialogTitle>Pengumuman</DialogTitle>
+                            <DialogClose asChild>
                                 <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
                                     <X className="h-4 w-4" />
                                     <span className="sr-only">Tutup</span>
                                 </Button>
                             </DialogClose>
-                            <DialogDescription>
-                                <div className="flex items-center gap-2 pt-1">
-                                    <Calendar className="h-4 w-4" />
-                                    {selectedAnnouncement.date as string}
-                                </div>
-                            </DialogDescription>
                         </DialogHeader>
                         <DialogBody className="whitespace-pre-wrap text-sm text-muted-foreground">
                             {selectedAnnouncement.content}
                         </DialogBody>
                         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t gap-4">
-                             <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />
                                 <ReactionButton announcement={selectedAnnouncement} type="dislike" />
                             </div>
                             <DialogClose asChild>
-                               <Button type="button">Tutup</Button>
+                               <Button type="button" size="sm">Ok</Button>
                             </DialogClose>
                         </DialogFooter>
                     </>

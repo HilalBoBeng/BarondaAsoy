@@ -229,8 +229,8 @@ export default function Home() {
                         
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif)}} className="flex items-start gap-2 cursor-pointer">
-                                   <div className="flex-grow">
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault();}} className="flex items-start gap-2 justify-between cursor-pointer">
+                                   <div className="flex-grow" onClick={() => handleNotificationClick(notif)}>
                                         <div className="font-semibold flex items-center gap-2">
                                             {notif.title}
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
@@ -238,6 +238,10 @@ export default function Home() {
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
+                                        <Trash className="h-4 w-4" />
+                                        <span className="sr-only">Hapus</span>
+                                    </Button>
                                 </DropdownMenuItem>
                             ))
                         ) : (
@@ -428,20 +432,12 @@ export default function Home() {
             <DialogHeader>
                  <div className="flex items-center justify-between">
                     <DialogTitle>{selectedNotification?.title}</DialogTitle>
-                    <div className="flex-shrink-0">
-                         <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                            if(selectedNotification) handleNotificationDelete(selectedNotification.id)
-                        }}>
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Hapus</span>
+                    <DialogClose asChild>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Tutup</span>
                         </Button>
-                        <DialogClose asChild>
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Tutup</span>
-                            </Button>
-                        </DialogClose>
-                    </div>
+                    </DialogClose>
                  </div>
                  <DialogDescription>
                     {selectedNotification?.createdAt ? new Date((selectedNotification.createdAt as any).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
