@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,26 +62,28 @@ export default function ProfilePage() {
     const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setLoading(true);
-        const userDocRef = doc(db, 'users', currentUser.uid);
-
         try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
             let userData;
+
             if (userDocSnap.exists()) {
                 userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
             } else {
-                 const newUserPayload = {
+                const newUserPayload = {
                     displayName: currentUser.displayName || 'Warga Baru',
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
                     lastUpdated: serverTimestamp(),
                     phone: '',
                     address: ''
-                 }
-                 await setDoc(userDocRef, newUserPayload);
-                 userData = { uid: currentUser.uid, ...newUserPayload } as AppUser;
+                };
+                await setDoc(userDocRef, newUserPayload);
+                // We need to fetch again to get the server-generated timestamps
+                const newUserSnap = await getDoc(userDocRef);
+                userData = { uid: currentUser.uid, ...newUserSnap.data() } as AppUser;
             }
-            
+
             setUser(userData);
             form.reset({
                 displayName: userData.displayName || '',
@@ -95,7 +96,10 @@ export default function ProfilePage() {
             }
 
             // Fetch dues history only after user is loaded and valid
-            const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
+            const duesQuery = query(
+                collection(db, 'dues'), 
+                where('userId', '==', currentUser.uid)
+            );
             const duesSnapshot = await getDocs(duesQuery);
             const duesData = duesSnapshot.docs.map(d => ({
                 ...d.data(),
@@ -105,7 +109,6 @@ export default function ProfilePage() {
             
             duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
             setDuesHistory(duesData);
-
         } catch (error) {
             console.error("Error fetching user profile:", error);
             toast({ variant: "destructive", title: "Gagal memuat profil." });
@@ -119,7 +122,8 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribeAuth();
-  }, [auth, router, form, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const canEdit = !lastUpdated || isBefore(lastUpdated, addDays(new Date(), -7));
 
@@ -147,7 +151,12 @@ export default function ProfilePage() {
           await updateDoc(userDocRef, updateData);
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
-          setUser(prev => prev ? { ...prev, [editingField]: valueToUpdate, lastUpdated: new Date() } : null);
+          
+          // Manually update local state to reflect changes instantly
+          const updatedUser = { ...user, [editingField]: valueToUpdate, lastUpdated: new Date() };
+          setUser(updatedUser);
+          setLastUpdated(new Date());
+
           setIsEditDialogOpen(false);
           setEditingField(null);
       } catch (error) {
@@ -186,9 +195,11 @@ export default function ProfilePage() {
                     <p className="font-medium">{value || 'Belum diisi'}</p>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)} disabled={!canEdit}>
-                <Pencil className="h-4 w-4" />
-            </Button>
+            {canEdit && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)}>
+                    <Pencil className="h-4 w-4" />
+                </Button>
+            )}
         </div>
     );
   };
@@ -233,9 +244,11 @@ export default function ProfilePage() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                      <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{user?.displayName || 'Pengguna'}</CardTitle>
-                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick('displayName')} disabled={!canEdit}>
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
+                                     {canEdit && (
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick('displayName')}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                     )}
                                 </div>
                                 <CardDescription className="text-primary-foreground/80 truncate">{user?.email}</CardDescription>
                             </div>
@@ -276,7 +289,9 @@ export default function ProfilePage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {duesHistory.length > 0 ? (
+                                    {loading ? (
+                                       <TableRow><TableCell colSpan={3} className="h-24 text-center">Memuat riwayat iuran...</TableCell></TableRow>
+                                    ) : duesHistory.length > 0 ? (
                                         duesHistory.map(due => (
                                             <TableRow key={due.id}>
                                                 <TableCell>{due.paymentDate instanceof Date ? format(due.paymentDate, "PPP", { locale: id }) : 'N/A'}</TableCell>
