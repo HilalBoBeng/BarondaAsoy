@@ -44,10 +44,6 @@ const sendReplyFlow = ai.defineFlow(
   },
   async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole, userId }) => {
     try {
-      if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        throw new Error('Layanan email belum dikonfigurasi oleh admin.');
-      }
-      
       let recipientName = 'Warga';
       if(userId) {
           const userRef = doc(db, 'users', userId);
@@ -61,19 +57,19 @@ const sendReplyFlow = ai.defineFlow(
       
       // 1. Send email notification
       const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT),
-          secure: Number(process.env.SMTP_PORT) === 465,
+          host: "smtp.gmail.com",
+          port: 587,
+          secure: false, // true for 465, false for other ports
           auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
+              user: "bobeng.icu@gmail.com",
+              pass: "hrll wccf slpw shmt",
           },
       });
 
-      const senderName = process.env.SMTP_SENDER_NAME || 'Baronda';
+      const senderName = "Baronda";
 
       const mailOptions = {
-          from: `"${senderName}" <${process.env.SMTP_USER}>`,
+          from: `"${senderName}" <bobeng.icu@gmail.com>`,
           to: recipientEmail,
           subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
           html: `
@@ -138,3 +134,5 @@ const sendReplyFlow = ai.defineFlow(
     }
   }
 );
+
+    
