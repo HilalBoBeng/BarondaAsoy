@@ -12,14 +12,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
 import ReportHistory from '@/components/dashboard/report-history';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -38,6 +38,7 @@ export default function ProfilePage() {
   const [duesHistory, setDuesHistory] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProfileLocked, setIsProfileLocked] = useState(false);
   const { toast } = useToast();
   const auth = getAuth(app);
   const router = useRouter();
@@ -70,6 +71,15 @@ export default function ProfilePage() {
             phone: userData.phone || '',
             address: userData.address || '',
           });
+
+          // Check if profile should be locked
+          if (userData.createdAt) {
+            const createdAtDate = (userData.createdAt as unknown as Timestamp).toDate();
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            if (createdAtDate < sevenDaysAgo) {
+              setIsProfileLocked(true);
+            }
+          }
           
           // Fetch Dues History
           const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
@@ -95,21 +105,18 @@ export default function ProfilePage() {
   }, [auth, router, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user) return;
+    if (!user || isProfileLocked) return;
     setIsSubmitting(true);
     try {
       const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, data);
+      // We don't update displayName, so we create a new object without it.
+      const dataToUpdate = {
+        phone: data.phone,
+        address: data.address
+      };
+      await updateDoc(userDocRef, dataToUpdate);
       
-      // Also update the user's profile in Firebase Auth
-      if (auth.currentUser) {
-          const { updateProfile } = await import("firebase/auth");
-          await updateProfile(auth.currentUser, {
-              displayName: data.displayName
-          });
-      }
-      
-      setUser(prev => prev ? { ...prev, ...data } : null);
+      setUser(prev => prev ? { ...prev, ...dataToUpdate } : null);
 
       toast({ title: 'Berhasil', description: 'Profil berhasil disimpan.' });
     } catch (error) {
@@ -132,7 +139,7 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-            <div className="flex items-center space-x-2 text-right">
+             <div className="flex items-center space-x-2 text-right">
                 <div className="flex flex-col">
                   <p className="text-xs font-semibold leading-tight">{user?.displayName}</p>
                   <p className="text-[11px] text-muted-foreground leading-tight">{user?.email}</p>
@@ -144,12 +151,22 @@ export default function ProfilePage() {
             </div>
       </div>
 
-       {!isProfileComplete && (
+       {!isProfileComplete && !isProfileLocked && (
             <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>Lengkapi Profil Anda!</AlertTitle>
                 <AlertDescription>
-                    Nomor HP dan alamat Anda belum diisi. Mohon lengkapi data diri Anda untuk mempermudah komunikasi dan verifikasi.
+                    Nomor HP dan alamat Anda belum diisi. Anda memiliki waktu 7 hari sejak pendaftaran untuk melengkapi data.
+                </AlertDescription>
+            </Alert>
+        )}
+        
+        {isProfileLocked && (
+             <Alert variant="destructive">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Data Diri Dikunci</AlertTitle>
+                <AlertDescription>
+                   Untuk alasan keamanan, data diri Anda (selain kata sandi) tidak dapat diubah setelah 7 hari sejak pendaftaran. Hubungi admin jika memerlukan bantuan.
                 </AlertDescription>
             </Alert>
         )}
@@ -168,7 +185,7 @@ export default function ProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nama Lengkap</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -179,7 +196,7 @@ export default function ProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nomor HP / WhatsApp</FormLabel>
-                    <FormControl><Input placeholder="08..." {...field} /></FormControl>
+                    <FormControl><Input placeholder="08..." {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -190,16 +207,16 @@ export default function ProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Alamat (RT/RW)</FormLabel>
-                    <FormControl><Input placeholder="Contoh: RT 01 / RW 02" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Contoh: RT 01 / RW 02" {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || isProfileLocked}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Perubahan
+                 {isProfileLocked ? 'Data Terkunci' : 'Simpan Perubahan'}
               </Button>
             </CardFooter>
           </form>

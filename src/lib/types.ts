@@ -59,7 +59,7 @@ export interface AppUser {
   email?: string | null;
   displayName?: string | null;
   photoURL?: string | null;
-  createdAt?: string;
+  createdAt?: Timestamp | Date;
   phone?: string;
   address?: string;
   isBlocked?: boolean;
