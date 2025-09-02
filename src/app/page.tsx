@@ -235,7 +235,7 @@ export default function Home() {
                                             {notif.title}
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
                                         </div>
-                                        <p className="text-xs text-muted-foreground whitespace-pre-wrap break-word">{notif.message}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
                                     <Button type="button" variant="ghost" size="icon" className="h-full w-auto p-2 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
@@ -440,11 +440,11 @@ export default function Home() {
                             </Button>
                         </DialogClose>
                     </DialogHeader>
-                    <div className="p-6 whitespace-pre-wrap min-h-[150px] flex-grow">
-                       <p className="text-foreground break-word">{selectedNotification?.message}</p>
+                    <div className="p-6 whitespace-pre-wrap break-word min-h-[150px] flex-grow">
+                       <p className="text-foreground">{selectedNotification?.message}</p>
                     </div>
                     <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t">
-                        <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>Ok</Button>
+                        <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>Tutup</Button>
                     </DialogFooter>
                 </>
              )}
