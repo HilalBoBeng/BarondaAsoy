@@ -38,6 +38,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentDue, setCurrentDue] = useState<DuesPayment | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const { userId } = params;
 
   const { toast } = useToast();
   const editForm = useForm<EditDuesFormValues>({
@@ -45,7 +46,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
   });
 
   useEffect(() => {
-    const userId = params.userId;
     if (!userId) {
       setLoading(false);
       notFound();
@@ -81,7 +81,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     return () => {
       unsubPayments();
     };
-  }, [params.userId]);
+  }, [userId]);
 
   const userPaymentHistory = useMemo(() => {
     return payments.sort((a, b) => {
@@ -280,5 +280,3 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     </>
   );
 }
-
-    
