@@ -119,7 +119,7 @@ export default function RecordDuesPage() {
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card>
         <CardHeader>
             <div className="flex items-center gap-4">
                 <Button variant="outline" size="icon" className="h-8 w-8" asChild>

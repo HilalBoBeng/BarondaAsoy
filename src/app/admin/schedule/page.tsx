@@ -150,60 +150,13 @@ export default function ScheduleAdminPage() {
     }
   };
 
-  const handleApproveCompletion = async (scheduleItem: ScheduleEntry) => {
-    if (!scheduleItem.officerId) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'ID Petugas tidak ditemukan di jadwal ini.' });
-        return;
-    }
-    const scheduleRef = doc(db, 'schedules', scheduleItem.id);
-    const staffRef = doc(db, 'staff', scheduleItem.officerId);
-    try {
-        await updateDoc(scheduleRef, { status: 'Completed' });
-        await updateDoc(staffRef, { points: increment(10) }); // Give 10 points for completion
-        toast({ title: "Berhasil", description: `Patroli ${scheduleItem.officer} telah diselesaikan dan poin ditambahkan.` });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyetujui penyelesaian patroli.' });
-        console.error("Approval failed:", error);
-    }
-  };
-
-  const renderActions = (item: ScheduleEntry) => (
-    <div className="flex gap-2 justify-end items-center">
-        {item.status === 'Pending Review' && (
-            <Button size="sm" onClick={() => handleApproveCompletion(item)}>
-                <Check className="h-4 w-4 mr-2"/>
-                Setujui & Selesaikan
-            </Button>
-        )}
-      <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent className="rounded-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-            <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleDelete(item.id)}>Hapus</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-
   const StatusBadge = ({ status }: { status: ScheduleEntry['status'] }) => {
     const config = {
-        'Pending': { variant: 'outline', label: 'Menunggu' },
+        'Pending': { variant: 'destructive', label: 'Menunggu' },
         'In Progress': { variant: 'default', label: 'Bertugas' },
-        'Completed': { variant: 'secondary', label: 'Selesai' },
+        'Completed': { variant: 'secondary', label: 'Selesai', className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400' },
         'Izin': { variant: 'destructive', label: 'Izin' },
         'Sakit': { variant: 'destructive', label: 'Sakit' },
-        'Pending Review': { variant: 'default', className:'bg-yellow-500 hover:bg-yellow-600', label: 'Menunggu Persetujuan' },
     } as const;
 
     const { variant, label, className } = config[status] || config['Pending'];
@@ -267,7 +220,26 @@ export default function ScheduleAdminPage() {
                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> {item.time}</p>
                 </CardContent>
                 <CardFooter>
-                   {renderActions(item)}
+                  <div className="flex gap-2 justify-end items-center w-full">
+                      <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
+                          <Edit className="h-4 w-4" />
+                      </Button>
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="rounded-lg">
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                              <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(item.id)}>Hapus</AlertDialogAction>
+                          </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                  </div>
                 </CardFooter>
               </Card>
             ))
@@ -310,7 +282,26 @@ export default function ScheduleAdminPage() {
                     <TableCell>{item.area}</TableCell>
                     <TableCell><StatusBadge status={item.status} /></TableCell>
                     <TableCell className="text-right">
-                     {renderActions(item)}
+                      <div className="flex gap-2 justify-end items-center">
+                          <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-lg">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(item.id)}>Hapus</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

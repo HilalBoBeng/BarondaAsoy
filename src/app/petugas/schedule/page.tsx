@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, query, where, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ScheduleEntry } from '@/lib/types';
@@ -39,7 +39,6 @@ const statusConfig: Record<string, {
   'Completed': { variant: 'secondary', className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
   'Izin': { variant: 'destructive', label: 'Izin' },
   'Sakit': { variant: 'destructive', label: 'Sakit' },
-  'Pending Review': { variant: 'default', className:'bg-yellow-500 hover:bg-yellow-600', label: 'Menunggu Persetujuan' },
 };
 
 
@@ -96,7 +95,16 @@ export default function PetugasSchedulePage() {
         if (reason) {
             updateData.reason = reason;
         }
+
+        const staffRef = doc(db, 'staff', schedule.officerId);
+        
         await updateDoc(docRef, updateData);
+
+        // If completing, add points
+        if (status === 'Completed') {
+            await updateDoc(staffRef, { points: increment(10) });
+        }
+        
         toast({ title: 'Berhasil', description: `Status tugas berhasil diperbarui menjadi ${status}.` });
         if(isAbsenceDialogOpen) setIsAbsenceDialogOpen(false);
     } catch (error) {
@@ -149,8 +157,8 @@ export default function PetugasSchedulePage() {
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')} disabled={isSubmitting}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                 </>
             )}
-            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus(schedule, 'Pending Review')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Ajukan Penyelesaian</Button>}
-            {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit' || schedule.status === 'Pending Review') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
+            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus(schedule, 'Completed')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Selesaikan Tugas</Button>}
+            {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
         </CardFooter>
       </Card>
     );
