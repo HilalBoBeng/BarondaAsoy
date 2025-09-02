@@ -43,6 +43,7 @@ export default function AdminLayout({
     pendingStaff: 0,
   });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [pageTitle, setPageTitle] = useState("Dasbor Admin");
 
   useEffect(() => {
     setIsClient(true);
@@ -77,6 +78,19 @@ export default function AdminLayout({
         }
     }
   }, [router, toast]);
+  
+  useEffect(() => {
+    const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
+    const match = pathname.match(duesDetailRegex);
+    if (match && match[1]) {
+      const userId = match[1];
+      const storedName = localStorage.getItem(`userName-${userId}`);
+      setPageTitle(storedName ? `Riwayat Iuran: ${storedName}` : "Memuat...");
+    } else {
+      const activeItem = navItems.find(item => pathname.startsWith(item.href));
+      setPageTitle(activeItem?.label || 'Dasbor Admin');
+    }
+  }, [pathname]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -147,13 +161,6 @@ export default function AdminLayout({
       </div>
     </div>
   );
-  
-  const getPageTitle = () => {
-    if (pathname === '/admin') return 'Dasbor Admin';
-    const activeItem = navItems.find(item => pathname.startsWith(item.href));
-    return activeItem?.label || 'Dasbor Admin';
-  }
-
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -191,7 +198,7 @@ export default function AdminLayout({
 
           <div className="w-full flex-1">
             <h1 className="text-lg font-semibold md:text-2xl truncate">
-              {getPageTitle()}
+              {pageTitle}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-right">

@@ -37,6 +37,7 @@ export default function PetugasLayout({
   const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0 });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
 
   useEffect(() => {
     setIsClient(true);
@@ -76,6 +77,21 @@ export default function PetugasLayout({
         }
     }
   }, [router, toast]);
+  
+  useEffect(() => {
+    const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
+    const match = pathname.match(duesDetailRegex);
+    if (match && match[1]) {
+      const userId = match[1];
+      const storedName = localStorage.getItem(`userName-${userId}`);
+      setPageTitle(storedName ? `Riwayat Iuran: ${storedName}` : "Memuat...");
+    } else if (pathname === '/petugas/dues/record') {
+        setPageTitle('Catat Iuran Warga');
+    } else {
+      const activeItem = navItems.find(item => pathname.startsWith(item.href));
+      setPageTitle(activeItem?.label || 'Dasbor Petugas');
+    }
+  }, [pathname]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -126,7 +142,7 @@ export default function PetugasLayout({
             href={item.href}
             className={cn(
               "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              pathname.startsWith(item.href) && "bg-muted text-primary"
+              pathname.startsWith(item.href) && !pathname.includes('/dues/') && "bg-muted text-primary"
             )}
           >
             <div className="flex items-center gap-3">
@@ -145,13 +161,6 @@ export default function PetugasLayout({
       </div>
     </div>
   );
-
-  const getPageTitle = () => {
-    if (pathname === '/petugas') return 'Dasbor Petugas';
-    if (pathname === '/petugas/dues/record') return 'Catat Iuran Warga';
-    const activeItem = navItems.find(item => pathname.startsWith(item.href));
-    return activeItem?.label || 'Dasbor Petugas';
-  }
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -189,7 +198,7 @@ export default function PetugasLayout({
 
            <div className="w-full flex-1">
              <h1 className="text-lg font-semibold md:text-2xl truncate">
-              {getPageTitle()}
+              {pageTitle}
             </h1>
           </div>
             <div className="flex items-center gap-2 text-right">

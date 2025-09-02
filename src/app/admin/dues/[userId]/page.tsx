@@ -23,7 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, usePathname } from 'next/navigation';
 
 const editDuesSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
@@ -38,6 +38,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentDue, setCurrentDue] = useState<DuesPayment | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const pathname = usePathname();
 
   const { toast } = useToast();
   const editForm = useForm<EditDuesFormValues>({
@@ -53,7 +54,11 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
       const userRef = doc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
-        setUser({ uid: userSnap.id, ...userSnap.data() } as AppUser);
+        const userData = { uid: userSnap.id, ...userSnap.data() } as AppUser;
+        setUser(userData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`userName-${userId}`, userData.displayName || 'Warga');
+        }
       } else {
         notFound();
       }
@@ -74,6 +79,9 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
 
     return () => {
       unsubPayments();
+      if (typeof window !== 'undefined') {
+          localStorage.removeItem(`userName-${params.userId}`);
+      }
     };
   }, [params.userId]);
 
@@ -132,19 +140,9 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-              <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                  <Link href="/admin/dues"><ArrowLeft className="h-4 w-4" /></Link>
+             <Button variant="outline" size="sm" className="w-fit" asChild>
+                  <Link href="/admin/dues"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Link>
               </Button>
-              <div>
-                {loading ? <Skeleton className="h-7 w-48" /> : (
-                    <CardTitle>Riwayat Iuran: {user?.displayName}</CardTitle>
-                )}
-                {loading ? <Skeleton className="h-4 w-64 mt-1" /> : (
-                  <CardDescription>{user?.email}</CardDescription>
-                )}
-              </div>
-          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
@@ -266,5 +264,3 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     </>
   );
 }
-
-    
