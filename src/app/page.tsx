@@ -68,7 +68,6 @@ export default function Home() {
       setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     }, 1000);
 
-    // Fetch patrol logs
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const logsQuery = query(
       collection(db, 'patrol_logs'), 
@@ -408,7 +407,7 @@ export default function Home() {
                             <CardTitle className="text-lg">Riwayat Laporan Warga</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ReportHistory user={user} />
+                            <ReportHistory />
                         </CardContent>
                     </Card>
                 </div>

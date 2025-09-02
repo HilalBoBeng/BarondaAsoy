@@ -15,7 +15,7 @@ import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Ma
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
-import ReportHistory from '@/components/dashboard/report-history';
+import ReportHistory from '@/components/profile/report-history';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, formatDistanceToNow, isBefore, addDays } from 'date-fns';
@@ -79,7 +79,6 @@ export default function ProfilePage() {
                     address: ''
                 };
                 await setDoc(userDocRef, newUserPayload);
-                // We need to fetch again to get the server-generated timestamps
                 const newUserSnap = await getDoc(userDocRef);
                 userData = { uid: currentUser.uid, ...newUserSnap.data() } as AppUser;
             }
@@ -95,11 +94,7 @@ export default function ProfilePage() {
                 setLastUpdated((userData.lastUpdated as Timestamp).toDate());
             }
 
-            // Fetch dues history only after user is loaded and valid
-            const duesQuery = query(
-                collection(db, 'dues'), 
-                where('userId', '==', currentUser.uid)
-            );
+            const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
             const duesSnapshot = await getDocs(duesQuery);
             const duesData = duesSnapshot.docs.map(d => ({
                 ...d.data(),
@@ -122,8 +117,7 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribeAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auth, router, toast, form]);
   
   const canEdit = !lastUpdated || isBefore(lastUpdated, addDays(new Date(), -7));
 
@@ -152,7 +146,6 @@ export default function ProfilePage() {
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           
-          // Manually update local state to reflect changes instantly
           const updatedUser = { ...user, [editingField]: valueToUpdate, lastUpdated: new Date() };
           setUser(updatedUser);
           setLastUpdated(new Date());
@@ -361,5 +354,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, query, where, Timestamp, limit, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Trash } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
 
@@ -22,6 +24,7 @@ const statusDisplay: Record<string, { text: string; className: string }> = {
   in_progress: { text: 'Ditangani', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400' },
   resolved: { text: 'Selesai', className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400' },
 };
+
 
 const ReplyCard = ({ reply }: { reply: Reply }) => (
     <Card className="mt-2 bg-muted/50">
@@ -41,7 +44,7 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     </Card>
 );
 
-export default function ReportHistory() {
+export default function ReportHistory({ user }: { user?: User | null }) {
     const [allReports, setAllReports] = useState<Report[]>([]);
     const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,11 +53,16 @@ export default function ReportHistory() {
     const [currentPage, setCurrentPage] = useState(1);
     
     const fetchReports = useCallback(async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        };
+
         setLoading(true);
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('visibility', '==', 'public'),
+                where('userId', '==', user.uid),
                 orderBy('createdAt', 'desc')
             );
             
@@ -80,7 +88,7 @@ export default function ReportHistory() {
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [user, toast]);
     
     useEffect(() => {
         fetchReports();
@@ -105,6 +113,18 @@ export default function ReportHistory() {
         }
     };
 
+
+    const handleDelete = async (reportId: string) => {
+        try {
+            await deleteDoc(doc(db, "reports", reportId));
+            toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
+            fetchReports();
+        } catch (error) {
+            console.error("Error deleting report:", error);
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
+        }
+    };
+
     if (loading) {
         return (
             <div className="space-y-4">
@@ -125,7 +145,7 @@ export default function ReportHistory() {
         return (
              <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
-                    Belum ada laporan dari warga.
+                    Anda belum pernah membuat laporan.
                 </CardContent>
             </Card>
         );
@@ -138,11 +158,10 @@ export default function ReportHistory() {
                     <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2 gap-2">
                             <div className="flex-grow">
-                                <p className="text-xs font-bold">{report.reporterName}</p>
                                 <p className="text-sm text-foreground/90 break-word">
                                     {report.reportText}
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-2">
+                                    <p className="text-xs text-muted-foreground mt-2">
                                     {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
                                 </p>
                             </div>
@@ -164,6 +183,31 @@ export default function ReportHistory() {
                                 {report.replies.map((reply, index) => (
                                     <ReplyCard key={index} reply={reply} />
                                 ))}
+                            </div>
+                        )}
+
+                        {report.userId === user?.uid && (
+                            <div className="w-full flex justify-end mt-2">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm">
+                                            <Trash className="h-4 w-4 mr-2" />
+                                            Hapus
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </div>
                         )}
                     </CardFooter>
