@@ -37,15 +37,6 @@ const sendOtpFlow = ai.defineFlow(
     outputSchema: SendOtpOutputSchema,
   },
   async ({ email, context = 'register' }) => {
-    // Check for required environment variables
-    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.SMTP_SENDER_NAME) {
-      console.error('SMTP environment variables are not set.');
-      return {
-        success: false,
-        message: 'Layanan email belum dikonfigurasi oleh admin.',
-      };
-    }
-
     try {
       // Check if user/staff exists if it's a password reset context
       if (context === 'resetPassword' || context === 'staffResetPassword') {
@@ -88,12 +79,12 @@ const sendOtpFlow = ai.defineFlow(
 
       // 5. Send email using nodemailer
       const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || '587'),
+          host: "smtp.gmail.com",
+          port: 587,
           secure: false, // true for 465, false for other ports
           auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
+              user: "bobeng.icu@gmail.com",
+              pass: "hrll wccf slpw shmt",
           },
       });
       
@@ -131,7 +122,7 @@ const sendOtpFlow = ai.defineFlow(
 
 
       const mailOptions = {
-          from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_USER}>`,
+          from: `"Baronda" <bobeng.icu@gmail.com>`,
           to: email,
           subject: subject,
           html: `
