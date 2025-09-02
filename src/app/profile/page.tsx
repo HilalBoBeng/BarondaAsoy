@@ -56,47 +56,54 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
-          setUser(userData);
-          form.reset({
-            displayName: userData.displayName || '',
-            phone: userData.phone || '',
-            address: userData.address || '',
-          });
+        const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
+          if (userDocSnap.exists()) {
+            const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
+            setUser(userData);
+            form.reset({
+              displayName: userData.displayName || '',
+              phone: userData.phone || '',
+              address: userData.address || '',
+            });
+          }
+          setLoading(false);
+        }, () => {
+          setLoading(false);
+        });
 
-          // Fetch dues history only after user is confirmed
-          const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid), orderBy('paymentDate', 'desc'));
-          const unsubDues = onSnapshot(duesQuery, (snapshot) => {
-              const duesData = snapshot.docs.map(d => ({
-                  ...d.data(),
-                  id: d.id,
-                  paymentDate: (d.data().paymentDate as Timestamp).toDate()
-              })) as DuesPayment[];
-              setDuesHistory(duesData);
-          }, (error) => {
-              console.error("Error fetching dues:", error);
-              toast({ variant: "destructive", title: "Gagal memuat riwayat iuran." });
-          });
-
-          return () => unsubDues();
-        } else {
-            setLoading(false);
-        }
+        return () => unsubscribeUser();
       } else {
         router.push('/auth/login');
         setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth, router, form]);
+  }, []);
+  
+  useEffect(() => {
+      if (!user?.uid) return;
+
+      const duesQuery = query(collection(db, 'dues'), where('userId', '==', user.uid), orderBy('paymentDate', 'desc'));
+      const unsubDues = onSnapshot(duesQuery, (snapshot) => {
+          const duesData = snapshot.docs.map(d => ({
+              ...d.data(),
+              id: d.id,
+              paymentDate: (d.data().paymentDate as Timestamp).toDate()
+          })) as DuesPayment[];
+          setDuesHistory(duesData);
+      }, (error) => {
+          console.error("Error fetching dues:", error);
+          toast({ variant: "destructive", title: "Gagal memuat riwayat iuran." });
+      });
+
+      return () => unsubDues();
+  }, [user?.uid, toast]);
+
 
   const handleEditClick = (field: FieldName) => {
     if (field === 'displayName') return; // Nama tidak bisa diganti
@@ -110,8 +117,9 @@ export default function ProfilePage() {
       setIsSubmitting(true);
       try {
           const userDocRef = doc(db, 'users', user.uid);
-          const updateData: { [key: string]: any } = {};
           const valueToUpdate = data[editingField]
+          
+          const updateData: { [key: string]: any } = {};
           updateData[editingField] = valueToUpdate;
 
           await updateDoc(userDocRef, updateData);

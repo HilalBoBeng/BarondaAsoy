@@ -63,13 +63,11 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     const fetchReports = useCallback(async () => {
         setLoading(true);
         try {
-            const reportsRef = collection(db, 'reports');
             let q;
-            
-            if (user) {
-                q = query(reportsRef, where('userId', '==', user.uid));
+            if (user && user.uid) { // Check if user and user.uid exist
+                q = query(collection(db, 'reports'), where('userId', '==', user.uid));
             } else {
-                q = query(reportsRef, where('visibility', '==', 'public'));
+                q = query(collection(db, 'reports'), where('visibility', '==', 'public'));
             }
             
             const snapshot = await getDocs(q);

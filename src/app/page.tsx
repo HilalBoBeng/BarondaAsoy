@@ -432,15 +432,19 @@ export default function Home() {
              {selectedNotification && (
                 <>
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
-                        <DialogTitle>Pemberitahuan</DialogTitle>
+                        <DialogTitle>Isi Pesan</DialogTitle>
+                         <DialogClose asChild>
+                           <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Tutup</span>
+                            </Button>
+                        </DialogClose>
                     </DialogHeader>
                     <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
                        <p className="text-foreground break-all">{selectedNotification?.message}</p>
                     </div>
                     <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t">
-                        <DialogClose asChild>
-                           <Button type="button" variant="secondary" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 border-0">Ok</Button>
-                        </DialogClose>
+                        <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>Tutup</Button>
                     </DialogFooter>
                 </>
              )}
