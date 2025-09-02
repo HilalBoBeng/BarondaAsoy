@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs, Timestamp, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -86,6 +86,21 @@ export default function RecordDuesPage() {
         setIsSubmitting(false);
         return;
     }
+
+    // Check for duplicate payment
+    const q = query(
+        collection(db, 'dues'),
+        where('userId', '==', values.userId),
+        where('month', '==', values.month),
+        where('year', '==', values.year)
+    );
+    const existingPayment = await getDocs(q);
+    if (!existingPayment.empty) {
+        toast({ variant: 'destructive', title: "Gagal", description: `Warga ini sudah membayar iuran untuk ${values.month} ${values.year}.` });
+        setIsSubmitting(false);
+        return;
+    }
+
     try {
       await addDoc(collection(db, 'dues'), {
         ...values,
