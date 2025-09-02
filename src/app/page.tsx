@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -47,6 +47,7 @@ export default function Home() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [patrolLogs, setPatrolLogs] = useState<PatrolLog[]>([]);
   const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
+  const [selectedNotificationIndex, setSelectedNotificationIndex] = useState(0);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -172,17 +173,35 @@ export default function Home() {
     }
   };
 
-  const handleNotificationClick = async (notif: Notification) => {
+    const handleNotificationClick = async (notif: Notification, index: number) => {
       if (userInfo?.isBlocked) {
         toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Anda tidak dapat melihat detail pemberitahuan.' });
         return;
       };
       setSelectedNotification(notif);
+      setSelectedNotificationIndex(index);
       if (!notif.read) {
           const docRef = doc(db, 'notifications', notif.id);
           await updateDoc(docRef, { read: true });
       }
-  }
+    };
+
+    const handleNavigateNotification = (direction: 'next' | 'prev') => {
+        let newIndex = direction === 'next' 
+            ? selectedNotificationIndex + 1 
+            : selectedNotificationIndex - 1;
+            
+        if (newIndex >= 0 && newIndex < allNotifications.length) {
+            setSelectedNotificationIndex(newIndex);
+            setSelectedNotification(allNotifications[newIndex]);
+            // Mark as read if not already
+            if (!allNotifications[newIndex].read) {
+                const docRef = doc(db, 'notifications', allNotifications[newIndex].id);
+                updateDoc(docRef, { read: true });
+            }
+        }
+    };
+
 
   const handleAllNotificationsDelete = async () => {
       if (!user || allNotifications.length === 0) return;
@@ -203,6 +222,9 @@ export default function Home() {
   const unreadNotifications = allNotifications.filter(n => !n.read).length;
   
   const stripHtml = (html: string) => {
+    if (typeof DOMParser === 'undefined') {
+        return html.replace(/<[^>]+>/g, '');
+    }
     const doc = new DOMParser().parseFromString(html, 'text/html');
     return doc.body.textContent || "";
   }
@@ -258,7 +280,7 @@ export default function Home() {
                     <DropdownMenuContent className="w-80" align="end">
                         <DropdownMenuLabel className="flex justify-between items-center">
                             <span>Pemberitahuan</span>
-                            {paginatedNotifications.length > 0 && (
+                            {allNotifications.length > 0 && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
@@ -280,9 +302,9 @@ export default function Home() {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
-                        {paginatedNotifications.length > 0 ? (
-                            paginatedNotifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif);}} className="flex items-start justify-between cursor-pointer p-0">
+                        {allNotifications.length > 0 ? (
+                            allNotifications.map((notif, index) => (
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif, index);}} className="flex items-start justify-between cursor-pointer p-0">
                                    <div className="flex w-full flex-grow flex-col py-1.5 pl-2 pr-1 min-w-0">
                                         <div className="flex items-center justify-between w-full">
                                             <p className="font-semibold truncate flex-grow w-0 min-w-0">{notif.title}</p>
@@ -295,18 +317,6 @@ export default function Home() {
                             ))
                         ) : (
                             <DropdownMenuItem disabled>Tidak ada pemberitahuan</DropdownMenuItem>
-                        )}
-                        {allNotifications.length > NOTIFICATIONS_PER_PAGE && (
-                          <>
-                           <DropdownMenuSeparator />
-                           <DropdownMenuItem className="p-0">
-                              <div className="flex justify-between w-full items-center p-2">
-                                  <Button variant="ghost" size="sm" onClick={() => setNotificationPage(p => p - 1)} disabled={notificationPage === 1}>Sebelumnya</Button>
-                                  <span className="text-xs text-muted-foreground">Hal {notificationPage}</span>
-                                  <Button variant="ghost" size="sm" onClick={() => setNotificationPage(p => p + 1)} disabled={notificationPage * NOTIFICATIONS_PER_PAGE >= allNotifications.length}>Berikutnya</Button>
-                              </div>
-                           </DropdownMenuItem>
-                          </>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -480,7 +490,6 @@ export default function Home() {
             <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
             <div className="flex justify-center">
                  <a href="mailto:admin@bobeng.icu" className="inline-flex items-center gap-2 text-primary hover:underline">
-                    <Mail className="mr-2 h-4 w-4" />
                     <span>Hubungi Admin</span>
                 </a>
             </div>
@@ -493,12 +502,22 @@ export default function Home() {
         {selectedNotification && (
           <>
             <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
-              <DialogTitle>Pemberitahuan</DialogTitle>
+              <DialogTitle>{selectedNotification.title}</DialogTitle>
             </DialogHeader>
             <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
               <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\n/g, '<br />') }}></p>
             </div>
-            <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
+            <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">
+                <div className="flex gap-2">
+                     <Button type="button" size="sm" variant="outline" onClick={() => handleNavigateNotification('prev')} disabled={selectedNotificationIndex === 0}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="sr-only">Sebelumnya</span>
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => handleNavigateNotification('next')} disabled={selectedNotificationIndex === allNotifications.length - 1}>
+                        <ArrowRight className="h-4 w-4" />
+                        <span className="sr-only">Berikutnya</span>
+                    </Button>
+                </div>
               <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>
                 Tutup
               </Button>
