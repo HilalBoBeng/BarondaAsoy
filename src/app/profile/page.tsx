@@ -24,6 +24,7 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Image from 'next/image';
 
 const profileSchema = z.object({
   displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
@@ -131,147 +132,153 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl space-y-8">
-       <div className="flex items-center justify-between">
+     <div className="flex min-h-screen flex-col bg-muted/40">
+       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <Button asChild variant="outline" size="sm">
                 <Link href="/">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Kembali
                 </Link>
             </Button>
-             <div className="flex items-center space-x-2 text-right">
-                <div className="flex flex-col">
-                  <p className="text-xs font-semibold leading-tight">{user?.displayName}</p>
-                  <p className="text-[11px] text-muted-foreground leading-tight">{user?.email}</p>
-                </div>
-                 <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.photoURL || ''} alt="User profile" />
-                    <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
-                </Avatar>
+            <div className="flex items-center gap-2 text-right">
+              <div className="flex flex-col">
+                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+          </div>
+       </header>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className="container mx-auto max-w-4xl space-y-8">
+                {!isProfileComplete && !isProfileLocked && (
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Lengkapi Profil Anda!</AlertTitle>
+                            <AlertDescription>
+                                Nomor HP dan alamat Anda belum diisi. Anda memiliki waktu 7 hari sejak pendaftaran untuk melengkapi data.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    
+                    {isProfileLocked && (
+                        <Alert variant="destructive">
+                            <Lock className="h-4 w-4" />
+                            <AlertTitle>Data Diri Dikunci</AlertTitle>
+                            <AlertDescription>
+                            Untuk alasan keamanan, data diri Anda (selain kata sandi) tidak dapat diubah setelah 7 hari sejak pendaftaran. Hubungi admin jika memerlukan bantuan.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                
+                <Card>
+                    <CardHeader>
+                    <CardTitle>Data Diri</CardTitle>
+                    <CardDescription>Perbarui informasi profil Anda.</CardDescription>
+                    </CardHeader>
+                    <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                        <CardContent className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nama Lengkap</FormLabel>
+                                <FormControl><Input {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nomor HP / WhatsApp</FormLabel>
+                                <FormControl><Input placeholder="08..." {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="address"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Alamat (RT/RW)</FormLabel>
+                                <FormControl><Input placeholder="Contoh: RT 01 / RW 02" {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        </CardContent>
+                        <CardFooter className="border-t px-6 py-4">
+                        <Button type="submit" disabled={isSubmitting || isProfileLocked}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isProfileLocked ? 'Data Terkunci' : 'Simpan Perubahan'}
+                        </Button>
+                        </CardFooter>
+                    </form>
+                    </Form>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                    <CardTitle>Riwayat Iuran Saya</CardTitle>
+                    <CardDescription>Daftar pembayaran iuran yang telah Anda lakukan.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-lg border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Tanggal Bayar</TableHead>
+                                        <TableHead>Periode</TableHead>
+                                        <TableHead>Jumlah</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {duesHistory.length > 0 ? (
+                                        duesHistory.map(due => (
+                                            <TableRow key={due.id}>
+                                                <TableCell>{due.paymentDate instanceof Date ? format(due.paymentDate, "PPP", { locale: id }) : 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{due.month} {due.year}</Badge>
+                                                </TableCell>
+                                                <TableCell>{formatCurrency(due.amount)}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="h-24 text-center">
+                                                Anda belum memiliki riwayat iuran.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                    <CardTitle>Riwayat Laporan Saya</CardTitle>
+                    <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ReportHistory user={auth.currentUser} showDeleteButton={true} />
+                    </CardContent>
+                </Card>
             </div>
-      </div>
-
-       {!isProfileComplete && !isProfileLocked && (
-            <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Lengkapi Profil Anda!</AlertTitle>
-                <AlertDescription>
-                    Nomor HP dan alamat Anda belum diisi. Anda memiliki waktu 7 hari sejak pendaftaran untuk melengkapi data.
-                </AlertDescription>
-            </Alert>
-        )}
-        
-        {isProfileLocked && (
-             <Alert variant="destructive">
-                <Lock className="h-4 w-4" />
-                <AlertTitle>Data Diri Dikunci</AlertTitle>
-                <AlertDescription>
-                   Untuk alasan keamanan, data diri Anda (selain kata sandi) tidak dapat diubah setelah 7 hari sejak pendaftaran. Hubungi admin jika memerlukan bantuan.
-                </AlertDescription>
-            </Alert>
-        )}
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Diri</CardTitle>
-          <CardDescription>Perbarui informasi profil Anda.</CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nama Lengkap</FormLabel>
-                    <FormControl><Input {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nomor HP / WhatsApp</FormLabel>
-                    <FormControl><Input placeholder="08..." {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alamat (RT/RW)</FormLabel>
-                    <FormControl><Input placeholder="Contoh: RT 01 / RW 02" {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="border-t px-6 py-4">
-              <Button type="submit" disabled={isSubmitting || isProfileLocked}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                 {isProfileLocked ? 'Data Terkunci' : 'Simpan Perubahan'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Riwayat Iuran Saya</CardTitle>
-          <CardDescription>Daftar pembayaran iuran yang telah Anda lakukan.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="rounded-lg border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Tanggal Bayar</TableHead>
-                            <TableHead>Periode</TableHead>
-                            <TableHead>Jumlah</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {duesHistory.length > 0 ? (
-                            duesHistory.map(due => (
-                                <TableRow key={due.id}>
-                                    <TableCell>{due.paymentDate instanceof Date ? format(due.paymentDate, "PPP", { locale: id }) : 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">{due.month} {due.year}</Badge>
-                                    </TableCell>
-                                    <TableCell>{formatCurrency(due.amount)}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">
-                                    Anda belum memiliki riwayat iuran.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Riwayat Laporan Saya</CardTitle>
-          <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <ReportHistory user={auth.currentUser} showDeleteButton={true} />
-        </CardContent>
-      </Card>
-
+        </main>
     </div>
   );
 }

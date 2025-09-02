@@ -244,12 +244,6 @@ export default function Announcements() {
                     <>
                         <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                             <DialogTitle>Pengumuman</DialogTitle>
-                            <DialogClose asChild>
-                                <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7 hover:bg-primary/80">
-                                    <X className="h-4 w-4" />
-                                    <span className="sr-only">Tutup</span>
-                                </Button>
-                            </DialogClose>
                         </DialogHeader>
                         <div className="p-6 whitespace-pre-wrap text-sm text-muted-foreground min-h-[150px] flex-grow">
                             <h3 className="font-bold text-lg text-foreground mb-2">{selectedAnnouncement.title}</h3>
@@ -271,5 +265,3 @@ export default function Announcements() {
     </div>
   );
 }
-
-    

@@ -229,8 +229,8 @@ export default function Home() {
                         
                         {notifications.length > 0 ? (
                             notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault();}} className="flex items-start gap-2 justify-between cursor-pointer">
-                                   <div className="flex-grow" onClick={() => handleNotificationClick(notif)}>
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault();}} className="flex items-start gap-2 justify-between cursor-pointer p-0">
+                                   <div className="flex-grow py-1.5 pl-2 pr-1" onClick={() => handleNotificationClick(notif)}>
                                         <div className="font-semibold flex items-center gap-2">
                                             {notif.title}
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
@@ -238,7 +238,7 @@ export default function Home() {
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
-                                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
+                                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 mr-1" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
                                         <Trash className="h-4 w-4" />
                                         <span className="sr-only">Hapus</span>
                                     </Button>
@@ -433,12 +433,6 @@ export default function Home() {
                 <>
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                         <DialogTitle>Pemberitahuan</DialogTitle>
-                         <DialogClose asChild>
-                            <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7 hover:bg-primary/80">
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Tutup</span>
-                            </Button>
-                        </DialogClose>
                     </DialogHeader>
                     <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
                        <p>{selectedNotification?.message}</p>
@@ -455,5 +449,3 @@ export default function Home() {
     </>
   );
 }
-
-    

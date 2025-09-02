@@ -22,6 +22,7 @@ import { useState, useEffect } from 'react'
 import { useToast } from "@/hooks/use-toast"
 import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword, signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 
 // Schemas
 const passwordSchema = z.object({
@@ -78,9 +79,19 @@ export default function SettingsPage() {
               Kembali
             </Link>
           </Button>
-          <h1 className="text-lg sm:text-xl font-bold text-primary">
-            Pengaturan
-          </h1>
+           <div className="flex items-center gap-2 text-right">
+              <div className="flex flex-col">
+                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+          </div>
        </header>
         <main className="flex-1 p-4 sm:p-6 md:p-8">
              <div className="mx-auto max-w-2xl space-y-8">
