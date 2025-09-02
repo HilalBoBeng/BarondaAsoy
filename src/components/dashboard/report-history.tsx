@@ -154,7 +154,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     }
     
     if (!loading && paginatedReports.length === 0) {
-         const message = user ? "Anda belum pernah membuat laporan." : "Belum ada laporan dari komunitas.";
+         const message = user ? "Anda belum pernah membuat laporan." : "Belum ada laporan dari warga.";
         return (
              <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
@@ -183,11 +183,6 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                                 <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                     {statusDisplay[report.status]?.text || report.status}
                                 </Badge>
-                                {!isUserOnProfilePage && (
-                                  <Badge variant="outline">
-                                      {categoryDisplay[report.category] || report.category}
-                                  </Badge>
-                                )}
                             </div>
                         </div>
                     </CardContent>

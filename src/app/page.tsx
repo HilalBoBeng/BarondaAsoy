@@ -270,9 +270,9 @@ export default function Home() {
                             paginatedNotifications.map(notif => (
                                 <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif);}} className="flex items-start justify-between cursor-pointer p-0">
                                    <div className="flex w-full flex-grow flex-col py-1.5 pl-2 pr-1 min-w-0">
-                                        <div className="font-semibold flex items-center gap-2 w-full">
-                                            <p className="truncate flex-grow w-0 min-w-0">{notif.title}</p>
-                                            {!notif.read && <Badge className="h-4 px-1.5 text-[10px] flex-shrink-0">Baru</Badge>}
+                                        <div className="flex items-center justify-between w-full">
+                                            <p className="font-semibold truncate flex-grow w-0 min-w-0">{notif.title}</p>
+                                            {!notif.read && <Badge className="h-4 px-1.5 text-[10px] flex-shrink-0 ml-2">Baru</Badge>}
                                         </div>
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
@@ -405,7 +405,7 @@ export default function Home() {
                     
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Riwayat Laporan Komunitas</CardTitle>
+                            <CardTitle className="text-lg">Riwayat Laporan Warga</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <ReportHistory user={user} />
@@ -480,12 +480,6 @@ export default function Home() {
           <>
             <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
               <DialogTitle>Pemberitahuan</DialogTitle>
-              <DialogClose asChild>
-                <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Tutup</span>
-                </Button>
-              </DialogClose>
             </DialogHeader>
             <div className="p-6 whitespace-pre-wrap break-word min-h-[150px] flex-grow">
               <p className="text-foreground">{selectedNotification?.message}</p>
