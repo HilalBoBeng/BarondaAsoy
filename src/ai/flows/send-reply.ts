@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file defines a Genkit flow for sending a reply from an admin to a user's report
@@ -114,7 +115,7 @@ const sendReplyFlow = ai.defineFlow(
       const replyId = doc(collection(db, 'reports')).id; // Generate a unique ID for the reply
       const updateData: { [key: string]: any } = {};
       
-      updateData[\`replies.\${replyId}\`] = {
+      updateData[`replies.${replyId}`] = {
           message: replyMessage,
           replierRole: replierRole,
           timestamp: serverTimestamp(),
@@ -124,7 +125,7 @@ const sendReplyFlow = ai.defineFlow(
       if (userId) {
         await addDoc(collection(db, 'notifications'), {
           userId: userId,
-          title: \`Tanggapan Laporan: \${originalReport.substring(0, 20)}...\`,
+          title: `Tanggapan Laporan: ${originalReport.substring(0, 20)}...`,
           message: formattedMessage,
           read: false,
           createdAt: serverTimestamp(),
@@ -144,7 +145,7 @@ const sendReplyFlow = ai.defineFlow(
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return {
         success: false,
-        message: \`Failed to send reply: \${errorMessage}\`,
+        message: `Failed to send reply: ${errorMessage}`,
       };
     }
   }

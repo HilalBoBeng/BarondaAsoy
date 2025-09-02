@@ -12,7 +12,9 @@ import {
   Settings,
   Landmark,
   Phone,
-  ArrowLeft
+  ArrowLeft,
+  Bell,
+  Megaphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -46,6 +48,8 @@ export default function PetugasLayout({
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
     { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
+    { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
+    { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
     { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
   ];
@@ -105,7 +109,7 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href));
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-  }, [pathname]);
+  }, [pathname, navItems]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
