@@ -63,6 +63,7 @@ export interface AppUser {
   phone?: string;
   address?: string;
   isBlocked?: boolean;
+  profileLastUpdated?: Timestamp | Date;
 }
 
 export interface Staff {

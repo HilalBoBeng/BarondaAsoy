@@ -12,22 +12,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
 import ReportHistory from '@/components/dashboard/report-history';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isBefore, addDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 
 const profileSchema = z.object({
-  displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
+  displayName: z.string(),
   phone: z.string().optional(),
   address: z.string().optional(),
 });
@@ -56,8 +55,6 @@ export default function ProfilePage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
-  
-  const isProfileComplete = !!user?.phone && !!user?.address;
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -73,16 +70,15 @@ export default function ProfilePage() {
             address: userData.address || '',
           });
 
-          // Check if profile should be locked
-          if (userData.createdAt) {
-            const createdAtDate = (userData.createdAt as unknown as Timestamp).toDate();
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            if (createdAtDate < sevenDaysAgo) {
+          // Profile locking logic
+          if (userData.profileLastUpdated) {
+            const lastUpdatedDate = (userData.profileLastUpdated as unknown as Timestamp).toDate();
+            const unlockDate = addDays(lastUpdatedDate, 7);
+            if (isBefore(new Date(), unlockDate)) {
               setIsProfileLocked(true);
             }
           }
           
-          // Fetch Dues History
           const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
           const unsubDues = onSnapshot(duesQuery, (snapshot) => {
               const duesData = snapshot.docs.map(d => ({
@@ -90,11 +86,9 @@ export default function ProfilePage() {
                   id: d.id,
                   paymentDate: (d.data().paymentDate as Timestamp).toDate()
               })) as DuesPayment[];
-              // Sort client-side
               duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
               setDuesHistory(duesData);
           });
-          // Here you could return unsubDues to clean it up, but since the parent is already handling cleanup, it might be okay
         }
       } else {
         router.push('/auth/login');
@@ -110,16 +104,17 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       const userDocRef = doc(db, 'users', user.uid);
-      // We don't update displayName, so we create a new object without it.
       const dataToUpdate = {
         phone: data.phone,
-        address: data.address
+        address: data.address,
+        profileLastUpdated: serverTimestamp(),
       };
       await updateDoc(userDocRef, dataToUpdate);
       
-      setUser(prev => prev ? { ...prev, ...dataToUpdate } : null);
+      setUser(prev => prev ? { ...prev, ...dataToUpdate, profileLastUpdated: new Date() } : null);
+      setIsProfileLocked(true);
 
-      toast({ title: 'Berhasil', description: 'Profil berhasil disimpan.' });
+      toast({ title: 'Berhasil', description: 'Profil berhasil disimpan dan akan dikunci selama 7 hari.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan profil.' });
     } finally {
@@ -140,7 +135,7 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-            <div className="flex items-center gap-2 text-right">
+             <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
                   <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
@@ -157,30 +152,40 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
-                {!isProfileComplete && !isProfileLocked && (
-                        <Alert>
-                            <Info className="h-4 w-4" />
-                            <AlertTitle>Lengkapi Profil Anda!</AlertTitle>
-                            <AlertDescription>
-                                Nomor HP dan alamat Anda belum diisi. Anda memiliki waktu 7 hari sejak pendaftaran untuk melengkapi data.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                    
-                    {isProfileLocked && (
-                        <Alert variant="destructive">
-                            <Lock className="h-4 w-4" />
-                            <AlertTitle>Data Diri Dikunci</AlertTitle>
-                            <AlertDescription>
-                            Untuk alasan keamanan, data diri Anda (selain kata sandi) tidak dapat diubah setelah 7 hari sejak pendaftaran. Hubungi admin jika memerlukan bantuan.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                
+                {isProfileLocked && (
+                    <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+                        <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <AlertTitle className="text-blue-800 dark:text-blue-300">Data Diri Dikunci</AlertTitle>
+                        <AlertDescription className="text-blue-700 dark:text-blue-400">
+                        Untuk keamanan, data Anda tidak dapat diubah selama 7 hari setelah pembaruan terakhir. Fitur ini akan terbuka kembali secara otomatis.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                 
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Biodata Pengguna</CardTitle>
+                        <CardDescription>Informasi dasar akun Anda.</CardDescription>
+                    </CardHeader>
+                     <CardContent className="space-y-4">
+                        <div className="flex justify-between items-center p-3 rounded-md border">
+                            <span className="text-sm font-medium text-muted-foreground">Bergabung Sejak</span>
+                             <span className="text-sm font-semibold">{user?.createdAt ? format((user.createdAt as Timestamp).toDate(), "d MMMM yyyy", { locale: id }) : 'N/A'}</span>
+                        </div>
+                         <div className="flex justify-between items-center p-3 rounded-md border">
+                            <span className="text-sm font-medium text-muted-foreground">Status Akun</span>
+                            <Badge variant={user?.isBlocked ? "destructive" : "secondary"} className={!user?.isBlocked ? "bg-green-100 text-green-800" : ""}>
+                                 <CheckCircle className="mr-1 h-3 w-3" />
+                                 {user?.isBlocked ? 'Diblokir' : 'Aktif'}
+                            </Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardHeader>
-                    <CardTitle>Data Diri</CardTitle>
-                    <CardDescription>Perbarui informasi profil Anda.</CardDescription>
+                        <CardTitle>Data Diri</CardTitle>
+                        <CardDescription>Perbarui informasi profil Anda.</CardDescription>
                     </CardHeader>
                     <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -219,12 +224,14 @@ export default function ProfilePage() {
                             )}
                         />
                         </CardContent>
-                        <CardFooter className="border-t px-6 py-4">
-                        <Button type="submit" disabled={isSubmitting || isProfileLocked}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isProfileLocked ? 'Data Terkunci' : 'Simpan Perubahan'}
-                        </Button>
-                        </CardFooter>
+                        {!isProfileLocked && (
+                             <CardFooter className="border-t px-6 py-4">
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Simpan Perubahan
+                                </Button>
+                            </CardFooter>
+                        )}
                     </form>
                     </Form>
                 </Card>
