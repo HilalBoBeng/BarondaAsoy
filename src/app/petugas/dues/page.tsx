@@ -78,7 +78,7 @@ export default function DuesPetugasPage() {
           return {
               id: doc.id, 
               ...data,
-              paymentDate: data.paymentDate instanceof Timestamp ? data.paymentDate.toDate() : new Date()
+              paymentDate: data.paymentDate // Keep as Timestamp
           }
       }) as DuesPayment[];
       setPayments(paymentsData);
@@ -177,7 +177,11 @@ export default function DuesPetugasPage() {
     if (!selectedUser) return [];
     return payments
       .filter(p => p.userId === selectedUser.uid)
-      .sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
+      .sort((a, b) => {
+        const timeA = (a.paymentDate as Timestamp)?.toMillis() || 0;
+        const timeB = (b.paymentDate as Timestamp)?.toMillis() || 0;
+        return timeB - timeA;
+      });
   }, [payments, selectedUser]);
   
   const handleViewHistory = (user: AppUser) => {
@@ -391,7 +395,7 @@ export default function DuesPetugasPage() {
                             {userPaymentHistory.length > 0 ? (
                                 userPaymentHistory.map(due => (
                                     <TableRow key={due.id}>
-                                        <TableCell>{format(due.paymentDate, "PPP", { locale: id })}</TableCell>
+                                        <TableCell>{due.paymentDate instanceof Timestamp ? format(due.paymentDate.toDate(), "PPP", { locale: id }) : 'N/A'}</TableCell>
                                         <TableCell>
                                             <Badge variant="secondary">{due.month} {due.year}</Badge>
                                         </TableCell>
