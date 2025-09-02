@@ -48,6 +48,7 @@ export interface Report {
   replies?: Reply[] | Record<string, Reply>;
   handlerName?: string;
   handlerId?: string;
+  location?: { lat: number; lng: number };
 }
 
 export interface AppUser {

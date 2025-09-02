@@ -117,9 +117,9 @@ export default function Announcements() {
                         <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                             <DialogTitle>Pengumuman</DialogTitle>
                         </DialogHeader>
-                        <div className="p-6 whitespace-pre-wrap text-sm text-muted-foreground min-h-[150px] flex-grow">
+                        <div className="p-6 whitespace-pre-wrap text-sm min-h-[150px] flex-grow">
                             <h3 className="font-bold text-lg text-foreground mb-2">{selectedAnnouncement.title}</h3>
-                            {selectedAnnouncement.content}
+                            <p className="text-muted-foreground">{selectedAnnouncement.content}</p>
                         </div>
                         <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
                             <DialogClose asChild>
