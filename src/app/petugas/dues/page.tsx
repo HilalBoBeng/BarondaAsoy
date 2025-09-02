@@ -70,11 +70,14 @@ export default function DuesPetugasPage() {
     });
 
     const unsubPayments = onSnapshot(paymentsQuery, (snapshot) => {
-      const paymentsData = snapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data(),
-          paymentDate: (doc.data().paymentDate as Timestamp).toDate()
-      })) as DuesPayment[];
+      const paymentsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              id: doc.id, 
+              ...data,
+              paymentDate: data.paymentDate instanceof Timestamp ? data.paymentDate.toDate() : new Date()
+          }
+      }) as DuesPayment[];
       setPayments(paymentsData);
     });
 
@@ -88,8 +91,8 @@ export default function DuesPetugasPage() {
     };
   }, []);
 
-  const filteredUsers = useMemo(() => {
-    const usersWithStatus = users
+  const usersWithPaymentStatus = useMemo(() => {
+    return users
       .map(user => {
         const hasPaid = payments.some(
           p => p.userId === user.uid && p.month === selectedMonth && p.year.toString() === selectedYear
@@ -99,8 +102,10 @@ export default function DuesPetugasPage() {
           paymentStatus: hasPaid ? 'Lunas' : 'Belum Bayar'
         };
       });
+  }, [users, payments, selectedMonth, selectedYear]);
 
-      let filtered = usersWithStatus;
+  const filteredUsers = useMemo(() => {
+      let filtered = usersWithPaymentStatus;
 
       if(filterStatus === 'paid') {
           filtered = filtered.filter(u => u.paymentStatus === 'Lunas');
@@ -110,9 +115,9 @@ export default function DuesPetugasPage() {
 
       return filtered
         .filter(user => user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.displayName!.localeCompare(b.displayName!));
+        .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
 
-  }, [users, payments, searchTerm, selectedMonth, selectedYear, filterStatus]);
+  }, [usersWithPaymentStatus, filterStatus, searchTerm]);
 
 
   const handleSendReminder = async (user: AppUser) => {
@@ -136,7 +141,8 @@ export default function DuesPetugasPage() {
 
   const handleBroadcastReminders = async () => {
     setIsBroadcasting(true);
-    const unpaidUsers = filteredUsers.filter(u => u.paymentStatus === 'Belum Bayar');
+    const unpaidUsers = usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
+
     if (unpaidUsers.length === 0) {
         toast({ variant: 'destructive', title: 'Tidak Ada Tindakan', description: 'Tidak ada warga yang belum membayar pada periode ini.' });
         setIsBroadcasting(false);
