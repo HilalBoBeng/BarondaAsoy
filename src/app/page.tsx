@@ -173,7 +173,10 @@ export default function Home() {
   };
 
   const handleNotificationClick = async (notif: Notification) => {
-      if (userInfo?.isBlocked) return;
+      if (userInfo?.isBlocked) {
+        toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Anda tidak dapat melihat detail pemberitahuan.' });
+        return;
+      };
       setSelectedNotification(notif);
       if (!notif.read) {
           const docRef = doc(db, 'notifications', notif.id);
@@ -198,6 +201,11 @@ export default function Home() {
   }
   
   const unreadNotifications = allNotifications.filter(n => !n.read).length;
+  
+  const stripHtml = (html: string) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || "";
+  }
 
   if (loading) {
     return (
@@ -280,7 +288,7 @@ export default function Home() {
                                             <p className="font-semibold truncate flex-grow w-0 min-w-0">{notif.title}</p>
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px] flex-shrink-0 ml-2">Baru</Badge>}
                                         </div>
-                                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{stripHtml(notif.message)}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
                                 </DropdownMenuItem>
