@@ -235,7 +235,6 @@ export default function Home() {
                                             {notif.title}
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
                                         </div>
-                                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
                                     <Button type="button" variant="ghost" size="icon" className="h-full w-auto p-2 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>

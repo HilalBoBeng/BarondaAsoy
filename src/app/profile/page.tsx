@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -59,6 +60,7 @@ export default function ProfilePage() {
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         const userDocRef = doc(db, 'users', currentUser.uid);
+        
         const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
             const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
@@ -68,13 +70,17 @@ export default function ProfilePage() {
               phone: userData.phone || '',
               address: userData.address || '',
             });
+          } else {
+            setUser(null);
           }
           setLoading(false);
         }, () => {
           setLoading(false);
+          toast({ variant: "destructive", title: "Gagal memuat profil." });
         });
 
         return () => unsubscribeUser();
+
       } else {
         router.push('/auth/login');
         setLoading(false);
@@ -82,31 +88,37 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribeAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  
+  }, [auth, router, form, toast]);
+
   useEffect(() => {
-      if (!user?.uid) return;
+    if (!user?.uid) {
+        if (!loading) {
+            setDuesHistory([]);
+        }
+        return;
+    };
+    
+    const duesQuery = query(collection(db, 'dues'), where('userId', '==', user.uid), orderBy('paymentDate', 'desc'));
+    
+    const unsubDues = onSnapshot(duesQuery, (snapshot) => {
+        const duesData = snapshot.docs.map(d => ({
+            ...d.data(),
+            id: d.id,
+            paymentDate: (d.data().paymentDate as Timestamp).toDate()
+        })) as DuesPayment[];
+        setDuesHistory(duesData);
+    }, (error) => {
+        console.error("Error fetching dues:", error);
+        toast({ variant: "destructive", title: "Gagal memuat iuran." });
+    });
 
-      const duesQuery = query(collection(db, 'dues'), where('userId', '==', user.uid), orderBy('paymentDate', 'desc'));
-      const unsubDues = onSnapshot(duesQuery, (snapshot) => {
-          const duesData = snapshot.docs.map(d => ({
-              ...d.data(),
-              id: d.id,
-              paymentDate: (d.data().paymentDate as Timestamp).toDate()
-          })) as DuesPayment[];
-          setDuesHistory(duesData);
-      }, (error) => {
-          console.error("Error fetching dues:", error);
-          toast({ variant: "destructive", title: "Gagal memuat riwayat iuran." });
-      });
+    return () => unsubDues();
+}, [user, toast, loading]);
 
-      return () => unsubDues();
-  }, [user?.uid, toast]);
 
 
   const handleEditClick = (field: FieldName) => {
-    if (field === 'displayName') return; // Nama tidak bisa diganti
+    if (field === 'displayName') return;
     setEditingField(field);
     form.setValue(field, user?.[field] || '');
     setIsEditDialogOpen(true);
@@ -188,8 +200,8 @@ export default function ProfilePage() {
             <div className="container mx-auto max-w-4xl space-y-8">
                  <Card>
                     <CardHeader>
-                        <CardTitle>Biodata Pengguna</CardTitle>
-                        <CardDescription>Informasi dasar akun Anda.</CardDescription>
+                        <CardTitle>Profil Pengguna</CardTitle>
+                        <CardDescription>Informasi akun dan data diri Anda.</CardDescription>
                     </CardHeader>
                      <CardContent className="space-y-4">
                         <div className="flex justify-between items-center p-3 rounded-md border">
@@ -203,15 +215,6 @@ export default function ProfilePage() {
                                  {user?.isBlocked ? 'Diblokir' : 'Aktif'}
                             </Badge>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Data Diri</CardTitle>
-                        <CardDescription>Perbarui informasi profil Anda dengan menekan ikon pensil.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
                         {renderDataRow("displayName", user?.displayName)}
                         {renderDataRow("phone", user?.phone)}
                         {renderDataRow("address", user?.address)}

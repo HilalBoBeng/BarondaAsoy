@@ -16,6 +16,7 @@ import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 
 const REPORTS_PER_PAGE = 5;
@@ -27,10 +28,10 @@ const categoryDisplay: Record<string, string> = {
     other: "Lainnya",
 };
 
-const statusDisplay: Record<string, { text: string; variant: 'destructive' | 'default' | 'secondary' }> = {
-  new: { text: 'Baru', variant: 'destructive' },
-  in_progress: { text: 'Ditangani', variant: 'default' },
-  resolved: { text: 'Selesai', variant: 'secondary' },
+const statusDisplay: Record<string, { text: string; className: string }> = {
+  new: { text: 'Baru', className: 'bg-red-100 text-red-800' },
+  in_progress: { text: 'Ditangani', className: 'bg-yellow-100 text-yellow-800' },
+  resolved: { text: 'Selesai', className: 'bg-green-100 text-green-800' },
 };
 
 const ReplyCard = ({ reply }: { reply: Reply }) => (
@@ -64,7 +65,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         setLoading(true);
         try {
             let q;
-            if (user && user.uid) { // Check if user and user.uid exist
+            if (user && user.uid) { 
                 q = query(collection(db, 'reports'), where('userId', '==', user.uid));
             } else {
                 q = query(collection(db, 'reports'), where('visibility', '==', 'public'));
@@ -178,7 +179,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                                 </p>
                             </div>
                             <div className="flex flex-col gap-2 items-end flex-shrink-0">
-                                <Badge variant={statusDisplay[report.status]?.variant || 'secondary'}>
+                                <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                     {statusDisplay[report.status]?.text || report.status}
                                 </Badge>
                                 <Badge variant="outline">
