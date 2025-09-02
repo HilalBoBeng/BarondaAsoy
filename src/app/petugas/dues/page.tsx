@@ -32,7 +32,6 @@ export default function DuesPetugasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>(months[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
-  const [isSendingReminder, setIsSendingReminder] = useState<string | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
 
@@ -102,25 +101,6 @@ export default function DuesPetugasPage() {
     return usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
   }, [usersWithPaymentStatus]);
 
-
-  const handleSendReminder = async (user: AppUser) => {
-    setIsSendingReminder(user.uid);
-    try {
-        await addDoc(collection(db, 'notifications'), {
-            userId: user.uid,
-            title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
-            message: `Dengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran. Terima kasih atas perhatian dan kerja sama Anda.`,
-            read: false,
-            createdAt: serverTimestamp(),
-            link: '/profile',
-        });
-        toast({ title: "Berhasil", description: `Pengingat iuran berhasil dikirim ke ${user.displayName}.` });
-    } catch(error) {
-        toast({ variant: 'destructive', title: "Gagal", description: "Gagal mengirim pengingat."});
-    } finally {
-        setIsSendingReminder(null);
-    }
-  }
 
   const handleBroadcastReminders = async () => {
     setIsBroadcasting(true);
@@ -239,7 +219,6 @@ export default function DuesPetugasPage() {
               <TableRow>
                 <TableHead>Nama Warga</TableHead>
                 <TableHead>Status Pembayaran</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -248,7 +227,6 @@ export default function DuesPetugasPage() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-28 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredUsers.length > 0 ? (
@@ -266,19 +244,11 @@ export default function DuesPetugasPage() {
                         {user.paymentStatus}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                       {user.paymentStatus === 'Belum Bayar' && (
-                         <Button size="sm" onClick={() => handleSendReminder(user)} disabled={isSendingReminder === user.uid}>
-                            {isSendingReminder === user.uid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
-                            Kirim Pengingat
-                         </Button>
-                       )}
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center h-24">
+                  <TableCell colSpan={2} className="text-center h-24">
                     Data warga tidak ditemukan.
                   </TableCell>
                 </TableRow>

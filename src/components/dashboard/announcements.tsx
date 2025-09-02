@@ -239,22 +239,22 @@ export default function Announcements() {
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent>
+            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg flex flex-col">
                 {selectedAnnouncement && (
                     <>
-                        <DialogHeader>
+                        <DialogHeader className="flex items-center justify-between space-y-0 bg-primary p-4 text-primary-foreground">
                             <DialogTitle>Pengumuman</DialogTitle>
                             <DialogClose asChild>
-                                <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                                <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
                                     <X className="h-4 w-4" />
                                     <span className="sr-only">Tutup</span>
                                 </Button>
                             </DialogClose>
                         </DialogHeader>
-                        <DialogBody className="whitespace-pre-wrap text-sm text-muted-foreground">
+                        <DialogBody className="whitespace-pre-wrap text-sm text-muted-foreground min-h-[200px] flex-grow">
                             {selectedAnnouncement.content}
                         </DialogBody>
-                        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t gap-4">
+                        <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">
                             <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />
                                 <ReactionButton announcement={selectedAnnouncement} type="dislike" />

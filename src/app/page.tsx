@@ -200,8 +200,8 @@ export default function Home() {
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
-              width={40}
-              height={40}
+              width={32}
+              height={32}
               className="h-10 w-10 rounded-full object-cover"
             />
             <div className="flex flex-col">
@@ -428,22 +428,22 @@ export default function Home() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-        <DialogContent>
+        <DialogContent className="w-[90%] sm:max-w-lg rounded-lg flex flex-col">
              {selectedNotification && (
                 <>
-                    <DialogHeader>
+                    <DialogHeader className="flex items-center justify-between space-y-0 bg-primary p-4 text-primary-foreground">
                         <DialogTitle>Pemberitahuan</DialogTitle>
                          <DialogClose asChild>
-                            <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                            <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
                                 <X className="h-4 w-4" />
                                 <span className="sr-only">Tutup</span>
                             </Button>
                         </DialogClose>
                     </DialogHeader>
-                    <DialogBody className="whitespace-pre-wrap break-words">
+                    <DialogBody className="whitespace-pre-wrap break-words min-h-[200px] flex-grow">
                        <p>{selectedNotification?.message}</p>
                     </DialogBody>
-                    <DialogFooter>
+                    <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <DialogClose asChild>
                            <Button type="button" variant="secondary" size="sm">Ok</Button>
                         </DialogClose>

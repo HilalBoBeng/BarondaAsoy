@@ -45,11 +45,12 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
   });
 
   useEffect(() => {
-    if (!params.userId) return;
+    const userId = params.userId;
+    if (!userId) return;
 
     setLoading(true);
     const fetchUserData = async () => {
-      const userRef = doc(db, 'users', params.userId);
+      const userRef = doc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         setUser({ uid: userSnap.id, ...userSnap.data() } as AppUser);
@@ -60,7 +61,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
 
     fetchUserData();
 
-    const paymentsQuery = query(collection(db, 'dues'), where('userId', '==', params.userId));
+    const paymentsQuery = query(collection(db, 'dues'), where('userId', '==', userId));
     const unsubPayments = onSnapshot(paymentsQuery, (snapshot) => {
       const paymentsData = snapshot.docs.map(d => ({
         id: d.id,
