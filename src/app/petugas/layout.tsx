@@ -85,18 +85,11 @@ export default function PetugasLayout({
     const duesDetailMatch = pathname.match(duesDetailRegex);
     const isDuesRecord = pathname === '/petugas/dues/record';
     
-    setIsDetailPage(isDuesRecord || !!duesDetailMatch);
+    const isDetail = isDuesRecord || !!duesDetailMatch;
+    setIsDetailPage(isDetail);
 
     if (duesDetailMatch) {
-        const userId = duesDetailMatch[1];
-        const userRef = doc(db, 'users', userId);
-        getDoc(userRef).then(userSnap => {
-            if (userSnap.exists()) {
-                setPageTitle(`Riwayat Iuran: ${userSnap.data().displayName}`);
-            } else {
-                setPageTitle('Riwayat Iuran');
-            }
-        });
+      setPageTitle("Riwayat Iuran");
     } else if (isDuesRecord) {
         setPageTitle("Catat Iuran Warga");
     } else {

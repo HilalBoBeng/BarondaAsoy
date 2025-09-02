@@ -133,7 +133,7 @@ export default function ProfilePage() {
             </Button>
             <div className="flex items-center space-x-2 text-right">
                 <div className="flex flex-col">
-                  <p className="text-sm font-semibold leading-tight">{user?.displayName}</p>
+                  <p className="text-xs font-semibold leading-tight">{user?.displayName}</p>
                   <p className="text-xs text-muted-foreground leading-tight">{user?.email}</p>
                 </div>
                  <User className="h-8 w-8 text-muted-foreground" />
@@ -215,7 +215,6 @@ export default function ProfilePage() {
                             <TableHead>Tanggal Bayar</TableHead>
                             <TableHead>Periode</TableHead>
                             <TableHead>Jumlah</TableHead>
-                            <TableHead>Dicatat Oleh</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -227,12 +226,11 @@ export default function ProfilePage() {
                                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                                     </TableCell>
                                     <TableCell>{formatCurrency(due.amount)}</TableCell>
-                                    <TableCell>{due.recordedBy}</TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
+                                <TableCell colSpan={3} className="h-24 text-center">
                                     Anda belum memiliki riwayat iuran.
                                 </TableCell>
                             </TableRow>
@@ -256,5 +254,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

@@ -87,15 +87,7 @@ export default function AdminLayout({
 
     if (duesDetailMatch) {
         setIsDetailPage(true);
-        const userId = duesDetailMatch[1];
-        const userRef = doc(db, 'users', userId);
-        getDoc(userRef).then(userSnap => {
-            if (userSnap.exists()) {
-                setPageTitle(`Riwayat Iuran: ${userSnap.data().displayName}`);
-            } else {
-                 setPageTitle('Riwayat Iuran');
-            }
-        });
+        setPageTitle('Riwayat Iuran');
     } else {
         setIsDetailPage(false);
         const activeItem = navItems.find(item => pathname.startsWith(item.href));
