@@ -45,7 +45,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
+                 <style>
                     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; margin: 0; padding: 0; background-color: #f0f4f8; }
                     .container { background-color: #f0f4f8; padding: 30px; }
                     .content { background-color: #ffffff; padding: 30px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -81,7 +81,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
           `;
       
       const headersList = headers();
-      const host = headersList.get('host') || 'localhost:9002';
+      const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
       const protocol = host.startsWith('localhost') ? 'http' : 'https';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
@@ -90,7 +90,6 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: `"${senderName}" <bobeng.icu@gmail.com>`,
           to: email,
           subject: 'Informasi Akun Petugas Baronda Anda',
           html: emailHtml,

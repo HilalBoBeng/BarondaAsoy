@@ -3,7 +3,8 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-export const runtime = 'nodejs'; // Memaksa Node.js runtime, ini adalah kunci utamanya!
+// Memaksa runtime Node.js, ini adalah kunci utamanya agar nodemailer berfungsi di Vercel/Netlify
+export const runtime = 'nodejs'; 
 
 export async function POST(req: Request) {
   try {
@@ -14,17 +15,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields: to, subject, html' }, { status: 400 });
     }
     
-    // Kredensial ditanam langsung di sini, hanya berjalan di server.
+    // Konfigurasi transporter menggunakan environment variables
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS, 
         },
     });
 
     const mailOptions = {
-      from: from || '"Baronda" <bobeng.icu@gmail.com>',
+      from: from || `"${process.env.SMTP_SENDER_NAME || 'Baronda'}" <${process.env.SMTP_USER}>`,
       to: to,
       subject: subject,
       html: html,
@@ -36,6 +37,12 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('API Send Email Error:', error);
-    return NextResponse.json({ error: 'Failed to send email.', details: error.message }, { status: 500 });
+    // Memberikan pesan error yang lebih spesifik untuk debugging di production
+    return NextResponse.json({ 
+        error: 'Failed to send email.', 
+        details: error.message,
+        code: error.code,
+        response: error.response,
+    }, { status: 500 });
   }
 }

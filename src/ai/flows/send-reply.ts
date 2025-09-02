@@ -77,7 +77,7 @@ const sendReplyFlow = ai.defineFlow(
 
       // 1. Send email notification via API route
       const headersList = headers();
-      const host = headersList.get('host') || 'localhost:9002';
+      const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
       const protocol = host.startsWith('localhost') ? 'http' : 'https';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
@@ -86,7 +86,6 @@ const sendReplyFlow = ai.defineFlow(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: `"${senderName}" <bobeng.icu@gmail.com>`,
           to: recipientEmail,
           subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
           html: emailHtml,

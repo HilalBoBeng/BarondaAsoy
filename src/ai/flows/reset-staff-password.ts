@@ -94,7 +94,7 @@ const resetStaffPasswordFlow = ai.defineFlow(
 
       // Automatically determine the base URL
       const headersList = headers();
-      const host = headersList.get('host') || 'localhost:9002';
+      const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
       const protocol = host.startsWith('localhost') ? 'http' : 'https';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
@@ -103,7 +103,6 @@ const resetStaffPasswordFlow = ai.defineFlow(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: `"${senderName}" <bobeng.icu@gmail.com>`,
           to: email,
           subject: 'Pengingat Kode Akses Petugas Baronda Anda',
           html: emailHtml,
