@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, onSnapshot, query, where, deleteDoc, doc, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast } from 'firebase/firestore';
+import { collection, query, where, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -49,7 +49,7 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     </Card>
 );
 
-export default function ReportHistory({ user }: { user?: User | null }) {
+export default function ReportHistory({ user, showDeleteButton = false }: { user?: User | null, showDeleteButton?: boolean }) {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
@@ -58,24 +58,28 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
     const [isLastPage, setIsLastPage] = useState(false);
-
+    
     const fetchReports = useCallback(async (direction: 'next' | 'prev' | 'initial') => {
         setLoading(true);
         try {
             const reportsRef = collection(db, 'reports');
             let q;
 
-            // Base query without ordering
-            const baseQuery = user 
-                ? [where('userId', '==', user.uid)]
-                : [where('visibility', '==', 'public')];
-
-            if (direction === 'next' && lastVisible) {
-                q = query(reportsRef, ...baseQuery, limit(REPORTS_PER_PAGE), startAfter(lastVisible));
-            } else if (direction === 'prev' && firstVisible) {
-                 q = query(reportsRef, ...baseQuery, limitToLast(REPORTS_PER_PAGE), endBefore(firstVisible));
+            // Base query filters
+            const filters = [];
+            if (user) {
+                filters.push(where('userId', '==', user.uid));
             } else {
-                q = query(reportsRef, ...baseQuery, limit(REPORTS_PER_PAGE));
+                filters.push(where('visibility', '==', 'public'));
+            }
+
+            // Pagination logic
+            if (direction === 'next' && lastVisible) {
+                q = query(reportsRef, ...filters, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+            } else if (direction === 'prev' && firstVisible) {
+                q = query(reportsRef, ...filters, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+            } else {
+                q = query(reportsRef, ...filters, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
             }
             
             const snapshot = await getDocs(q);
@@ -101,10 +105,6 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      replies: repliesArray
                  } as Report;
             });
-            
-            // Sort on the client side
-            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
-
 
             setReports(reportsData);
             setFirstVisible(snapshot.docs[0]);
@@ -121,7 +121,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     
     useEffect(() => {
         fetchReports('initial');
-    }, [user]); // Removed fetchReports from dependency array as it is now wrapped in useCallback
+    }, [user, fetchReports]); 
 
     const goToNextPage = () => {
         setCurrentPage(prev => prev + 1);
@@ -211,7 +211,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                             </div>
                         )}
 
-                        {user && ( // Show delete button only if it's the user's own history view
+                        {user && showDeleteButton && (
                             <div className="w-full flex justify-end mt-2">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>

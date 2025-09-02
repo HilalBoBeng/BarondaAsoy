@@ -168,11 +168,6 @@ export default function RegisterPage() {
                       Masuk di sini
                   </Link>
               </div>
-              <div className="text-center text-sm">
-                  <Link href="/" className="underline">
-                      Kembali ke Halaman Utama
-                  </Link>
-              </div>
             </CardFooter>
           </form>
         </Form>

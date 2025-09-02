@@ -116,11 +116,6 @@ export default function ForgotPasswordPage() {
                   Kembali ke Halaman Masuk
                 </Link>
               </div>
-              <div className="text-center text-sm">
-                  <Link href="/" className="underline">
-                      Kembali ke Halaman Utama
-                  </Link>
-              </div>
             </CardFooter>
           </form>
         </Form>

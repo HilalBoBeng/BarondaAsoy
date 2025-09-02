@@ -140,7 +140,6 @@ export default function StaffLoginPage() {
                         <Link href="/auth/staff-register" className="underline text-primary">Daftar sebagai Petugas</Link>
                         <Link href="/auth/staff-forgot-password" className="underline">Lupa Kode Akses?</Link>
                     </div>
-                     <Link href="/" className="underline text-sm mt-2">Kembali ke Halaman Utama</Link>
                 </CardFooter>
             </form>
         </Form>

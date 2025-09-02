@@ -93,7 +93,17 @@ export default function ProfilePage() {
     try {
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, data);
+      
+      // Also update the user's profile in Firebase Auth
+      if (auth.currentUser) {
+          const { updateProfile } = await import("firebase/auth");
+          await updateProfile(auth.currentUser, {
+              displayName: data.displayName
+          });
+      }
+      
       setUser(prev => prev ? { ...prev, ...data } : null);
+
       toast({ title: 'Berhasil', description: 'Profil berhasil disimpan.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan profil.' });
@@ -221,7 +231,7 @@ export default function ProfilePage() {
           <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
         </CardHeader>
         <CardContent>
-            <ReportHistory user={auth.currentUser} />
+            <ReportHistory user={auth.currentUser} showDeleteButton={false} />
         </CardContent>
       </Card>
 

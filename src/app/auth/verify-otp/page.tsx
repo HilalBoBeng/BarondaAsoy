@@ -29,9 +29,9 @@ import { verifyOtp } from '@/ai/flows/verify-otp';
 import { sendOtp } from '@/ai/flows/send-otp';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword, updateProfile, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app, db } from '@/lib/firebase/client';
-import { setDoc, doc, serverTimestamp, collection, addDoc, updateDoc } from 'firebase/firestore';
+import { setDoc, doc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { resetStaffPassword } from '@/ai/flows/reset-staff-password';
 import Image from 'next/image';
 
@@ -48,8 +48,6 @@ export default function VerifyOtpPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [isStaffFlow, setIsStaffFlow] = useState(false);
   const [isStaffResetFlow, setIsStaffResetFlow] = useState(false);
-  const [isChangeEmailFlow, setIsChangeEmailFlow] = useState(false);
-  const [isChangeStaffEmailFlow, setIsChangeStaffEmailFlow] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -141,9 +139,6 @@ export default function VerifyOtpPage() {
   const handleResendOtp = async () => {
     if (!verificationContext || cooldown > 0) return;
     let emailToSend = verificationContext.email;
-    if (verificationContext.flow === 'changeEmail' || verificationContext.flow === 'changeStaffEmail') {
-        emailToSend = verificationContext.newEmail;
-    }
 
     setIsSubmitting(true);
     try {
@@ -186,9 +181,6 @@ export default function VerifyOtpPage() {
     }
     
     let emailToVerify = verificationContext.email;
-    if (verificationContext.flow === 'changeEmail' || verificationContext.flow === 'changeStaffEmail') {
-        emailToVerify = verificationContext.newEmail;
-    }
 
     setIsSubmitting(true);
     try {
@@ -244,27 +236,6 @@ export default function VerifyOtpPage() {
             await resetStaffPassword({ email: verificationContext.email });
             setOtpVerified(true);
             setIsStaffResetFlow(true);
-        } else if (verificationContext.flow === 'changeEmail') {
-            const user = auth.currentUser;
-            if (!user) throw new Error("Pengguna tidak ditemukan. Sesi mungkin berakhir.");
-            
-            // Re-authenticate again before sensitive change
-            const credential = EmailAuthProvider.credential(verificationContext.email, verificationContext.password);
-            await reauthenticateWithCredential(user, credential);
-            
-            // Update email in Firebase Auth
-            await updateEmail(user, verificationContext.newEmail);
-
-            // Update email in Firestore
-            await setDoc(doc(db, "users", user.uid), { email: verificationContext.newEmail }, { merge: true });
-            
-            setOtpVerified(true);
-            setIsChangeEmailFlow(true);
-        } else if (verificationContext.flow === 'changeStaffEmail') {
-            const staffRef = doc(db, 'staff', verificationContext.staffId);
-            await updateDoc(staffRef, { email: verificationContext.newEmail });
-            setOtpVerified(true);
-            setIsChangeStaffEmailFlow(true);
         }
       } else {
         throw new Error(result.message);
@@ -283,8 +254,8 @@ export default function VerifyOtpPage() {
   if (otpVerified) {
     let successTitle = "Proses Selesai";
     let successDescription = "Proses telah selesai. Anda dapat kembali ke halaman utama.";
-    let buttonText = "Kembali ke Halaman Utama";
-    let buttonLink = "/";
+    let buttonText = "Kembali ke Halaman Masuk Staf";
+    let buttonLink = "/auth/staff-login";
 
     if (isStaffFlow) {
       successTitle = "Pendaftaran Sedang Ditinjau";
@@ -292,19 +263,6 @@ export default function VerifyOtpPage() {
     } else if (isStaffResetFlow) {
       successTitle = "Kode Akses Baru Terkirim";
       successDescription = "Kode akses baru Anda telah dikirim ulang ke email Anda. Silakan periksa kotak masuk Anda.";
-    } else if (isChangeEmailFlow) {
-      successTitle = "Email Berhasil Diubah";
-      successDescription = "Email Anda telah berhasil diperbarui. Anda akan dikeluarkan dan perlu masuk kembali dengan email baru Anda.";
-      buttonText = "Kembali ke Halaman Masuk";
-      buttonLink = "/auth/login";
-      if(auth.currentUser) auth.signOut();
-    } else if (isChangeStaffEmailFlow) {
-        successTitle = "Email Petugas Berhasil Diubah";
-        successDescription = "Email Anda telah berhasil diperbarui. Anda akan dikeluarkan dan perlu masuk kembali.";
-        buttonText = "Kembali ke Halaman Masuk Staf";
-        buttonLink = "/auth/staff-login";
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('staffInfo');
     }
       
     return (
@@ -343,9 +301,7 @@ export default function VerifyOtpPage() {
           <CardTitle>Verifikasi Kode OTP</CardTitle>
           <CardDescription>
             Masukkan 6 digit kode yang kami kirimkan ke email {
-                verificationContext?.flow === 'changeEmail' || verificationContext?.flow === 'changeStaffEmail'
-                ? verificationContext.newEmail 
-                : verificationContext?.email || 'Anda'
+                verificationContext?.email || 'Anda'
             }.
           </CardDescription>
         </CardHeader>

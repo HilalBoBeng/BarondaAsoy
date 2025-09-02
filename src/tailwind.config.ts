@@ -11,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['sans-serif'],
-        headline: ['sans-serif'],
+        body: ['Roboto', 'sans-serif'],
+        headline: ['Roboto', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
