@@ -34,7 +34,7 @@ export default function PetugasLayout({
   const [isClient, setIsClient] = useState(false);
   const [staffName, setStaffName] = useState("Petugas");
   const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
-  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, pendingSchedules: 0 });
+  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0 });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -58,14 +58,19 @@ export default function PetugasLayout({
         }
 
         // Badge listeners
-        const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
+        const reportsRef = collection(db, 'reports');
+        const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
+        const myReportsQuery = query(reportsRef, where('handlerId', '==', staffInfo.id), where('status', '==', 'in_progress'));
+        
         const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', staffInfo.id), where('status', '==', 'Pending'));
         
-        const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+        const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+        const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
         const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
         
         return () => {
-          unsubReports();
+          unsubNewReports();
+          unsubMyReports();
           unsubSchedules();
         }
     }
@@ -80,7 +85,7 @@ export default function PetugasLayout({
   };
 
   const navItems = [
-    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports },
+    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports + badgeCounts.myReports },
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
     { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },

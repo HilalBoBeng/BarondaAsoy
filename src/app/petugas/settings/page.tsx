@@ -23,11 +23,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Separator } from "@/components/ui/separator";
+import { useTheme } from "next-themes";
 
 
 const accessCodeSchema = z.object({
@@ -47,6 +48,7 @@ export default function StaffSettingsPage() {
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string, email: string } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const { setTheme, theme } = useTheme();
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -155,7 +157,35 @@ export default function StaffSettingsPage() {
               </Button>
             </form>
           </Form>
-
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+        <CardTitle>Pengaturan Tampilan</CardTitle>
+        <CardDescription>
+            Pilih tema tampilan untuk aplikasi.
+        </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                    <h3 className="font-medium">Tema Aplikasi</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Pilih antara mode terang atau gelap.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
+                        <Sun className="h-5 w-5" />
+                        <span className="sr-only">Light</span>
+                    </Button>
+                    <Button variant={theme === 'dark' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("dark")}>
+                        <Moon className="h-5 w-5" />
+                        <span className="sr-only">Dark</span>
+                    </Button>
+                </div>
+            </div>
         </CardContent>
       </Card>
     </div>

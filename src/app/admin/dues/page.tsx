@@ -23,6 +23,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -55,7 +56,9 @@ export default function DuesAdminPage() {
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   const { toast } = useToast();
-  const editForm = useForm<EditDuesFormValues>();
+  const editForm = useForm<EditDuesFormValues>({
+    resolver: zodResolver(editDuesSchema),
+  });
 
 
   useEffect(() => {
@@ -118,6 +121,10 @@ export default function DuesAdminPage() {
 
   }, [usersWithPaymentStatus, filterStatus, searchTerm]);
 
+  const unpaidUsers = useMemo(() => {
+    return usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
+  }, [usersWithPaymentStatus]);
+
 
   const handleSendReminder = async (user: AppUser) => {
     setIsSendingReminder(user.uid);
@@ -140,7 +147,6 @@ export default function DuesAdminPage() {
 
   const handleBroadcastReminders = async () => {
     setIsBroadcasting(true);
-    const unpaidUsers = usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
     
     if (unpaidUsers.length === 0) {
         toast({ variant: 'destructive', title: 'Tidak Ada Tindakan', description: 'Tidak ada warga yang belum membayar pada periode ini.' });
@@ -273,28 +279,27 @@ export default function DuesAdminPage() {
                   <SelectItem value="unpaid">Belum Bayar</SelectItem>
               </SelectContent>
           </Select>
-          {filterStatus === 'unpaid' && (
-              <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                      <Button variant="outline" disabled={isBroadcasting}>
-                          {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
-                          Broadcast Pengingat
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                      <AlertDialogHeader>
-                          <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
-                          <AlertDialogDescription>
-                              Anda akan mengirimkan notifikasi pengingat ke semua warga yang belum membayar iuran untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
-                          </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleBroadcastReminders}>Ya, Kirim</AlertDialogAction>
-                      </AlertDialogFooter>
-                  </AlertDialogContent>
-              </AlertDialog>
-          )}
+          
+          <AlertDialog>
+              <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={isBroadcasting || unpaidUsers.length === 0}>
+                      {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
+                      Broadcast Pengingat
+                  </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Anda akan mengirimkan notifikasi pengingat ke semua warga yang belum membayar iuran untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleBroadcastReminders}>Ya, Kirim</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
         </div>
 
 
@@ -326,7 +331,8 @@ export default function DuesAdminPage() {
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.paymentStatus === 'Lunas' ? 'secondary' : 'destructive'}>
+                      <Badge variant={user.paymentStatus === 'Lunas' ? 'secondary' : 'destructive'} 
+                        className={cn(user.paymentStatus === 'Lunas' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 border-green-200 dark:border-green-800')}>
                         {user.paymentStatus}
                       </Badge>
                     </TableCell>

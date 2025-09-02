@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const reasonSchema = z.object({
   reason: z.string().min(5, "Alasan harus diisi (minimal 5 karakter)."),
@@ -33,9 +34,9 @@ const statusConfig: Record<string, {
     label: string;
     className?: string;
 }> = {
-  'Pending': { variant: 'outline', label: 'Menunggu' },
-  'In Progress': { variant: 'default', label: 'Bertugas' },
-  'Completed': { variant: 'secondary', label: 'Selesai' },
+  'Pending': { variant: 'destructive', label: 'Menunggu Konfirmasi' },
+  'In Progress': { variant: 'default', label: 'Sedang Bertugas' },
+  'Completed': { variant: 'secondary', className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
   'Izin': { variant: 'destructive', label: 'Izin' },
   'Sakit': { variant: 'destructive', label: 'Sakit' },
   'Pending Review': { variant: 'default', className:'bg-yellow-500 hover:bg-yellow-600', label: 'Menunggu Persetujuan' },
@@ -129,7 +130,7 @@ export default function PetugasSchedulePage() {
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" /> {area}
             </CardTitle>
-            <Badge variant={config.variant} className={config.className}>{config.label}</Badge>
+            <Badge variant={config.variant} className={cn(config.className, "text-xs")}>{config.label}</Badge>
           </div>
           <CardDescription className="flex items-center gap-2 pt-1">
              <Calendar className="h-4 w-4" />
@@ -166,7 +167,7 @@ export default function PetugasSchedulePage() {
             </CardHeader>
             <CardContent className="space-y-4">
                 {loading ? (
-                    Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+                    Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-lg" />)
                 ) : schedules.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {schedules.map(schedule => (

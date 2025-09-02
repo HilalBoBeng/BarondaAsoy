@@ -21,8 +21,6 @@ import { sendReply } from '@/ai/flows/send-reply';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-const REPORTS_PER_PAGE = 5;
-
 const replySchema = z.object({
   replyMessage: z.string().min(1, "Balasan tidak boleh kosong."),
 });
@@ -39,6 +37,8 @@ export default function PetugasReportsPage() {
   const { toast } = useToast();
   
   const [filter, setFilter] = useState('new');
+  const [newReportsCount, setNewReportsCount] = useState(0);
+  const [myReportsCount, setMyReportsCount] = useState(0);
 
   const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
 
@@ -67,6 +67,10 @@ export default function PetugasReportsPage() {
         } as Report;
       });
       setAllReports(reportsData);
+      setNewReportsCount(reportsData.filter(r => r.status === 'new').length);
+      if (staffInfo) {
+        setMyReportsCount(reportsData.filter(r => r.handlerId === staffInfo.id && r.status === 'in_progress').length);
+      }
       setLoading(false);
     }, (error) => {
       console.error("Error fetching reports:", error);
@@ -75,7 +79,7 @@ export default function PetugasReportsPage() {
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, staffInfo]);
 
   useEffect(() => {
     let filtered = [];
@@ -188,17 +192,23 @@ export default function PetugasReportsPage() {
                 <CardDescription>Tinjau dan tanggapi laporan yang masuk dari warga.</CardDescription>
             </div>
              <div className="flex gap-2">
-                <Button variant={filter === 'new' ? 'default' : 'outline'} onClick={() => setFilter('new')}>Laporan Baru</Button>
-                <Button variant={filter === 'my_reports' ? 'default' : 'outline'} onClick={() => setFilter('my_reports')}>Laporan Saya</Button>
+                <Button variant={filter === 'new' ? 'default' : 'outline'} onClick={() => setFilter('new')}>
+                    Laporan Baru
+                    {newReportsCount > 0 && <Badge variant="destructive" className="ml-2">{newReportsCount}</Badge>}
+                </Button>
+                <Button variant={filter === 'my_reports' ? 'default' : 'outline'} onClick={() => setFilter('my_reports')}>
+                    Laporan Saya
+                    {myReportsCount > 0 && <Badge variant="secondary" className="ml-2">{myReportsCount}</Badge>}
+                </Button>
              </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-lg" />)
         ) : displayedReports.length > 0 ? (
             displayedReports.map((report) => (
-                <Card key={report.id}>
+                <Card key={report.id} className="rounded-lg">
                     <CardHeader>
                         <CardTitle className="text-base break-words">{report.reportText}</CardTitle>
                         <CardDescription className="flex flex-col gap-2 pt-2">
@@ -252,7 +262,7 @@ export default function PetugasReportsPage() {
     </Card>
 
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-lg">
             <DialogHeader>
                 <DialogTitle>Selesaikan & Balas Laporan</DialogTitle>
                 <CardDescription>Anda harus mengirim balasan untuk menyelesaikan laporan ini.</CardDescription>
