@@ -131,7 +131,8 @@ export default function PetugasReportsPage() {
             recipientEmail: currentReport.reporterEmail,
             replyMessage: values.replyMessage,
             originalReport: currentReport.reportText,
-            replierRole: 'Petugas'
+            replierRole: 'Petugas',
+            userId: currentReport.userId,
         });
         
         if (!result.success) throw new Error(result.message);

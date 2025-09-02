@@ -13,7 +13,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, getDoc } from 'firebase/firestore';
 
 
 const SendReplyInputSchema = z.object({
@@ -22,6 +22,7 @@ const SendReplyInputSchema = z.object({
   replyMessage: z.string().describe('The content of the reply message.'),
   originalReport: z.string().describe('The original report text for context.'),
   replierRole: z.enum(['Admin', 'Petugas']).describe("The role of the person replying."),
+  userId: z.string().optional().describe("The ID of the user who made the report."),
 });
 export type SendReplyInput = z.infer<typeof SendReplyInputSchema>;
 
@@ -41,7 +42,7 @@ const sendReplyFlow = ai.defineFlow(
     inputSchema: SendReplyInputSchema,
     outputSchema: SendReplyOutputSchema,
   },
-  async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole }) => {
+  async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole, userId }) => {
     // Check for required environment variables
     if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.error('SMTP environment variables are not set.');
@@ -50,6 +51,27 @@ const sendReplyFlow = ai.defineFlow(
         message: 'Layanan email belum dikonfigurasi oleh admin.',
       };
     }
+    
+    let recipientName = 'Warga';
+    if(userId) {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            recipientName = userSnap.data().displayName || 'Warga';
+        }
+    }
+
+    const formattedMessage = `
+        Yth, ${recipientName.toUpperCase()}
+        Warga Kelurahan Kilongan
+
+        ${replyMessage}
+
+        Terima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.
+
+        Hormat kami,
+        ${replierRole}, Tim Baronda
+    `;
     
     try {
       // 1. Send email notification
@@ -70,18 +92,15 @@ const sendReplyFlow = ai.defineFlow(
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Tanggapan dari ${replierRole}</h2>
-                <p>Berikut adalah tanggapan dari ${replierRole} terkait laporan yang Anda kirimkan:</p>
                 <div style="background-color: #f9f9f9; border-left: 4px solid #f9a825; margin: 1em 0; padding: 10px 20px;">
-                    <p style="font-style: italic;">"${replyMessage}"</p>
+                    <p style="font-style: italic; white-space: pre-wrap;">"${replyMessage}"</p>
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                 <p style="color: #666;">Sebagai referensi, berikut adalah laporan awal Anda:</p>
                 <blockquote style="border-left: 4px solid #ccc; color: #666; margin: 1em 0; padding: 10px 20px;">
                     <p>"${originalReport}"</p>
                 </blockquote>
-                <p>Terima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.</p>
-                <p>Hormat kami,<br/>Tim Baronda Siskamling</p>
-                 <div style="font-size: 12px; color: #999; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                <div style="font-size: 12px; color: #999; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                     © ${new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.
                     <p style="margin-top: 10px;">Ini adalah email yang dibuat secara otomatis. Mohon untuk tidak membalas email ini.</p>
                 </div>
@@ -102,6 +121,17 @@ const sendReplyFlow = ai.defineFlow(
           replierRole: replierRole,
           timestamp: serverTimestamp(),
       };
+      
+      // Also add the formatted message to the user's notifications collection
+      await addDoc(collection(db, 'notifications'), {
+        userId: userId,
+        title: `Tanggapan Laporan: ${originalReport.substring(0, 20)}...`,
+        message: formattedMessage,
+        read: false,
+        createdAt: serverTimestamp(),
+        link: '/profile',
+      });
+
 
       await updateDoc(reportRef, updateData);
 

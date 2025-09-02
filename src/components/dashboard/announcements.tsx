@@ -260,7 +260,7 @@ export default function Announcements() {
                                 <ReactionButton announcement={selectedAnnouncement} type="dislike" />
                             </div>
                             <DialogClose asChild>
-                               <Button type="button" size="sm">Ok</Button>
+                               <Button type="button" variant="secondary" size="sm">Ok</Button>
                             </DialogClose>
                         </DialogFooter>
                     </>

@@ -443,9 +443,9 @@ export default function Home() {
                     <DialogBody className="whitespace-pre-wrap break-words">
                        <p>{selectedNotification?.message}</p>
                     </DialogBody>
-                    <DialogFooter className="sm:justify-end">
+                    <DialogFooter>
                         <DialogClose asChild>
-                           <Button type="button" size="sm">Ok</Button>
+                           <Button type="button" variant="secondary" size="sm">Ok</Button>
                         </DialogClose>
                     </DialogFooter>
                 </>
