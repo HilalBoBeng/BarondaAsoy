@@ -118,18 +118,15 @@ export default function RecordDuesPage() {
     }
   };
   
-  const handleUserSelect = (uid: string) => {
-    form.setValue("userId", uid);
-    const user = users.find(u => u.uid === uid);
-    setSearchValue(user?.displayName || '');
+  const handleUserSelect = (user: AppUser) => {
+    form.setValue("userId", user.uid);
+    setSearchValue(user.displayName || '');
     setComboboxOpen(false);
   }
 
   const formatNumberInput = (value: string) => {
-    // Remove all non-digit characters
     const numericValue = value.replace(/[^0-9]/g, '');
     if (!numericValue) return '';
-    // Format with dots for thousands
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
 
@@ -146,19 +143,18 @@ export default function RecordDuesPage() {
                         <FormLabel>Pilih Warga</FormLabel>
                         <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                             <PopoverTrigger asChild>
-                            <FormControl>
-                                <Input
-                                  placeholder="Ketik nama warga untuk mencari..."
-                                  value={searchValue}
-                                  onChange={(e) => {
-                                      setSearchValue(e.target.value);
-                                      if(!comboboxOpen) setComboboxOpen(true);
-                                  }}
-                                  onClick={() => setComboboxOpen(true)}
-                                />
-                            </FormControl>
+                                 <FormControl>
+                                    <Input
+                                        placeholder="Ketik nama warga untuk mencari..."
+                                        value={searchValue}
+                                        onChange={(e) => {
+                                            setSearchValue(e.target.value);
+                                            if(!comboboxOpen) setComboboxOpen(true);
+                                        }}
+                                        onClick={() => setComboboxOpen(true)}
+                                    />
+                                </FormControl>
                             </PopoverTrigger>
-                            {searchValue && (
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                     <CommandList>
@@ -172,7 +168,7 @@ export default function RecordDuesPage() {
                                                 <CommandItem
                                                     value={user.displayName || user.uid}
                                                     key={user.uid}
-                                                    onSelect={() => handleUserSelect(user.uid)}
+                                                    onSelect={() => handleUserSelect(user)}
                                                 >
                                                     <Check
                                                     className={cn(
@@ -192,7 +188,6 @@ export default function RecordDuesPage() {
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
-                            )}
                         </Popover>
                         <FormMessage />
                         </FormItem>
@@ -263,3 +258,5 @@ export default function RecordDuesPage() {
     </Card>
   );
 }
+
+    

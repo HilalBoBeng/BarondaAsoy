@@ -48,6 +48,8 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     const userId = params.userId;
     if (!userId) return;
 
+    setLoading(true);
+
     const fetchUserData = async () => {
       const userRef = doc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
@@ -271,3 +273,5 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     </>
   );
 }
+
+    
