@@ -6,7 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const SendStaffAccessCodeInputSchema = z.object({
   email: z.string().email().describe('The email address of the new staff member.'),
@@ -33,13 +33,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
   },
   async ({ email, name, accessCode }) => {
     try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
-        },
-      });
+      const resend = new Resend(process.env.RESEND_API_KEY);
 
       const emailHtml = `
             <!DOCTYPE html>
@@ -58,8 +52,8 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
             </html>
           `;
 
-      await transporter.sendMail({
-        from: `"Baronda" <bobeng.icu@gmail.com>`,
+      await resend.emails.send({
+        from: 'Baronda <onboarding@resend.dev>',
         to: email,
         subject: 'Pendaftaran Petugas Baronda Disetujui',
         html: emailHtml,

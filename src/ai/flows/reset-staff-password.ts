@@ -9,7 +9,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const ResetStaffPasswordInputSchema = z.object({
   email: z.string().email().describe('The email address of the staff member.'),
@@ -34,6 +34,8 @@ const resetStaffPasswordFlow = ai.defineFlow(
   },
   async ({ email }) => {
     try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
       const staffQuery = query(collection(db, "staff"), where("email", "==", email), where("status", "==", "active"));
       const staffSnapshot = await getDocs(staffQuery);
 
@@ -44,14 +46,6 @@ const resetStaffPasswordFlow = ai.defineFlow(
       const staffData = staffSnapshot.docs[0].data();
       const staffName = staffData.name;
       const accessCode = staffData.accessCode;
-
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
-        },
-      });
 
       const emailHtml = `
             <!DOCTYPE html>
@@ -69,8 +63,8 @@ const resetStaffPasswordFlow = ai.defineFlow(
             </html>
           `;
 
-      await transporter.sendMail({
-        from: `"Baronda" <bobeng.icu@gmail.com>`,
+      await resend.emails.send({
+        from: 'Baronda <onboarding@resend.dev>',
         to: email,
         subject: 'Reset Kata Sandi Petugas - Kode Akses Anda',
         html: emailHtml,

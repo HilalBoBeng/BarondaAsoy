@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow for generating and sending a One-Time Password (OTP).
+ * @fileOverview This file defines a Genkit flow for generating and sending a One-Time Password (OTP) using Resend.
  *
  * - sendOtp - Generates, stores, and sends an OTP to a user's email.
  * - SendOtpInput - The input type for the sendOtp function.
@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -38,6 +38,8 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context = 'register' }) => {
     try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
       if (context === 'resetPassword' || context === 'staffResetPassword') {
         const collectionName = context === 'resetPassword' ? 'users' : 'staff';
         const userQuery = query(collection(db, collectionName), where('email', '==', email));
@@ -72,14 +74,6 @@ const sendOtpFlow = ai.defineFlow(
       
       await batch.commit();
 
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
-        },
-      });
-
       const emailHtml = `
             <!DOCTYPE html>
             <html lang="id">
@@ -97,8 +91,8 @@ const sendOtpFlow = ai.defineFlow(
             </html>
           `;
 
-      await transporter.sendMail({
-        from: `"Baronda" <bobeng.icu@gmail.com>`,
+      await resend.emails.send({
+        from: 'Baronda <onboarding@resend.dev>',
         to: email,
         subject: 'Kode Verifikasi Anda',
         html: emailHtml,
