@@ -2,16 +2,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, runTransaction, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
-import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight, X } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { collection, onSnapshot, query, orderBy, doc, runTransaction } from 'firebase/firestore';
+import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase/client';
 import type { Announcement } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -203,7 +196,7 @@ export default function Announcements() {
         onClick={() => setSelectedAnnouncement(announcement)}
         className="w-full p-4 border-b last:border-b-0 text-left hover:bg-muted/50 transition-colors rounded-lg"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
                 <div className="p-3 rounded-full bg-primary/10 text-primary">
                     <Megaphone className="h-5 w-5" />
