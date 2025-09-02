@@ -130,10 +130,12 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
   }
 
   const formatNumberInput = (value: string) => {
+    // Only allows numbers and removes leading zeros
     const numericValue = value.replace(/[^0-9]/g, '');
     if (!numericValue) return '';
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
+
 
   return (
     <>
@@ -272,5 +274,3 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     </>
   );
 }
-
-    

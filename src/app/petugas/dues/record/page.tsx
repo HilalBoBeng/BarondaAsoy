@@ -17,7 +17,7 @@ import { Loader2, Landmark, Check, ChevronsUpDown, ArrowLeft } from 'lucide-reac
 import type { AppUser, DuesPayment } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "cmdk";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -129,6 +129,12 @@ export default function RecordDuesPage() {
     if (!numericValue) return '';
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
+  
+  const filteredUsers = useMemo(() => {
+    if (!searchValue) return [];
+    return users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()));
+  }, [searchValue, users]);
+
 
   return (
     <Card>
@@ -158,13 +164,11 @@ export default function RecordDuesPage() {
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                     <CommandList>
-                                        {users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase())).length === 0 && (
+                                        {filteredUsers.length === 0 && searchValue && (
                                             <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
                                         )}
                                         <CommandGroup>
-                                            {users
-                                              .filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()))
-                                              .map((user) => (
+                                            {filteredUsers.map((user) => (
                                                 <CommandItem
                                                     value={user.displayName || user.uid}
                                                     key={user.uid}
@@ -178,10 +182,7 @@ export default function RecordDuesPage() {
                                                         : "opacity-0"
                                                     )}
                                                     />
-                                                    <div>
-                                                       <p>{user.displayName}</p>
-                                                       <p className="text-xs text-muted-foreground">{user.email}</p>
-                                                    </div>
+                                                    {user.displayName}
                                                 </CommandItem>
                                             ))}
                                         </CommandGroup>
@@ -258,5 +259,3 @@ export default function RecordDuesPage() {
     </Card>
   );
 }
-
-    
