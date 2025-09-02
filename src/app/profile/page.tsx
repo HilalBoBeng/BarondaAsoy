@@ -6,7 +6,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, Timestamp, orderBy, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 const profileSchema = z.object({
   displayName: z.string().optional(),
@@ -60,37 +62,16 @@ export default function ProfilePage() {
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
+        setLoading(true);
         const userDocRef = doc(db, 'users', currentUser.uid);
 
         try {
             const userDocSnap = await getDoc(userDocRef);
+            let userData;
             if (userDocSnap.exists()) {
-                const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
-                setUser(userData);
-                form.reset({
-                    displayName: userData.displayName || '',
-                    phone: userData.phone || '',
-                    address: userData.address || '',
-                });
-                if (userData.lastUpdated) {
-                    setLastUpdated((userData.lastUpdated as Timestamp).toDate());
-                }
-
-                // Fetch dues history only after user is loaded
-                const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
-                const duesSnapshot = await getDocs(duesQuery);
-                const duesData = duesSnapshot.docs.map(d => ({
-                    ...d.data(),
-                    id: d.id,
-                    paymentDate: (d.data().paymentDate as Timestamp).toDate()
-                })) as DuesPayment[];
-                
-                // Client-side sorting
-                duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
-                setDuesHistory(duesData);
-
+                userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
             } else {
-                 const newUser = {
+                 const newUserPayload = {
                     displayName: currentUser.displayName || 'Warga Baru',
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
@@ -98,16 +79,39 @@ export default function ProfilePage() {
                     phone: '',
                     address: ''
                  }
-                 await setDoc(userDocRef, newUser);
-                 setUser({ uid: currentUser.uid, ...newUser });
+                 await setDoc(userDocRef, newUserPayload);
+                 userData = { uid: currentUser.uid, ...newUserPayload } as AppUser;
             }
+            
+            setUser(userData);
+            form.reset({
+                displayName: userData.displayName || '',
+                phone: userData.phone || '',
+                address: userData.address || '',
+            });
+
+            if (userData.lastUpdated) {
+                setLastUpdated((userData.lastUpdated as Timestamp).toDate());
+            }
+
+            // Fetch dues history only after user is loaded and valid
+            const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
+            const duesSnapshot = await getDocs(duesQuery);
+            const duesData = duesSnapshot.docs.map(d => ({
+                ...d.data(),
+                id: d.id,
+                paymentDate: (d.data().paymentDate as Timestamp).toDate()
+            })) as DuesPayment[];
+            
+            duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
+            setDuesHistory(duesData);
+
         } catch (error) {
             console.error("Error fetching user profile:", error);
             toast({ variant: "destructive", title: "Gagal memuat profil." });
         } finally {
             setLoading(false);
         }
-
       } else {
         router.push('/auth/login');
         setLoading(false);
@@ -143,7 +147,7 @@ export default function ProfilePage() {
           await updateDoc(userDocRef, updateData);
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
-          setUser(prev => prev ? { ...prev, [editingField]: valueToUpdate } : null);
+          setUser(prev => prev ? { ...prev, [editingField]: valueToUpdate, lastUpdated: new Date() } : null);
           setIsEditDialogOpen(false);
           setEditingField(null);
       } catch (error) {
@@ -164,43 +168,31 @@ export default function ProfilePage() {
     address: "Alamat (RT/RW)"
   };
 
-  const fieldIcons: Record<FieldName | 'email', React.ElementType> = {
+  const fieldIcons: Record<keyof ProfileFormValues | 'email', React.ElementType> = {
     displayName: User,
     email: Mail,
     phone: Phone,
     address: MapPin,
   };
 
-  const renderDataRow = (field: FieldName, value: string | undefined | null) => {
+  const renderDataRow = (field: 'phone' | 'address', value: string | undefined | null) => {
     const Icon = fieldIcons[field];
     return (
-        <div className="flex items-center gap-4">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-                <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
-                <p className="font-medium">{value || 'Belum diisi'}</p>
+        <div className="flex items-start justify-between gap-4 p-4 border-b last:border-b-0">
+            <div className="flex items-center gap-4">
+                <Icon className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
+                    <p className="font-medium">{value || 'Belum diisi'}</p>
+                </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(field)} disabled={!canEdit}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)} disabled={!canEdit}>
                 <Pencil className="h-4 w-4" />
             </Button>
         </div>
     );
   };
   
-  const EmailRow = ({ email }: { email: string | null | undefined }) => {
-    const Icon = fieldIcons['email'];
-    return (
-        <div className="flex items-center gap-4">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="font-medium">{email}</p>
-            </div>
-        </div>
-    );
-  };
-
-
   return (
      <div className="flex min-h-screen flex-col bg-muted/40">
        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
@@ -227,38 +219,43 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
-                <Card className="overflow-hidden">
-                    <CardHeader className="bg-muted/30 p-4">
-                        <CardTitle className="text-lg">Profil Saya</CardTitle>
+               <Card className="overflow-hidden">
+                    <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Avatar className="h-20 w-20 border-4 border-background/50">
+                                    <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
+                                    <AvatarFallback className="text-3xl bg-background text-primary">
+                                        {user?.displayName?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                     <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{user?.displayName || 'Pengguna'}</CardTitle>
+                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick('displayName')} disabled={!canEdit}>
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <CardDescription className="text-primary-foreground/80 truncate">{user?.email}</CardDescription>
+                            </div>
+                        </div>
                     </CardHeader>
-                     <CardContent className="p-4 md:p-6 space-y-4">
-                        <div className="space-y-4">
-                            {renderDataRow("displayName", user?.displayName)}
-                            <EmailRow email={user?.email} />
+                    <CardContent className="p-0">
+                        <div className="divide-y">
                             {renderDataRow("phone", user?.phone)}
                             {renderDataRow("address", user?.address)}
                         </div>
-
-                         <div className="flex justify-between items-center p-3 rounded-md border mt-4">
-                            <span className="text-sm font-medium text-muted-foreground">Bergabung Sejak</span>
-                             <span className="text-sm font-semibold">{user?.createdAt && user.createdAt instanceof Timestamp ? format(user.createdAt.toDate(), "d MMMM yyyy", { locale: id }) : 'N/A'}</span>
-                        </div>
-                         <div className="flex justify-between items-center p-3 rounded-md border">
-                            <span className="text-sm font-medium text-muted-foreground">Status Akun</span>
-                            <Badge variant={user?.isBlocked ? "destructive" : "secondary"} className={!user?.isBlocked ? "bg-green-100 text-green-800" : ""}>
-                                 <CheckCircle className="mr-1 h-3 w-3" />
-                                 {user?.isBlocked ? 'Diblokir' : 'Aktif'}
-                            </Badge>
-                        </div>
-                        
-                        {!canEdit && (
-                            <Alert>
-                                <Info className="h-4 w-4" />
-                                <AlertTitle>Profil Dikunci</AlertTitle>
-                                <AlertDescription>
-                                Anda dapat mengubah data diri Anda lagi setelah 7 hari dari pembaruan terakhir.
-                                </AlertDescription>
-                            </Alert>
+                         {!canEdit && (
+                            <div className="p-4">
+                                <Alert>
+                                    <Info className="h-4 w-4" />
+                                    <AlertTitle>Profil Dikunci</AlertTitle>
+                                    <AlertDescription>
+                                    Anda dapat mengubah data diri Anda lagi setelah 7 hari dari pembaruan terakhir.
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
