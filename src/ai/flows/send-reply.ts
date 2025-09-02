@@ -44,7 +44,7 @@ const sendReplyFlow = ai.defineFlow(
   },
   async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole, userId }) => {
     // Check for required environment variables
-    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.SMTP_SENDER_NAME || !process.env.SMTP_SENDER_ADDRESS) {
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.SMTP_SENDER_NAME) {
       console.error('SMTP environment variables are not set.');
       return {
         success: false,
@@ -76,7 +76,7 @@ const sendReplyFlow = ai.defineFlow(
       });
 
       const mailOptions = {
-          from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
+          from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_USER}>`,
           to: recipientEmail,
           subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
           html: `
