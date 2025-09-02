@@ -25,11 +25,12 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, KeyRound, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, serverTimestamp, type Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
-
+import { addDays, isBefore, formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const accessCodeSchema = z.object({
   currentAccessCode: z.string().min(1, "Kode akses saat ini diperlukan."),
@@ -46,15 +47,27 @@ type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 export default function StaffSettingsPage() {
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string, email: string } | null>(null);
-  const [passwordChanged, setPasswordChanged] = useState(false);
+  const [lastCodeChange, setLastCodeChange] = useState<Date | null>(null);
+  const [codeChangedThisSession, setCodeChangedThisSession] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { setTheme, theme } = useTheme();
+
+  const canChangeCode = !lastCodeChange || isBefore(lastCodeChange, addDays(new Date(), -7));
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info.id) {
       setStaffInfo(info);
+      const staffRef = doc(db, 'staff', info.id);
+      getDoc(staffRef).then(docSnap => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.lastCodeChangeTimestamp) {
+            setLastCodeChange((data.lastCodeChangeTimestamp as Timestamp).toDate());
+          }
+        }
+      });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Informasi petugas tidak ditemukan.' });
       router.push('/auth/staff-login');
@@ -79,13 +92,19 @@ export default function StaffSettingsPage() {
             return;
         }
 
-        await updateDoc(staffRef, { accessCode: data.newAccessCode.toUpperCase() });
+        await updateDoc(staffRef, { 
+            accessCode: data.newAccessCode.toUpperCase(),
+            lastCodeChangeTimestamp: serverTimestamp(),
+        });
+
         toast({
             title: "Berhasil",
             description: "Kode akses Anda telah diubah.",
         });
-        setPasswordChanged(true);
-        accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
+        
+        setCodeChangedThisSession(true);
+        setLastCodeChange(new Date());
+        accessCodeForm.reset();
     } catch (error) {
         toast({
             variant: "destructive",
@@ -97,6 +116,7 @@ export default function StaffSettingsPage() {
     }
   };
   
+  const showForm = canChangeCode && !codeChangedThisSession;
 
   return (
     <Card>
@@ -111,51 +131,59 @@ export default function StaffSettingsPage() {
         <Form {...accessCodeForm}>
           <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="max-w-md space-y-4">
             <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" /> Ubah Kode Akses</h3>
-            <FormField
+             <FormField
               control={accessCodeForm.control}
               name="currentAccessCode"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Kode Akses Saat Ini</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} value={passwordChanged ? '********' : field.value} />
+                    <Input type="password" {...field} readOnly={!showForm} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={accessCodeForm.control}
-              name="newAccessCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kode Akses Baru</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={accessCodeForm.control}
-              name="confirmNewAccessCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Konfirmasi Kode Akses Baru</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {!passwordChanged && (
+
+            {showForm ? (
+              <>
+                <FormField
+                  control={accessCodeForm.control}
+                  name="newAccessCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kode Akses Baru</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={accessCodeForm.control}
+                  name="confirmNewAccessCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Konfirmasi Kode Akses Baru</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button type="submit" disabled={isSubmittingCode || !staffInfo}>
-                {isSubmittingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Kode Akses Baru
+                  {isSubmittingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan Kode Akses Baru
                 </Button>
+              </>
+            ) : (
+               <p className="text-sm text-muted-foreground">
+                {lastCodeChange && `Anda baru bisa mengubah kode akses lagi ${formatDistanceToNow(addDays(lastCodeChange, 7), { addSuffix: true, locale: id })}.`}
+               </p>
             )}
+
           </form>
         </Form>
         

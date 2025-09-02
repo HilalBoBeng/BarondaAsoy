@@ -21,12 +21,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { addDays, isBefore } from 'date-fns';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Kata sandi saat ini diperlukan."),
@@ -53,13 +56,16 @@ export default function AdminSettingsPage() {
 
   const onSubmit = async (data: PasswordFormValues) => {
     setIsSubmitting(true);
+    // This is a simulation. In a real app, you'd call a backend function.
     if (data.currentPassword === "Admin123") {
+      // In a real app, you would update the password in your database.
+      // For this simulation, we'll just show success and update the UI state.
       console.log("Admin password changed to:", data.newPassword);
       toast({
         title: "Berhasil",
         description: "Kata sandi admin berhasil diubah (simulasi).",
       });
-      setPasswordChanged(true);
+      setPasswordChanged(true); // This state will now hide the form fields
     } else {
       toast({
         variant: "destructive",
@@ -80,11 +86,13 @@ export default function AdminSettingsPage() {
       </CardHeader>
       <CardContent className="space-y-8">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md space-y-6">
-            <h3 className="text-lg font-medium">Ubah Kata Sandi Admin</h3>
-            <p className="text-sm text-muted-foreground">
-                Kata sandi admin saat ini adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
-            </p>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium">Ubah Kata Sandi Admin</h3>
+                <p className="text-sm text-muted-foreground">
+                    Kata sandi admin default adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
+                </p>
+            </div>
             <FormField
               control={form.control}
               name="currentPassword"
@@ -92,43 +100,47 @@ export default function AdminSettingsPage() {
                 <FormItem>
                   <FormLabel>Kata Sandi Saat Ini</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} value={passwordChanged ? '********' : field.value} />
+                    <Input type="password" {...field} readOnly={passwordChanged} value={passwordChanged ? '********' : field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="newPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kata Sandi Baru</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmNewPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {!passwordChanged && (
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Simpan Perubahan
-                </Button>
+            {!passwordChanged ? (
+                <>
+                    <FormField
+                    control={form.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Kata Sandi Baru</FormLabel>
+                        <FormControl>
+                            <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="confirmNewPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
+                        <FormControl>
+                            <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Simpan Perubahan
+                    </Button>
+                </>
+            ) : (
+                 <p className="text-sm text-green-600">Kata sandi telah berhasil diubah.</p>
             )}
           </form>
         </Form>

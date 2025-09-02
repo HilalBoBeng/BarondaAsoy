@@ -60,6 +60,9 @@ export interface AppUser {
   phone?: string;
   address?: string;
   isBlocked?: boolean;
+  lastUpdated_displayName?: Timestamp;
+  lastUpdated_phone?: Timestamp;
+  lastUpdated_address?: Timestamp;
 }
 
 export interface Staff {
@@ -72,6 +75,7 @@ export interface Staff {
   accessCode: string;
   status: 'pending' | 'active' | 'rejected';
   points?: number;
+  lastCodeChangeTimestamp?: Timestamp;
 }
 
 export interface Notification {
@@ -123,7 +127,6 @@ export interface DuesPayment {
     month: string;
     year: string;
     paymentDate: Date;
-    notes?: string;
     recordedBy: string; // Staff name
     recordedById: string; // Staff ID
 }
