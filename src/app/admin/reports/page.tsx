@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Trash, CheckCircle, AlertTriangle, User, Calendar as CalendarIcon, UserCheck, X } from 'lucide-react';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter, DialogBody } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 

@@ -68,6 +68,14 @@ const DialogHeader = ({
 )
 DialogHeader.displayName = "DialogHeader"
 
+const DialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("flex-1 space-y-4", className)} {...props} />
+)
+DialogBody.displayName = "DialogBody"
+
 const DialogFooter = ({
   className,
   ...props
@@ -117,9 +125,8 @@ export {
   DialogTrigger,
   DialogContent,
   DialogHeader,
+  DialogBody,
   DialogFooter,
   DialogTitle,
   DialogDescription,
 }
-
-    
