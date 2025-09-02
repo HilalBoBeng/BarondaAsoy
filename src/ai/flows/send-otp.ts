@@ -180,7 +180,7 @@ const sendOtpFlow = ai.defineFlow(
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return {
         success: false,
-        message: `Failed to send OTP: ${errorMessage}`,
+        message: `Gagal mengirim OTP: ${errorMessage}`,
       };
     }
   }
