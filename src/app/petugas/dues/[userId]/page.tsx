@@ -11,7 +11,7 @@ import type { DuesPayment, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Loader2, Edit, Trash, ArrowLeft } from 'lucide-react';
+import { Loader2, Edit, Trash, ArrowLeft, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -32,13 +32,15 @@ const editDuesSchema = z.object({
 type EditDuesFormValues = z.infer<typeof editDuesSchema>;
 
 export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
+  const { userId } = params;
   const [user, setUser] = useState<AppUser | null>(null);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentDue, setCurrentDue] = useState<DuesPayment | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
-  const { userId } = params;
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
 
   const { toast } = useToast();
   const editForm = useForm<EditDuesFormValues>({
@@ -98,6 +100,11 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     });
     setIsEditDialogOpen(true);
   };
+  
+  const handleOpenNoteDialog = (note: string) => {
+    setSelectedNote(note);
+    setIsNoteDialogOpen(true);
+  }
 
   const handleEditSubmit = async (values: EditDuesFormValues) => {
     if (!currentDue) return;
@@ -181,7 +188,17 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                       </TableCell>
                       <TableCell>{formatCurrency(due.amount)}</TableCell>
-                      <TableCell className="max-w-xs truncate">{due.notes || '-'}</TableCell>
+                       <TableCell>
+                         <Button
+                            variant="outline"
+                            size="icon"
+                            disabled={!due.notes}
+                            onClick={() => due.notes && handleOpenNoteDialog(due.notes)}
+                            >
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">Lihat Catatan</span>
+                         </Button>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           <Button variant="outline" size="icon" onClick={() => handleOpenEditDialog(due)}>
@@ -274,6 +291,20 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Isi Catatan</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 whitespace-pre-wrap">
+            {selectedNote}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsNoteDialogOpen(false)}>Tutup</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
