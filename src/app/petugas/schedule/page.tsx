@@ -30,15 +30,14 @@ type ReasonFormValues = z.infer<typeof reasonSchema>;
 type AbsenceType = 'Izin' | 'Sakit';
 
 const statusConfig: Record<string, {
-    variant: 'default' | 'secondary' | 'outline' | 'destructive';
+    className: string;
     label: string;
-    className?: string;
 }> = {
-  'Pending': { variant: 'destructive', label: 'Menunggu Konfirmasi' },
-  'In Progress': { variant: 'default', label: 'Sedang Bertugas' },
-  'Completed': { variant: 'secondary', className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
-  'Izin': { variant: 'destructive', label: 'Izin' },
-  'Sakit': { variant: 'destructive', label: 'Sakit' },
+  'Pending': { className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400', label: 'Menunggu Konfirmasi' },
+  'In Progress': { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400', label: 'Sedang Bertugas' },
+  'Completed': { className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
+  'Izin': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Izin' },
+  'Sakit': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Sakit' },
 };
 
 
@@ -138,7 +137,7 @@ export default function PetugasSchedulePage() {
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" /> {area}
             </CardTitle>
-            <Badge variant={config.variant} className={cn(config.className, "text-xs")}>{config.label}</Badge>
+            <Badge variant={'secondary'} className={cn(config.className, "text-xs")}>{config.label}</Badge>
           </div>
            <CardDescription className="flex items-center gap-2 pt-1">
              <Calendar className="h-4 w-4" />

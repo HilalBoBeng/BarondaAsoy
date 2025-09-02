@@ -165,15 +165,15 @@ export default function ScheduleAdminPage() {
 
   const StatusBadge = ({ status }: { status: ScheduleEntry['status'] }) => {
     const config = {
-        'Pending': { variant: 'destructive', label: 'Menunggu' },
-        'In Progress': { variant: 'default', label: 'Bertugas' },
-        'Completed': { variant: 'secondary', label: 'Selesai', className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400' },
-        'Izin': { variant: 'destructive', label: 'Izin' },
-        'Sakit': { variant: 'destructive', label: 'Sakit' },
+        'Pending': { className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400', label: 'Menunggu' },
+        'In Progress': { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400', label: 'Bertugas' },
+        'Completed': { className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
+        'Izin': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Izin' },
+        'Sakit': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Sakit' },
     } as const;
 
-    const { variant, label, className } = config[status] || config['Pending'];
-    return <Badge variant={variant} className={className}>{label}</Badge>
+    const { className, label } = config[status] || config['Pending'];
+    return <Badge variant={'secondary'} className={className}>{label}</Badge>
   };
   
   const filteredSchedule = schedule.filter(item => {

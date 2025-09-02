@@ -46,6 +46,10 @@ export default function EmergencyContacts() {
     <div>
       {loading ? (
         renderSkeleton()
+        ) : contacts.length === 0 ? (
+        <div className="text-center text-muted-foreground py-4">
+          Tidak ada kontak darurat yang ditambahkan.
+        </div>
         ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {contacts.map((contact) => (
