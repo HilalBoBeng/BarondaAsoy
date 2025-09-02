@@ -23,13 +23,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Moon, Sun } from "lucide-react";
+import { Loader2, Moon, Sun, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { addDays, isBefore } from 'date-fns';
+import { addDays, isBefore, subDays } from 'date-fns';
+import { Timestamp } from "firebase/firestore";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Kata sandi saat ini diperlukan."),
@@ -45,13 +46,28 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export default function AdminSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [passwordChanged, setPasswordChanged] = useState(false);
+  const [lastPasswordChange, setLastPasswordChange] = useState<Date | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { setTheme, theme } = useTheme();
 
+  // This is a simulation. In a real app, you'd fetch this from the database.
+  useEffect(() => {
+    const lastChangeStr = localStorage.getItem('adminPasswordLastChange');
+    if (lastChangeStr) {
+      setLastPasswordChange(new Date(lastChangeStr));
+    }
+  }, []);
+
+  const canChangePassword = !lastPasswordChange || isBefore(lastPasswordChange, subDays(new Date(), 7));
+
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
+    defaultValues: {
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: ''
+    }
   });
 
   const onSubmit = async (data: PasswordFormValues) => {
@@ -65,7 +81,10 @@ export default function AdminSettingsPage() {
         title: "Berhasil",
         description: "Kata sandi admin berhasil diubah (simulasi).",
       });
-      setPasswordChanged(true); // This state will now hide the form fields
+      const now = new Date();
+      setLastPasswordChange(now);
+      localStorage.setItem('adminPasswordLastChange', now.toISOString());
+      form.reset();
     } else {
       toast({
         variant: "destructive",
@@ -88,26 +107,26 @@ export default function AdminSettingsPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div>
-                <h3 className="text-lg font-medium">Ubah Kata Sandi Admin</h3>
+                <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" />Ubah Kata Sandi Admin</h3>
                 <p className="text-sm text-muted-foreground">
                     Kata sandi admin default adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
                 </p>
             </div>
-            <FormField
-              control={form.control}
-              name="currentPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} readOnly={passwordChanged} value={passwordChanged ? '********' : field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {!passwordChanged ? (
+            {canChangePassword ? (
                 <>
+                    <FormField
+                    control={form.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Kata Sandi Saat Ini</FormLabel>
+                        <FormControl>
+                            <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
                     <FormField
                     control={form.control}
                     name="newPassword"
@@ -140,7 +159,24 @@ export default function AdminSettingsPage() {
                     </Button>
                 </>
             ) : (
-                 <p className="text-sm text-green-600">Kata sandi telah berhasil diubah.</p>
+                <>
+                    <FormField
+                        control={form.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Kata Sandi Saat Ini</FormLabel>
+                            <FormControl>
+                                <Input type="password" {...field} readOnly value={'********'} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                        Anda baru bisa mengubah kata sandi lagi {lastPasswordChange ? formatDistanceToNow(addDays(lastPasswordChange, 7), { addSuffix: true, locale: id }) : 'dalam 7 hari'}.
+                    </p>
+                </>
             )}
           </form>
         </Form>

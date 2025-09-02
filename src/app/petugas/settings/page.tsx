@@ -29,7 +29,7 @@ import { doc, updateDoc, getDoc, serverTimestamp, type Timestamp } from 'firebas
 import { db } from '@/lib/firebase/client';
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
-import { addDays, isBefore, formatDistanceToNow } from 'date-fns';
+import { addDays, isBefore, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 const accessCodeSchema = z.object({
@@ -48,12 +48,9 @@ export default function StaffSettingsPage() {
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string, email: string } | null>(null);
   const [lastCodeChange, setLastCodeChange] = useState<Date | null>(null);
-  const [codeChangedThisSession, setCodeChangedThisSession] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { setTheme, theme } = useTheme();
-
-  const canChangeCode = !lastCodeChange || isBefore(lastCodeChange, addDays(new Date(), -7));
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -73,6 +70,8 @@ export default function StaffSettingsPage() {
       router.push('/auth/staff-login');
     }
   }, [router, toast]);
+
+  const canChangeCode = !lastCodeChange || isBefore(lastCodeChange, subDays(new Date(), 7));
 
   const accessCodeForm = useForm<AccessCodeFormValues>({
     resolver: zodResolver(accessCodeSchema),
@@ -102,8 +101,12 @@ export default function StaffSettingsPage() {
             description: "Kode akses Anda telah diubah.",
         });
         
-        setCodeChangedThisSession(true);
-        setLastCodeChange(new Date());
+        // Fetch the new timestamp to update the state accurately
+        const updatedStaffDoc = await getDoc(staffRef);
+        if (updatedStaffDoc.exists() && updatedStaffDoc.data().lastCodeChangeTimestamp) {
+          setLastCodeChange((updatedStaffDoc.data().lastCodeChangeTimestamp as Timestamp).toDate());
+        }
+        
         accessCodeForm.reset();
     } catch (error) {
         toast({
@@ -116,8 +119,6 @@ export default function StaffSettingsPage() {
     }
   };
   
-  const showForm = canChangeCode && !codeChangedThisSession;
-
   return (
     <Card>
       <CardHeader>
@@ -131,22 +132,22 @@ export default function StaffSettingsPage() {
         <Form {...accessCodeForm}>
           <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="max-w-md space-y-4">
             <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" /> Ubah Kode Akses</h3>
-             <FormField
-              control={accessCodeForm.control}
-              name="currentAccessCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kode Akses Saat Ini</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} readOnly={!showForm} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {showForm ? (
+            
+            {canChangeCode ? (
               <>
+                <FormField
+                  control={accessCodeForm.control}
+                  name="currentAccessCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kode Akses Saat Ini</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={accessCodeForm.control}
                   name="newAccessCode"
@@ -179,11 +180,25 @@ export default function StaffSettingsPage() {
                 </Button>
               </>
             ) : (
-               <p className="text-sm text-muted-foreground">
-                {lastCodeChange && `Anda baru bisa mengubah kode akses lagi ${formatDistanceToNow(addDays(lastCodeChange, 7), { addSuffix: true, locale: id })}.`}
-               </p>
+              <>
+                 <FormField
+                    control={accessCodeForm.control}
+                    name="currentAccessCode"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Kode Akses Saat Ini</FormLabel>
+                        <FormControl>
+                            <Input type="password" {...field} readOnly value="********" />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+                 <p className="text-sm text-muted-foreground">
+                    Anda baru bisa mengubah kode akses lagi {lastCodeChange ? formatDistanceToNow(addDays(lastCodeChange, 7), { addSuffix: true, locale: id }) : 'dalam 7 hari'}.
+                </p>
+              </>
             )}
-
           </form>
         </Form>
         
