@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
@@ -111,6 +111,21 @@ export default function AnnouncementsPetugasPage() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (announcements.length === 0) return;
+    const batch = writeBatch(db);
+    announcements.forEach(ann => {
+      const docRef = doc(db, 'announcements', ann.id);
+      batch.delete(docRef);
+    });
+    try {
+      await batch.commit();
+      toast({ title: 'Berhasil', description: 'Semua pengumuman telah dihapus.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus semua pengumuman.' });
+    }
+  }
+
   const renderActions = (ann: Announcement) => (
     <div className="flex gap-2 justify-end">
       <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)} disabled={isSubmitting || !!isDeleting}>
@@ -142,15 +157,36 @@ export default function AnnouncementsPetugasPage() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div className="flex-grow">
           <CardTitle>Manajemen Pengumuman</CardTitle>
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
         </div>
-        <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Buat Pengumuman
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+            <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Buat
+            </Button>
+            {announcements.length > 0 && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon">
+                            <Trash className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus Semua Pengumuman?</AlertDialogTitle>
+                            <AlertDialogDescription>Tindakan ini akan menghapus semua {announcements.length} pengumuman.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteAll}>Ya, Hapus Semua</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </div>
       </CardHeader>
       <CardContent>
         {/* Mobile View */}
@@ -274,5 +310,3 @@ export default function AnnouncementsPetugasPage() {
     </Card>
   );
 }
-
-    

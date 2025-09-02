@@ -196,6 +196,21 @@ export default function NotificationsPetugasPage() {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal menghapus notifikasi." });
     }
   }
+
+  const handleDeleteAll = async () => {
+    if (notifications.length === 0) return;
+    const batch = writeBatch(db);
+    notifications.forEach(notif => {
+      const docRef = doc(db, 'notifications', notif.id);
+      batch.delete(docRef);
+    });
+    try {
+      await batch.commit();
+      toast({ title: 'Berhasil', description: 'Semua notifikasi telah dihapus.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus semua notifikasi.' });
+    }
+  }
   
   type Recipient = AppUser | Staff;
   type RecipientType = 'users' | 'staff';
@@ -257,14 +272,35 @@ export default function NotificationsPetugasPage() {
   return (
     <>
     <Card>
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div className='flex-grow'>
             <CardTitle>Riwayat Pemberitahuan</CardTitle>
             <CardDescription>Kelola pemberitahuan yang telah dikirim ke warga.</CardDescription>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} disabled={loading}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Kirim Pemberitahuan
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button onClick={() => setIsDialogOpen(true)} disabled={loading}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Kirim
+          </Button>
+           {notifications.length > 0 && (
+             <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Hapus Semua Notifikasi?</AlertDialogTitle>
+                  <AlertDialogDescription>Tindakan ini akan menghapus semua {notifications.length} notifikasi secara permanen.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll}>Ya, Hapus Semua</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
           <div className="rounded-lg border">
