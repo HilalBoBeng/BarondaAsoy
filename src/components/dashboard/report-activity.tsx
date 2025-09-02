@@ -55,6 +55,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
   const [triageResult, setTriageResult] = useState<TriageReportOutput | null>(null);
   const { toast } = useToast();
   const [currentPosition, setCurrentPosition] = useState<{lat: number, lng: number} | null>(null);
+  const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -64,6 +65,12 @@ export default function ReportActivity({ user }: { user: User | null }) {
       visibility: 'public',
     },
   });
+  
+  useEffect(() => {
+    // This is a workaround to get the env var on the client.
+    // In a real app, you might use a different approach.
+    setMapsApiKey(process.env.NEXT_PUBLIC_MAPS_API_KEY || null);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -72,22 +79,24 @@ export default function ReportActivity({ user }: { user: User | null }) {
   }, [user, form]);
   
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const pos = { lat: latitude, lng: longitude };
-        setCurrentPosition(pos);
-        form.setValue('location', pos);
-      },
-      (error) => {
-        console.error("Error getting location", error);
-        toast({
-            variant: "destructive",
-            title: "Gagal Mendapatkan Lokasi",
-            description: "Pastikan Anda mengizinkan akses lokasi di browser Anda.",
-        });
-      }
-    );
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const pos = { lat: latitude, lng: longitude };
+          setCurrentPosition(pos);
+          form.setValue('location', pos);
+        },
+        (error) => {
+          console.error("Error getting location", error);
+          toast({
+              variant: "destructive",
+              title: "Gagal Mendapatkan Lokasi",
+              description: "Pastikan Anda mengizinkan akses lokasi di browser Anda.",
+          });
+        }
+      );
+    }
   }, [form, toast]);
 
 
@@ -129,8 +138,6 @@ export default function ReportActivity({ user }: { user: User | null }) {
     }
   };
   
-  const mapsApiKey = process.env.NEXT_PUBLIC_MAPS_API_KEY;
-
   if (!user) {
     return (
         <div className="text-center p-8 border-2 border-dashed rounded-lg">
@@ -148,20 +155,6 @@ export default function ReportActivity({ user }: { user: User | null }) {
     );
   }
 
-  if (!mapsApiKey) {
-    return (
-        <Card className="w-full">
-            <CardHeader>
-                <CardTitle className="text-destructive">Konfigurasi Peta Diperlukan</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p>Fitur peta tidak dapat dimuat. Admin perlu mengkonfigurasi Google Maps API Key.</p>
-            </CardContent>
-        </Card>
-    )
-  }
-
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -172,20 +165,31 @@ export default function ReportActivity({ user }: { user: User | null }) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
-            <div className="h-48 w-full rounded-md overflow-hidden border">
-                <APIProvider apiKey={mapsApiKey}>
-                    <Map
-                        defaultCenter={{ lat: -1.48, lng: 119.55 }} // Default to Indonesia
-                        center={currentPosition || undefined}
-                        defaultZoom={15}
-                        gestureHandling={'greedy'}
-                        disableDefaultUI={true}
-                        mapId="baronda-map"
-                    >
-                        {currentPosition && <AdvancedMarker position={currentPosition} />}
-                    </Map>
-                </APIProvider>
-             </div>
+            {mapsApiKey ? (
+                 <div className="h-48 w-full rounded-md overflow-hidden border">
+                    <APIProvider apiKey={mapsApiKey}>
+                        <Map
+                            defaultCenter={{ lat: -1.48, lng: 119.55 }} // Default to Indonesia
+                            center={currentPosition || undefined}
+                            defaultZoom={15}
+                            gestureHandling={'greedy'}
+                            disableDefaultUI={true}
+                            mapId="baronda-map"
+                        >
+                            {currentPosition && <AdvancedMarker position={currentPosition} />}
+                        </Map>
+                    </APIProvider>
+                 </div>
+             ) : (
+                <Card className="w-full bg-destructive/10 border-destructive">
+                    <CardHeader>
+                        <CardTitle className="text-destructive text-base">Konfigurasi Peta Diperlukan</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-destructive/80">Fitur peta tidak dapat dimuat. Admin perlu mengkonfigurasi Google Maps API Key.</p>
+                    </CardContent>
+                </Card>
+             )}
              <FormField
                 control={form.control}
                 name="reporterName"

@@ -200,12 +200,12 @@ export default function Home() {
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-full object-cover"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
             />
             <div className="flex flex-col">
-              <span className="text-lg font-bold text-primary leading-tight">Baronda</span>
+              <span className="text-base font-bold text-primary leading-tight">Baronda</span>
               <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
             </div>
           </Link>
@@ -238,7 +238,7 @@ export default function Home() {
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
-                                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 mr-1" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
+                                    <Button type="button" variant="ghost" size="icon" className="h-full w-auto p-2 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
                                         <Trash className="h-4 w-4" />
                                         <span className="sr-only">Hapus</span>
                                     </Button>
@@ -361,7 +361,7 @@ export default function Home() {
                             <CardTitle className="text-lg">Riwayat Laporan Komunitas</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ReportHistory />
+                            <ReportHistory user={user} showDeleteButton={true} />
                         </CardContent>
                     </Card>
                 </div>
@@ -435,7 +435,7 @@ export default function Home() {
                         <DialogTitle>Pemberitahuan</DialogTitle>
                     </DialogHeader>
                     <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
-                       <p>{selectedNotification?.message}</p>
+                       <p className="text-foreground">{selectedNotification?.message}</p>
                     </div>
                     <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t">
                         <DialogClose asChild>

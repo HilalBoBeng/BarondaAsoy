@@ -153,7 +153,7 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-            <div className="flex items-center gap-3 text-right">
+            <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
                   <span className="text-base font-bold text-primary leading-tight">Baronda</span>
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
@@ -161,9 +161,9 @@ export default function ProfilePage() {
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 
-                width={40} 
-                height={40}
-                className="h-10 w-10 rounded-full object-cover"
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
               />
           </div>
        </header>
