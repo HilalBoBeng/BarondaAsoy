@@ -45,6 +45,7 @@ export default function ProfilePage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<FieldName | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [canEdit, setCanEdit] = useState(true);
 
   const { toast } = useToast();
   const auth = getAuth(app);
@@ -91,7 +92,11 @@ export default function ProfilePage() {
             });
 
             if (userData.lastUpdated) {
-                setLastUpdated((userData.lastUpdated as Timestamp).toDate());
+                const lastUpdatedDate = (userData.lastUpdated as Timestamp).toDate();
+                setLastUpdated(lastUpdatedDate);
+                setCanEdit(isBefore(lastUpdatedDate, addDays(new Date(), -7)));
+            } else {
+                 setCanEdit(true);
             }
 
             const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
@@ -119,7 +124,6 @@ export default function ProfilePage() {
     return () => unsubscribeAuth();
   }, [auth, router, toast, form]);
   
-  const canEdit = !lastUpdated || isBefore(lastUpdated, addDays(new Date(), -7));
 
   const handleEditClick = (field: FieldName) => {
     if (!canEdit) {
@@ -146,9 +150,11 @@ export default function ProfilePage() {
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           
-          const updatedUser = { ...user, [editingField]: valueToUpdate, lastUpdated: new Date() };
+          const newLastUpdatedDate = new Date();
+          const updatedUser = { ...user, [editingField]: valueToUpdate, lastUpdated: newLastUpdatedDate };
           setUser(updatedUser);
-          setLastUpdated(new Date());
+          setLastUpdated(newLastUpdatedDate);
+          setCanEdit(false);
 
           setIsEditDialogOpen(false);
           setEditingField(null);
