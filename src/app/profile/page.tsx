@@ -6,7 +6,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -58,59 +58,55 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         const userDocRef = doc(db, 'users', currentUser.uid);
 
-        const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
-          if (userDocSnap.exists()) {
-            const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
-            setUser(userData);
-            form.reset({
-              displayName: userData.displayName || '',
-              phone: userData.phone || '',
-              address: userData.address || '',
-            });
-            if(userData.lastUpdated) {
-                setLastUpdated((userData.lastUpdated as Timestamp).toDate());
-            }
+        try {
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
+                setUser(userData);
+                form.reset({
+                    displayName: userData.displayName || '',
+                    phone: userData.phone || '',
+                    address: userData.address || '',
+                });
+                if (userData.lastUpdated) {
+                    setLastUpdated((userData.lastUpdated as Timestamp).toDate());
+                }
 
-            // Fetch dues history only after user is loaded
-            const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
-            const unsubDues = onSnapshot(duesQuery, (snapshot) => {
-                const duesData = snapshot.docs.map(d => ({
+                // Fetch dues history only after user is loaded
+                const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
+                const duesSnapshot = await getDocs(duesQuery);
+                const duesData = duesSnapshot.docs.map(d => ({
                     ...d.data(),
                     id: d.id,
                     paymentDate: (d.data().paymentDate as Timestamp).toDate()
                 })) as DuesPayment[];
-                // Client-side sorting to avoid composite index
+                
+                // Client-side sorting
                 duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
                 setDuesHistory(duesData);
-            }, (error) => {
-                console.error("Error fetching dues:", error);
-                toast({ variant: "destructive", title: "Gagal memuat iuran." });
-            });
-            return () => unsubDues();
 
-          } else {
-             // Create user document if it doesn't exist
-             const newUser = {
-                displayName: currentUser.displayName || 'Warga Baru',
-                email: currentUser.email,
-                createdAt: serverTimestamp(),
-                lastUpdated: serverTimestamp(),
-                phone: '',
-                address: ''
-             }
-             setDoc(userDocRef, newUser);
-          }
-          setLoading(false);
-        }, () => {
-          setLoading(false);
-          toast({ variant: "destructive", title: "Gagal memuat profil." });
-        });
-        
-        return () => unsubscribeUser();
+            } else {
+                 const newUser = {
+                    displayName: currentUser.displayName || 'Warga Baru',
+                    email: currentUser.email,
+                    createdAt: serverTimestamp(),
+                    lastUpdated: serverTimestamp(),
+                    phone: '',
+                    address: ''
+                 }
+                 await setDoc(userDocRef, newUser);
+                 setUser({ uid: currentUser.uid, ...newUser });
+            }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            toast({ variant: "destructive", title: "Gagal memuat profil." });
+        } finally {
+            setLoading(false);
+        }
 
       } else {
         router.push('/auth/login');
@@ -147,6 +143,7 @@ export default function ProfilePage() {
           await updateDoc(userDocRef, updateData);
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
+          setUser(prev => prev ? { ...prev, [editingField]: valueToUpdate } : null);
           setIsEditDialogOpen(false);
           setEditingField(null);
       } catch (error) {
@@ -230,7 +227,7 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
-                 <Card className="overflow-hidden">
+                <Card className="overflow-hidden">
                     <CardHeader className="bg-muted/30 p-4">
                         <CardTitle className="text-lg">Profil Saya</CardTitle>
                     </CardHeader>
@@ -352,3 +349,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
