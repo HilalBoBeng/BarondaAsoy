@@ -103,14 +103,17 @@ export default function ProfilePage() {
       setIsSubmitting(true);
       try {
           const userDocRef = doc(db, 'users', user.uid);
-          await updateDoc(userDocRef, {
-              [editingField]: data[editingField]
-          });
-          setUser(prev => prev ? { ...prev, [editingField]: data[editingField] } : null);
+          const updateData: { [key: string]: any } = {};
+          updateData[editingField] = data[editingField];
+
+          await updateDoc(userDocRef, updateData);
+          
+          setUser(prev => prev ? { ...prev, ...updateData } : null);
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           setIsEditDialogOpen(false);
           setEditingField(null);
       } catch (error) {
+          console.error("Profile update error:", error);
           toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memperbarui profil.' });
       } finally {
           setIsSubmitting(false);
@@ -150,17 +153,17 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-            <div className="flex items-center gap-2 text-right">
+            <div className="flex items-center gap-3 text-right">
               <div className="flex flex-col">
-                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
               </div>
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 
-                width={32} 
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
+                width={40} 
+                height={40}
+                className="h-10 w-10 rounded-full object-cover"
               />
           </div>
        </header>
@@ -253,21 +256,23 @@ export default function ProfilePage() {
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Edit {fieldLabels[editingField!]}</DialogTitle>
+                    <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                        <FormField
-                            control={form.control}
-                            name={editingField!}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>{fieldLabels[editingField!]}</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
+                        {editingField && (
+                           <FormField
+                                control={form.control}
+                                name={editingField}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{fieldLabels[editingField]}</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        )}
                         <DialogFooter>
                             <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                             <Button type="submit" disabled={isSubmitting}>

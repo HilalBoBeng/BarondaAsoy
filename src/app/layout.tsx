@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Inter } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 
-const inter = Inter({ subsets: ['latin'] });
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700']
+});
+
 
 export const metadata: Metadata = {
   title: "Baronda - Siskamling Digital",
@@ -19,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head />
-      <body className={`${inter.className} antialiased bg-background`}>
+      <body className={`${poppins.className} antialiased bg-background`}>
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
