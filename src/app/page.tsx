@@ -113,8 +113,13 @@ export default function Home() {
            snapshot.forEach(doc => {
             notifsData.push({ id: doc.id, ...doc.data() } as Notification)
            });
-          notifsData.sort((a,b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis())
-          setNotifications(notifsData);
+          
+          const sortedNotifs = notifsData.sort((a, b) => {
+            const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
+            const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
+            return timeB - timeA;
+          });
+          setNotifications(sortedNotifs);
         }, (error) => {
           console.error("Error fetching notifications: ", error);
         });
@@ -324,9 +329,6 @@ export default function Home() {
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base mt-1">
                 Selamat datang di Baronda Kelurahan Kilongan.
-            </p>
-             <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
-                Baronda adalah platform siskamling digital yang dirancang untuk meningkatkan keamanan dan komunikasi di lingkungan kita.
             </p>
              <p className="text-muted-foreground text-sm sm:text-base mt-2">
                 {currentDate} | {currentTime}
