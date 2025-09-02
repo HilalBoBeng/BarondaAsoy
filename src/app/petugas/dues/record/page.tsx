@@ -12,14 +12,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Landmark, Check, ChevronsUpDown, ArrowLeft } from 'lucide-react';
-import type { AppUser, DuesPayment } from '@/lib/types';
+import { Loader2, Landmark, ArrowLeft } from 'lucide-react';
+import type { AppUser } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from '@/lib/utils';
-
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -28,9 +26,8 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
-
 const duesSchema = z.object({
-  userId: z.string({ required_error: "Nama warga harus dipilih."}).min(1, "Nama warga harus diisi."),
+  userId: z.string({ required_error: "Nama warga harus dipilih."}).min(1, "Nama warga harus dipilih dari daftar."),
   amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
   month: z.string().min(1, "Bulan harus dipilih."),
   year: z.string().min(1, "Tahun harus dipilih."),
@@ -44,8 +41,10 @@ export default function RecordDuesPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string } | null>(null);
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
+
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
 
   const form = useForm<DuesFormValues>({
     resolver: zodResolver(duesSchema),
@@ -112,6 +111,7 @@ export default function RecordDuesPage() {
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
       form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
+      setInputValue("");
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
@@ -124,6 +124,12 @@ export default function RecordDuesPage() {
     if (!numericValue) return '';
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
+  
+  const filteredUsers = inputValue
+    ? users.filter(user =>
+        user.displayName?.toLowerCase().includes(inputValue.toLowerCase())
+      )
+    : [];
 
   return (
     <Card>
@@ -131,7 +137,7 @@ export default function RecordDuesPage() {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="pt-0">
+          <CardContent>
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -139,49 +145,37 @@ export default function RecordDuesPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Nama Warga</FormLabel>
-                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                    <Popover open={popoverOpen && !!inputValue} onOpenChange={setPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? users.find(
-                                  (user) => user.uid === field.value
-                                )?.displayName
-                              : "Pilih warga"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
+                          <Input
+                            placeholder="Ketik nama warga untuk mencari..."
+                            value={inputValue}
+                            onChange={(e) => {
+                              setInputValue(e.target.value);
+                              field.onChange(''); // Clear userId when typing
+                            }}
+                            onClick={() => setPopoverOpen(true)}
+                          />
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
-                          <CommandInput placeholder="Cari nama warga..." />
                           <CommandList>
-                            <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                            {filteredUsers.length === 0 && inputValue && (
+                               <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                            )}
                             <CommandGroup>
-                              {users.map((user) => (
+                              {filteredUsers.map((user) => (
                                 <CommandItem
                                   value={user.displayName || user.uid}
                                   key={user.uid}
                                   onSelect={() => {
-                                    form.setValue("userId", user.uid)
-                                    setPopoverOpen(false)
+                                    form.setValue("userId", user.uid);
+                                    setInputValue(user.displayName || "");
+                                    setPopoverOpen(false);
                                   }}
                                 >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      user.uid === field.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
                                   {user.displayName}
                                 </CommandItem>
                               ))}
