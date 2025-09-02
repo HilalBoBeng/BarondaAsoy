@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, PlusCircle, Trash, User } from 'lucide-react';
+import { Loader2, Send, PlusCircle, Trash, User, Eye } from 'lucide-react';
 import type { AppUser, Notification, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,6 +43,8 @@ export default function NotificationsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewMessageOpen, setIsViewMessageOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState('');
   const { toast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,8 +157,8 @@ export default function NotificationsAdminPage() {
         }
 
         const batch = writeBatch(db);
-        const title = values.title.toUpperCase();
-        const message = values.message.toUpperCase();
+        const title = values.title;
+        const message = values.message;
 
         values.recipientIds.forEach(userId => {
           const newNotifRef = doc(collection(db, 'notifications'));
@@ -194,43 +196,59 @@ export default function NotificationsAdminPage() {
   }
   
   type Recipient = AppUser | Staff;
+  type RecipientType = 'users' | 'staff';
 
-  const RecipientList = ({ recipients, field }: { recipients: Recipient[], field: any }) => (
-    <ScrollArea className="h-48 rounded-md border">
-      <div className="p-4">
-        {recipients.map((recipient: Recipient) => {
-          const recipientId = (recipient as AppUser).uid || (recipient as Staff).id;
-          const recipientName = (recipient as AppUser).displayName || (recipient as Staff).name;
-          return (
-            <FormField
-              key={recipientId}
-              control={form.control}
-              name="recipientIds"
-              render={({ field }) => (
-                <FormItem key={recipientId} className="flex flex-row items-start space-x-3 space-y-0 py-2">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value?.includes(recipientId)}
-                      onCheckedChange={(checked) => {
-                        return checked
-                          ? field.onChange([...field.value, recipientId])
-                          : field.onChange(field.value?.filter((value) => value !== recipientId));
-                      }}
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal w-full">
-                    <div className="flex justify-between">
-                      <span>{recipientName}</span>
-                      <span className="text-muted-foreground text-xs">{recipient.email}</span>
-                    </div>
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
-          );
-        })}
-      </div>
-    </ScrollArea>
+  const RecipientList = ({ recipients, field, type }: { recipients: Recipient[], field: any, type: RecipientType }) => (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+            const allIds = recipients.map(r => (r as AppUser).uid || (r as Staff).id);
+            const currentIds = field.value || [];
+            const newIds = [...new Set([...currentIds, ...allIds])];
+            field.onChange(newIds);
+        }}
+        >
+        Pilih Semua {type === 'users' ? 'Warga' : 'Staf'}
+      </Button>
+      <ScrollArea className="h-48 rounded-md border">
+        <div className="p-4">
+            {recipients.map((recipient: Recipient) => {
+            const recipientId = (recipient as AppUser).uid || (recipient as Staff).id;
+            const recipientName = (recipient as AppUser).displayName || (recipient as Staff).name;
+            return (
+                <FormField
+                key={recipientId}
+                control={form.control}
+                name="recipientIds"
+                render={({ field }) => (
+                    <FormItem key={recipientId} className="flex flex-row items-start space-x-3 space-y-0 py-2">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value?.includes(recipientId)}
+                        onCheckedChange={(checked) => {
+                            return checked
+                            ? field.onChange([...field.value, recipientId])
+                            : field.onChange(field.value?.filter((value) => value !== recipientId));
+                        }}
+                        />
+                    </FormControl>
+                    <FormLabel className="font-normal w-full">
+                        <div className="flex justify-between">
+                        <span>{recipientName}</span>
+                        <span className="text-muted-foreground text-xs">{recipient.email}</span>
+                        </div>
+                    </FormLabel>
+                    </FormItem>
+                )}
+                />
+            );
+            })}
+        </div>
+      </ScrollArea>
+    </div>
   );
 
 
@@ -254,7 +272,7 @@ export default function NotificationsAdminPage() {
                         <TableHead>Tanggal</TableHead>
                         <TableHead>Penerima</TableHead>
                         <TableHead>Judul</TableHead>
-                        <TableHead>Pesan</TableHead>
+                        <TableHead className="w-[100px]">Pesan</TableHead>
                         <TableHead className="text-right w-[50px]">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -265,7 +283,7 @@ export default function NotificationsAdminPage() {
                         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-10" /></TableCell>
                         <TableCell className="text-right"><Skeleton className="h-8 w-10 ml-auto" /></TableCell>
                       </TableRow>
                     ))
@@ -280,7 +298,11 @@ export default function NotificationsAdminPage() {
                             </div>
                         </TableCell>
                         <TableCell className="font-medium">{notif.title}</TableCell>
-                        <TableCell className="max-w-xs truncate">{notif.message}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="icon" onClick={() => { setSelectedMessage(notif.message); setIsViewMessageOpen(true);}}>
+                            <Eye className="h-4 w-4"/>
+                          </Button>
+                        </TableCell>
                         <TableCell className="text-right">
                            <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -356,10 +378,10 @@ export default function NotificationsAdminPage() {
                                 <TabsTrigger value="staff">Staf</TabsTrigger>
                             </TabsList>
                             <TabsContent value="users" className="mt-4">
-                                <RecipientList recipients={users} field={field} />
+                                <RecipientList recipients={users} field={field} type="users" />
                             </TabsContent>
                              <TabsContent value="staff" className="mt-4">
-                                <RecipientList recipients={staff} field={field} />
+                                <RecipientList recipients={staff} field={field} type="staff" />
                             </TabsContent>
                        </Tabs>
                        <FormMessage />
@@ -397,6 +419,20 @@ export default function NotificationsAdminPage() {
                 </DialogFooter>
               </form>
             </Form>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog open={isViewMessageOpen} onOpenChange={setIsViewMessageOpen}>
+        <DialogContent className="rounded-lg">
+            <DialogHeader>
+                <DialogTitle>Isi Pesan</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 whitespace-pre-wrap">
+                {selectedMessage}
+            </div>
+            <DialogFooter>
+                <Button onClick={() => setIsViewMessageOpen(false)}>Tutup</Button>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
     </>

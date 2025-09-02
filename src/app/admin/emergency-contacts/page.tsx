@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Shield, Flame, HeartPulse, Building, Phone } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Phone } from 'lucide-react';
 import type { EmergencyContact } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -27,13 +27,6 @@ const contactSchema = z.object({
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
-
-const iconMap: Record<EmergencyContact['type'], React.ReactElement> = {
-  police: <Shield className="h-5 w-5 text-blue-500" />,
-  fire: <Flame className="h-5 w-5 text-red-500" />,
-  medical: <HeartPulse className="h-5 w-5 text-green-500" />,
-  other: <Building className="h-5 w-5 text-gray-500" />,
-};
 
 export default function EmergencyContactsAdminPage() {
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
@@ -151,7 +144,7 @@ export default function EmergencyContactsAdminPage() {
                   contacts.map((contact) => (
                       <Card key={contact.id}>
                           <CardHeader className="flex flex-row items-center justify-between pb-2">
-                               <CardTitle className="text-base flex items-center gap-2">{iconMap[contact.type]} {contact.name}</CardTitle>
+                               <CardTitle className="text-base">{contact.name}</CardTitle>
                                {renderActions(contact)}
                           </CardHeader>
                           <CardContent>
@@ -172,7 +165,6 @@ export default function EmergencyContactsAdminPage() {
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[50px]">Tipe</TableHead>
                     <TableHead>Nama</TableHead>
                     <TableHead>Nomor Telepon</TableHead>
                     <TableHead className="text-right w-[100px]">Aksi</TableHead>
@@ -182,7 +174,6 @@ export default function EmergencyContactsAdminPage() {
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
-                        <TableCell><Skeleton className="h-6 w-6 rounded-sm" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                         <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
@@ -191,7 +182,6 @@ export default function EmergencyContactsAdminPage() {
                 ) : contacts.length > 0 ? (
                     contacts.map((contact) => (
                     <TableRow key={contact.id}>
-                        <TableCell>{iconMap[contact.type]}</TableCell>
                         <TableCell className="font-medium">{contact.name}</TableCell>
                         <TableCell>{contact.number}</TableCell>
                         <TableCell className="text-right">{renderActions(contact)}</TableCell>
@@ -199,7 +189,7 @@ export default function EmergencyContactsAdminPage() {
                     ))
                 ) : (
                     <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
+                    <TableCell colSpan={3} className="text-center h-24">
                         Belum ada kontak darurat.
                     </TableCell>
                     </TableRow>

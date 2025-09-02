@@ -93,7 +93,7 @@ export default function PetugasSchedulePage() {
         const docRef = doc(db, 'schedules', schedule.id);
         const updateData: Partial<ScheduleEntry> = { status };
         if (reason) {
-            updateData.reason = reason.toUpperCase();
+            updateData.reason = reason;
         }
         await updateDoc(docRef, updateData);
         toast({ title: 'Berhasil', description: `Status tugas berhasil diperbarui menjadi ${status}.` });

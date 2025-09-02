@@ -87,17 +87,11 @@ export default function ReportActivity({ user }: { user: User | null }) {
     setIsSubmitting(true);
     setTriageResult(null);
     try {
-      // Uppercase the report text
-      const processedData = {
-        ...data,
-        reportText: data.reportText.toUpperCase(),
-      };
-
-      const result = await triageReport(processedData);
+      const result = await triageReport(data);
       setTriageResult(result);
       
       await addDoc(collection(db, 'reports'), {
-        ...processedData,
+        ...data,
         reporterEmail: user?.email, // Save user's email
         triageResult: result,
         userId: user?.uid,

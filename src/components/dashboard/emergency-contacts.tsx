@@ -1,20 +1,14 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
-import { Phone, Shield, Flame, HeartPulse, Building } from 'lucide-react';
+import { Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase/client';
 import type { EmergencyContact } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Card, CardContent } from '../ui/card';
-
-const iconMap: Record<EmergencyContact['type'], React.ReactElement> = {
-  police: <Shield className="h-5 w-5 text-blue-500" />,
-  fire: <Flame className="h-5 w-5 text-red-500" />,
-  medical: <HeartPulse className="h-5 w-5 text-green-500" />,
-  other: <Building className="h-5 w-5 text-gray-500" />,
-};
 
 export default function EmergencyContacts() {
     const [contacts, setContacts] = useState<EmergencyContact[]>([]);
@@ -58,7 +52,6 @@ export default function EmergencyContacts() {
             <Card key={contact.id}>
                 <CardContent className="p-3 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
-                         {iconMap[contact.type]}
                         <div>
                             <p className="font-semibold text-sm">{contact.name}</p>
                             <p className="text-muted-foreground text-xs">{contact.number}</p>
