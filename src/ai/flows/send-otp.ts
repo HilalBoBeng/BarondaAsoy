@@ -76,7 +76,7 @@ const sendOtpFlow = ai.defineFlow(
         service: "gmail",
         auth: {
           user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt", 
+          pass: "hrll wccf slpw shmt",
         },
       });
 
