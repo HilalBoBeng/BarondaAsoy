@@ -44,7 +44,6 @@ export default function RecordDuesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string } | null>(null);
   const [comboboxOpen, setComboboxOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
   const { toast } = useToast();
 
   const form = useForm<DuesFormValues>({
@@ -106,7 +105,6 @@ export default function RecordDuesPage() {
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
       form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
-      setSearchValue("");
       form.setValue('userId','');
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
@@ -120,12 +118,6 @@ export default function RecordDuesPage() {
     if (!numericValue) return '';
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
-  
-  const filteredUsers = useMemo(() => {
-    if (!searchValue) return [];
-    return users.filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()));
-  }, [searchValue, users]);
-
 
   return (
     <Card>
@@ -133,7 +125,7 @@ export default function RecordDuesPage() {
         </CardHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4 pt-6">
+            <CardContent className="space-y-4">
                 <FormField
                     control={form.control}
                     name="userId"
@@ -143,48 +135,52 @@ export default function RecordDuesPage() {
                         <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                             <PopoverTrigger asChild>
                                 <FormControl>
-                                   <Input
-                                        placeholder="Ketik nama warga..."
-                                        className="w-full"
-                                        value={searchValue}
-                                        onChange={(e) => {
-                                            setSearchValue(e.target.value);
-                                            if (!comboboxOpen) setComboboxOpen(true);
-                                        }}
-                                    />
+                                    <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                        "w-full justify-between",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value
+                                        ? users.find(
+                                            (user) => user.uid === field.value
+                                        )?.displayName
+                                        : "Pilih warga"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
                                 </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                {searchValue && (
-                                     <Command>
-                                        <CommandList>
-                                            <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
-                                            <CommandGroup>
-                                                {filteredUsers.map((user) => (
-                                                    <CommandItem
-                                                        value={user.displayName || user.uid}
-                                                        key={user.uid}
-                                                        onSelect={() => {
-                                                            form.setValue("userId", user.uid);
-                                                            setSearchValue(user.displayName || '');
-                                                            setComboboxOpen(false);
-                                                        }}
-                                                    >
-                                                        <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            user.uid === field.value
-                                                            ? "opacity-100"
-                                                            : "opacity-0"
-                                                        )}
-                                                        />
-                                                        {user.displayName}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                )}
+                                <Command>
+                                    <CommandInput placeholder="Cari nama warga..." />
+                                    <CommandList>
+                                        <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                                        <CommandGroup>
+                                            {users.map((user) => (
+                                                <CommandItem
+                                                    value={user.displayName || user.uid}
+                                                    key={user.uid}
+                                                    onSelect={() => {
+                                                        form.setValue("userId", user.uid);
+                                                        setComboboxOpen(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        user.uid === field.value
+                                                        ? "opacity-100"
+                                                        : "opacity-0"
+                                                    )}
+                                                    />
+                                                    {user.displayName}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
                             </PopoverContent>
                         </Popover>
                         <FormMessage />
