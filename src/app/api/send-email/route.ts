@@ -15,9 +15,7 @@ export async function POST(req: Request) {
     
     // Kredensial ditanam langsung di sini, hanya berjalan di server.
     const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // true for 465, false for other ports
+        service: "gmail",
         auth: {
           user: "bobeng.icu@gmail.com",
           pass: "hrll wccf slpw shmt",

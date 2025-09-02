@@ -79,7 +79,8 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
             </html>
           `;
 
-      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-email`, {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const emailResponse = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
