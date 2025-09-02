@@ -141,6 +141,7 @@ export default function PetugasLayout({
 
   const getPageTitle = () => {
     if (pathname === '/petugas') return 'Dasbor Petugas';
+    if (pathname === '/petugas/dues/record') return 'Catat Iuran Warga';
     const activeItem = navItems.find(item => pathname.startsWith(item.href));
     return activeItem?.label || 'Dasbor Petugas';
   }

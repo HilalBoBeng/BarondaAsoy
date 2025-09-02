@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,7 +65,6 @@ export default function DuesAdminPage() {
   const handleSendReminder = async (user: AppUser) => {
     setIsSendingReminder(user.uid);
     try {
-        const newNotifRef = doc(collection(db, 'notifications'));
         await addDoc(collection(db, 'notifications'), {
             userId: user.uid,
             title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
