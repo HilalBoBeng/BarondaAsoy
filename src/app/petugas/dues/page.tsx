@@ -122,10 +122,13 @@ export default function DuesPetugasPage() {
     }
     try {
         for (const user of usersToRemind) {
+            const recipientName = user.displayName || 'Warga';
+            const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\nDengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran.\n\nTerima kasih atas perhatian dan kerja sama Anda.`;
+            
             await addDoc(collection(db, 'notifications'), {
                 userId: user.uid,
                 title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
-                message: `Dengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran. Terima kasih atas perhatian dan kerja sama Anda.`,
+                message: formattedMessage,
                 read: false,
                 createdAt: serverTimestamp(),
                 link: '/profile',
