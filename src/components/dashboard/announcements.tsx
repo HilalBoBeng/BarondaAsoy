@@ -6,7 +6,7 @@ import { collection, onSnapshot, query, orderBy, doc, runTransaction } from 'fir
 import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight, MessageCircle, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase/client';
-import type { Announcement } from '@/lib/types';
+import type { Announcement, AppUser } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { getAuth } from 'firebase/auth';
@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
 
-export default function Announcements() {
+export default function Announcements({ userInfo }: { userInfo: AppUser | null }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
@@ -49,6 +49,18 @@ export default function Announcements() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleReadMore = (announcement: Announcement) => {
+    if (userInfo?.isBlocked) {
+        toast({
+            variant: "destructive",
+            title: "Akses Ditolak",
+            description: "Akun Anda diblokir dan tidak dapat melihat detail pengumuman.",
+        });
+        return;
+    }
+    setSelectedAnnouncement(announcement);
+  }
   
  const renderAnnouncements = () => {
     if (loading) {
@@ -96,7 +108,7 @@ export default function Announcements() {
                         <Calendar className="h-4 w-4" />
                         <span>{announcement.date as string}</span>
                     </p>
-                    <Button variant="secondary" size="sm" className="w-full" onClick={() => setSelectedAnnouncement(announcement)}>
+                    <Button variant="secondary" size="sm" className="w-full" onClick={() => handleReadMore(announcement)}>
                         Baca Selengkapnya
                     </Button>
                 </CardFooter>
@@ -117,7 +129,7 @@ export default function Announcements() {
                         <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                             <DialogTitle>Pengumuman</DialogTitle>
                         </DialogHeader>
-                        <div className="p-6 whitespace-pre-wrap break-word min-h-[150px] flex-grow">
+                        <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
                             <p className="text-foreground">{selectedAnnouncement.content}</p>
                         </div>
                         <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">

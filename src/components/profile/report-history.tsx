@@ -80,9 +80,6 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
                      replies: repliesArray
                  } as Report;
-            }).filter(report => {
-                const reportAge = Date.now() - (report.createdAt as Date).getTime();
-                return reportAge < TWENTY_FOUR_HOURS_IN_MS;
             });
 
             reportsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -115,7 +112,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
 
     const goToPrevPage = () => {
         if (currentPage > 1) {
-            setCurrentPage(prev => prev - 1);
+            setCurrentPage(prev => prev + 1);
         }
     };
 
@@ -149,18 +146,11 @@ export default function ReportHistory({ user }: { user?: User | null }) {
 
     return (
         <div className="space-y-4">
-            <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Informasi</AlertTitle>
-                <AlertDescription>
-                    Laporan yang lebih lama dari 24 jam tidak akan ditampilkan di riwayat ini untuk menjaga privasi.
-                </AlertDescription>
-            </Alert>
             
             {paginatedReports.length === 0 ? (
                  <Card>
                     <CardContent className="p-6 text-center text-muted-foreground">
-                        Anda tidak memiliki laporan dalam 24 jam terakhir.
+                        Anda belum memiliki riwayat laporan.
                     </CardContent>
                 </Card>
             ) : (

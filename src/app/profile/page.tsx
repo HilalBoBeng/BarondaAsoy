@@ -259,15 +259,6 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
-                {user?.isBlocked && (
-                    <Alert variant="destructive">
-                        <ShieldBan className="h-4 w-4" />
-                        <AlertTitle>Akun Diblokir</AlertTitle>
-                        <AlertDescription>
-                            Akun Anda saat ini sedang diblokir oleh admin. Anda tidak dapat menggunakan fitur-fitur aplikasi. Hubungi admin untuk informasi lebih lanjut.
-                        </AlertDescription>
-                    </Alert>
-                )}
                <Card className="overflow-hidden">
                     <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                         <div className="flex items-center gap-4">
@@ -284,6 +275,9 @@ export default function ProfilePage() {
                                      <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{user?.displayName || 'Pengguna'}</CardTitle>
                                 </div>
                                 <CardDescription className="text-primary-foreground/80 truncate">{user?.email}</CardDescription>
+                                {user?.isBlocked && (
+                                    <Badge variant="destructive" className="mt-2">Akun Diblokir</Badge>
+                                )}
                             </div>
                         </div>
                     </CardHeader>

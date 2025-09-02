@@ -126,12 +126,6 @@ export default function ReportsAdminPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-              <DialogClose asChild>
-                    <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Tutup</span>
-                    </Button>
-                </DialogClose>
               <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

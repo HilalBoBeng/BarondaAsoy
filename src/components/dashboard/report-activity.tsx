@@ -12,14 +12,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin } from 'lucide-react';
+import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin, ShieldBan } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { User } from 'firebase/auth';
+import type { AppUser } from '@/lib/types';
 import Link from 'next/link';
 import { Input } from '../ui/input';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 const reportSchema = z.object({
   reporterName: z.string().min(1, "Nama pelapor tidak boleh kosong."),
@@ -49,7 +51,7 @@ const ThreatLevelBadge = ({ level }: { level: TriageReportOutput['threatLevel'] 
     </Badge>
 }
 
-export default function ReportActivity({ user }: { user: User | null }) {
+export default function ReportActivity({ user, userInfo }: { user: User | null, userInfo: AppUser | null }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageReportOutput | null>(null);
   const { toast } = useToast();
@@ -123,6 +125,18 @@ export default function ReportActivity({ user }: { user: User | null }) {
             </p>
         </div>
     );
+  }
+  
+  if (userInfo?.isBlocked) {
+    return (
+        <Alert variant="destructive">
+            <ShieldBan className="h-4 w-4" />
+            <AlertTitle>Akun Diblokir</AlertTitle>
+            <AlertDescription>
+                Anda tidak dapat mengirim laporan karena akun Anda telah diblokir oleh admin.
+            </AlertDescription>
+        </Alert>
+    )
   }
 
   return (

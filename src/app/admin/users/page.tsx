@@ -166,7 +166,7 @@ export default function UsersAdminPage() {
                       <TableRow key={user.uid}>
                         <TableCell>
                           <div className="flex items-center gap-4">
-                            <Avatar><AvatarImage src={user.photoURL || undefined} /><AvatarFallback><UserIcon /></AvatarFallback></Avatar>
+                            <Avatar><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
                             <div>
                               <p className="font-medium">{user.displayName || 'Tanpa Nama'}</p>
                             </div>

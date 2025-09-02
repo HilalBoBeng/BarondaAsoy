@@ -103,6 +103,12 @@ export default function Home() {
         const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as AppUser;
+             if (userData.isBlocked) {
+                toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Akun Anda telah diblokir oleh admin.' });
+                auth.signOut();
+                router.push('/auth/login');
+                return;
+            }
             setUserInfo(userData);
           } else {
             setUserInfo(null);
@@ -139,7 +145,7 @@ export default function Home() {
     });
 
     return () => unsubscribeAuth();
-  }, [auth, router]);
+  }, [auth, router, toast]);
   
   useEffect(() => {
       const start = (notificationPage - 1) * NOTIFICATIONS_PER_PAGE;
@@ -167,6 +173,7 @@ export default function Home() {
   };
 
   const handleNotificationClick = async (notif: Notification) => {
+      if (userInfo?.isBlocked) return;
       setSelectedNotification(notif);
       if (!notif.read) {
           const docRef = doc(db, 'notifications', notif.id);
@@ -230,7 +237,7 @@ export default function Home() {
             {user && (
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
+                        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full" disabled={userInfo?.isBlocked}>
                             <Bell className="h-5 w-5" />
                             {unreadNotifications > 0 && (
                                 <Badge variant="destructive" className="absolute top-1 right-1 h-5 w-5 flex items-center justify-center rounded-full p-0 text-xs">
@@ -387,7 +394,7 @@ export default function Home() {
                     <CardTitle className="text-lg">Pengumuman</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Announcements />
+                    <Announcements userInfo={userInfo} />
                 </CardContent>
             </Card>
 
@@ -398,7 +405,7 @@ export default function Home() {
                             <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ReportActivity user={user} />
+                            <ReportActivity user={user} userInfo={userInfo} />
                         </CardContent>
                     </Card>
                     
