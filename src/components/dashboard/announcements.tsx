@@ -123,9 +123,8 @@ export default function Announcements() {
                                 </Button>
                             </DialogClose>
                         </DialogHeader>
-                        <div className="p-6 whitespace-pre-wrap text-sm min-h-[150px] flex-grow">
-                            <h3 className="font-bold text-lg text-foreground mb-2 break-word">{selectedAnnouncement.title}</h3>
-                            <p className="text-muted-foreground whitespace-pre-wrap break-word">{selectedAnnouncement.content}</p>
+                        <div className="p-6 whitespace-pre-wrap min-h-[150px] flex-grow">
+                            <p className="text-foreground break-word">{selectedAnnouncement.content}</p>
                         </div>
                         <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
                              <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedAnnouncement(null)}>Ok</Button>

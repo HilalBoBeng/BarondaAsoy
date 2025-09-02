@@ -112,7 +112,6 @@ export default function NotificationsAdminPage() {
           ...data,
           createdAt: data.createdAt?.toDate(),
           recipientName: recipient?.displayName || recipient?.name || data.userId,
-          recipientEmail: recipient?.email,
         } as Notification;
       });
 
@@ -292,10 +291,7 @@ export default function NotificationsAdminPage() {
                       <TableRow key={notif.id}>
                         <TableCell>{notif.createdAt instanceof Date ? format(notif.createdAt, "PPP, HH:mm", { locale: id }) : 'N/A'}</TableCell>
                         <TableCell>
-                            <div className="flex flex-col">
-                                <span className="font-medium">{notif.recipientName || notif.userId}</span>
-                                <span className="text-xs text-muted-foreground">{notif.recipientEmail}</span>
-                            </div>
+                            <span className="font-medium">{notif.recipientName || notif.userId}</span>
                         </TableCell>
                         <TableCell className="font-medium">{notif.title}</TableCell>
                         <TableCell>
