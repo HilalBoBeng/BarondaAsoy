@@ -52,8 +52,6 @@ export default function RecordDuesPage() {
     defaultValues: { userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' },
   });
   
-  const selectedUserId = form.watch('userId');
-
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info.id) {
@@ -137,6 +135,9 @@ export default function RecordDuesPage() {
 
   return (
     <Card>
+        <CardHeader>
+           {/* This is handled by the layout now */}
+        </CardHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-4 pt-6">
@@ -148,7 +149,7 @@ export default function RecordDuesPage() {
                         <FormLabel>Pilih Warga</FormLabel>
                         <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                             <PopoverTrigger asChild>
-                                <FormControl>
+                                 <FormControl>
                                     <Input
                                         placeholder="Ketik nama warga untuk mencari..."
                                         value={searchValue}
@@ -167,28 +168,31 @@ export default function RecordDuesPage() {
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                     <CommandList>
-                                        {filteredUsers.length === 0 && (
+                                        {loading ? (
+                                            <CommandEmpty>Memuat...</CommandEmpty>
+                                        ) : filteredUsers.length === 0 ? (
                                             <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                                        ) : (
+                                            <CommandGroup>
+                                                {filteredUsers.map((user) => (
+                                                    <CommandItem
+                                                        value={user.displayName || user.uid}
+                                                        key={user.uid}
+                                                        onSelect={() => handleUserSelect(user)}
+                                                    >
+                                                        <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            user.uid === field.value
+                                                            ? "opacity-100"
+                                                            : "opacity-0"
+                                                        )}
+                                                        />
+                                                        {user.displayName}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
                                         )}
-                                        <CommandGroup>
-                                            {filteredUsers.map((user) => (
-                                                <CommandItem
-                                                    value={user.displayName || user.uid}
-                                                    key={user.uid}
-                                                    onSelect={() => handleUserSelect(user)}
-                                                >
-                                                    <Check
-                                                    className={cn(
-                                                        "mr-2 h-4 w-4",
-                                                        user.uid === field.value
-                                                        ? "opacity-100"
-                                                        : "opacity-0"
-                                                    )}
-                                                    />
-                                                    {user.displayName}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
                                     </CommandList>
                                 </Command>
                             </PopoverContent>

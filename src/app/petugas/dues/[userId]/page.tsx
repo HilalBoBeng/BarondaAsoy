@@ -144,8 +144,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     <>
       <Card>
         <CardHeader>
-           <CardTitle>Riwayat Pembayaran</CardTitle>
-           <CardDescription>{loading ? <Skeleton className="h-5 w-32" /> : user?.displayName}</CardDescription>
+           {/* This is now handled by layout.tsx */}
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
