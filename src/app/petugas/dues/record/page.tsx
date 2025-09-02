@@ -45,6 +45,7 @@ export default function RecordDuesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string } | null>(null);
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const { toast } = useToast();
 
   const form = useForm<DuesFormValues>({
@@ -111,6 +112,7 @@ export default function RecordDuesPage() {
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
       form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
+      setSearchValue("");
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
@@ -160,32 +162,40 @@ export default function RecordDuesPage() {
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
-                                    <CommandInput placeholder="Cari nama warga..." />
-                                    <CommandList>
-                                        <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
-                                        <CommandGroup>
-                                            {users.map((user) => (
-                                            <CommandItem
-                                                value={user.displayName || user.uid}
-                                                key={user.uid}
-                                                onSelect={() => {
-                                                    form.setValue("userId", user.uid);
-                                                    setComboboxOpen(false);
-                                                }}
-                                            >
-                                                <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    user.uid === field.value
-                                                    ? "opacity-100"
-                                                    : "opacity-0"
-                                                )}
-                                                />
-                                                {user.displayName}
-                                            </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </CommandList>
+                                    <CommandInput 
+                                      placeholder="Cari nama warga..."
+                                      value={searchValue}
+                                      onValueChange={setSearchValue}
+                                    />
+                                    {searchValue && (
+                                      <CommandList>
+                                          <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                                          <CommandGroup>
+                                              {users
+                                                .filter(user => user.displayName?.toLowerCase().includes(searchValue.toLowerCase()))
+                                                .map((user) => (
+                                                  <CommandItem
+                                                      value={user.displayName || user.uid}
+                                                      key={user.uid}
+                                                      onSelect={() => {
+                                                          form.setValue("userId", user.uid);
+                                                          setComboboxOpen(false);
+                                                      }}
+                                                  >
+                                                      <Check
+                                                      className={cn(
+                                                          "mr-2 h-4 w-4",
+                                                          user.uid === field.value
+                                                          ? "opacity-100"
+                                                          : "opacity-0"
+                                                      )}
+                                                      />
+                                                      {user.displayName}
+                                                  </CommandItem>
+                                              ))}
+                                          </CommandGroup>
+                                      </CommandList>
+                                    )}
                                 </Command>
                             </PopoverContent>
                         </Popover>
@@ -246,3 +256,5 @@ export default function RecordDuesPage() {
     </Card>
   );
 }
+
+    
