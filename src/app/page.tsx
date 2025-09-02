@@ -428,31 +428,30 @@ export default function Home() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-        <DialogContent className="rounded-lg">
-            <DialogHeader>
-                 <div className="flex items-center justify-between">
-                    <DialogTitle>{selectedNotification?.title}</DialogTitle>
-                    <DialogClose asChild>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
-                            <X className="h-4 w-4" />
-                            <span className="sr-only">Tutup</span>
-                        </Button>
-                    </DialogClose>
-                 </div>
-                 <DialogDescription>
-                    {selectedNotification?.createdAt ? new Date((selectedNotification.createdAt as any).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
-                </DialogDescription>
-            </DialogHeader>
-            <DialogBody className="whitespace-pre-wrap break-words">
-                <p>{selectedNotification?.message}</p>
-            </DialogBody>
-            <DialogFooter>
-                <Button onClick={() => setSelectedNotification(null)}>Tutup</Button>
-            </DialogFooter>
+        <DialogContent>
+             {selectedNotification && (
+                <>
+                    <DialogHeader>
+                        <DialogTitle>Pemberitahuan</DialogTitle>
+                         <DialogClose asChild>
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Tutup</span>
+                            </Button>
+                        </DialogClose>
+                    </DialogHeader>
+                    <DialogBody className="whitespace-pre-wrap break-words">
+                       <p>{selectedNotification?.message}</p>
+                    </DialogBody>
+                    <DialogFooter className="sm:justify-end">
+                        <DialogClose asChild>
+                           <Button type="button" size="sm">Ok</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </>
+             )}
         </DialogContent>
     </Dialog>
     </>
   );
 }
-
-    
