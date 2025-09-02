@@ -40,7 +40,7 @@ const editDuesSchema = z.object({
 type EditDuesFormValues = z.infer<typeof editDuesSchema>;
 
 export default function DuesPetugasPage() {
-  const [payments, setPayments] useState<DuesPayment[]>([]);
+  const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
