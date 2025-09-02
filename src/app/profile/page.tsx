@@ -234,7 +234,7 @@ export default function ProfilePage() {
           <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
         </CardHeader>
         <CardContent>
-            <ReportHistory user={auth.currentUser} showDeleteButton={false} />
+            <ReportHistory user={auth.currentUser} />
         </CardContent>
       </Card>
 

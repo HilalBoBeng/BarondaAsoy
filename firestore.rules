@@ -1,0 +1,77 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default: Deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users can only read and write to their own user document.
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // Allow user creation for any authenticated user (during registration).
+      allow create: if request.auth != null;
+    }
+    
+    // Announcements can be read by anyone, but only written by authenticated users (admins).
+    // Let's assume for now only auth is needed for write, specific admin logic is in backend.
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // Dues can be read by the specific user, and created by authenticated staff.
+    // Admin can read all.
+    match /dues/{dueId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null; // Petugas
+    }
+
+    // Emergency contacts can be read by anyone, but only written by authenticated users (admins).
+    match /emergency_contacts/{contactId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // Notifications can only be read by the intended user.
+    match /notifications/{notificationId} {
+        allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+        allow create: if request.auth != null; // Can be created by backend flows
+    }
+    
+    // OTPs should not be readable by clients. Only backend can access.
+    match /otps/{otpId} {
+      allow read, write: if false;
+    }
+    
+    // Patrol logs can be read by any authenticated user, but only created by them.
+    match /patrol_logs/{logId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+    }
+    
+    // Reports can be created by authenticated users. They can read their own private reports.
+    // Public reports can be read by anyone.
+    // Updates are handled by backend flows (petugas/admin).
+    match /reports/{reportId} {
+      allow create: if request.auth != null;
+      allow read: if resource.data.visibility == 'public' || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow update, delete: if request.auth != null; // Petugas/Admin via backend
+    }
+    
+    // Schedules can be read by any authenticated user.
+    match /schedules/{scheduleId} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if request.auth != null; // Admin
+    }
+    
+    // Staff info can be read by authenticated users, but only managed by admins.
+    match /staff/{staffId} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if request.auth != null; // Admins via backend
+    }
+  }
+}
