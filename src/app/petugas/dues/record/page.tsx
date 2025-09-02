@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -12,12 +13,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Landmark, ArrowLeft } from 'lucide-react';
+import { Loader2, Landmark } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import Link from 'next/link';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -42,9 +40,6 @@ export default function RecordDuesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string } | null>(null);
   const { toast } = useToast();
-
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const [inputValue, setInputValue] = useState("");
 
   const form = useForm<DuesFormValues>({
     resolver: zodResolver(duesSchema),
@@ -111,7 +106,6 @@ export default function RecordDuesPage() {
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
       form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
-      setInputValue("");
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
@@ -125,65 +119,33 @@ export default function RecordDuesPage() {
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
   
-  const filteredUsers = inputValue
-    ? users.filter(user =>
-        user.displayName?.toLowerCase().includes(inputValue.toLowerCase())
-      )
-    : [];
-
   return (
     <Card>
       <CardHeader>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="space-y-4">
               <FormField
                 control={form.control}
                 name="userId"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Nama Warga</FormLabel>
-                    <Popover open={popoverOpen && !!inputValue} onOpenChange={setPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Input
-                            placeholder="Ketik nama warga untuk mencari..."
-                            value={inputValue}
-                            onChange={(e) => {
-                              setInputValue(e.target.value);
-                              field.onChange(''); // Clear userId when typing
-                            }}
-                            onClick={() => setPopoverOpen(true)}
-                          />
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command>
-                          <CommandList>
-                            {filteredUsers.length === 0 && inputValue && (
-                               <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
-                            )}
-                            <CommandGroup>
-                              {filteredUsers.map((user) => (
-                                <CommandItem
-                                  value={user.displayName || user.uid}
-                                  key={user.uid}
-                                  onSelect={() => {
-                                    form.setValue("userId", user.uid);
-                                    setInputValue(user.displayName || "");
-                                    setPopoverOpen(false);
-                                  }}
-                                >
-                                  {user.displayName}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih nama warga" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {users.map((user) => (
+                          <SelectItem key={user.uid} value={user.uid}>
+                            {user.displayName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -241,7 +203,6 @@ export default function RecordDuesPage() {
                   <FormMessage />
                 </FormItem>
               )} />
-            </div>
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
@@ -254,3 +215,5 @@ export default function RecordDuesPage() {
     </Card>
   );
 }
+
+    
