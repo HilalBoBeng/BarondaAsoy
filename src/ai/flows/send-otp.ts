@@ -38,7 +38,7 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context = 'register' }) => {
     // Check for required environment variables
-    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.SMTP_SENDER_NAME || !process.env.SMTP_SENDER_ADDRESS) {
       console.error('SMTP environment variables are not set.');
       return {
         success: false,
