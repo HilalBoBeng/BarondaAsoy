@@ -29,7 +29,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 const notificationSchema = z.object({
   recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong."),
-  message: z.string().min(1, "Pesan tidak boleh kosong."),
+  message: z.string().min(1, "Pesan tidak boleh kosong.").max(1200, "Pesan tidak boleh lebih dari 1200 karakter."),
 });
 
 type NotificationFormValues = z.infer<typeof notificationSchema>;
@@ -440,7 +440,7 @@ export default function NotificationsAdminPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Isi Pesan</FormLabel>
-                      <FormControl><Textarea placeholder="Tulis pesan Anda di sini..." {...field} rows={4} /></FormControl>
+                      <FormControl><Textarea placeholder="Tulis pesan Anda di sini..." {...field} rows={4} maxLength={1200} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

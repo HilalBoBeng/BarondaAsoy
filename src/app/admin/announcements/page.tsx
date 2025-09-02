@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const announcementSchema = z.object({
   title: z.string().min(1, "Judul tidak boleh kosong."),
-  content: z.string().min(1, "Isi pengumuman tidak boleh kosong."),
+  content: z.string().min(1, "Isi pengumuman tidak boleh kosong.").max(1200, "Isi pengumuman tidak boleh lebih dari 1200 karakter."),
 });
 
 type AnnouncementFormValues = z.infer<typeof announcementSchema>;
@@ -291,7 +291,7 @@ export default function AnnouncementsAdminPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Isi Pengumuman</FormLabel>
-                        <FormControl><Textarea {...field} rows={5} /></FormControl>
+                        <FormControl><Textarea {...field} rows={5} maxLength={1200} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
