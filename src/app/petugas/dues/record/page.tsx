@@ -54,7 +54,6 @@ export default function RecordDuesPage() {
   });
   
   const selectedUserId = form.watch('userId');
-  const selectedUser = users.find(u => u.uid === selectedUserId);
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -62,7 +61,6 @@ export default function RecordDuesPage() {
         setStaffInfo(info);
     }
     
-    // Fetch users
     const usersQuery = query(collection(db, "users"), orderBy("displayName"));
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
@@ -88,7 +86,6 @@ export default function RecordDuesPage() {
         return;
     }
 
-    // Check for duplicate payment
     const q = query(
         collection(db, 'dues'),
         where('userId', '==', values.userId),
@@ -130,14 +127,9 @@ export default function RecordDuesPage() {
 
   return (
     <Card>
-        <CardHeader>
-             <Button variant="outline" size="sm" className="w-fit" asChild>
-                  <Link href="/petugas/dues"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Link>
-              </Button>
-        </CardHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
                 <FormField
                     control={form.control}
                     name="userId"
@@ -150,7 +142,10 @@ export default function RecordDuesPage() {
                                 <Input
                                   placeholder="Ketik nama warga untuk mencari..."
                                   value={searchValue}
-                                  onChange={(e) => setSearchValue(e.target.value)}
+                                  onChange={(e) => {
+                                      setSearchValue(e.target.value);
+                                      if(!comboboxOpen) setComboboxOpen(true);
+                                  }}
                                   onClick={() => setComboboxOpen(true)}
                                 />
                             </FormControl>

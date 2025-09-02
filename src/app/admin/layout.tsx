@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Settings,
   Landmark,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -44,6 +45,7 @@ export default function AdminLayout({
   });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pageTitle, setPageTitle] = useState("Dasbor Admin");
+  const [isDetailPage, setIsDetailPage] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -80,16 +82,11 @@ export default function AdminLayout({
   }, [router, toast]);
   
   useEffect(() => {
-    const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
-    const match = pathname.match(duesDetailRegex);
-    if (match && match[1]) {
-      const userId = match[1];
-      const storedName = localStorage.getItem(`userName-${userId}`);
-      setPageTitle(storedName ? `Riwayat Iuran: ${storedName}` : "Memuat...");
-    } else {
-      const activeItem = navItems.find(item => pathname.startsWith(item.href));
-      setPageTitle(activeItem?.label || 'Dasbor Admin');
-    }
+    const isDuesDetail = /^\/admin\/dues\/(.+)$/.test(pathname);
+    setIsDetailPage(isDuesDetail);
+
+    const activeItem = navItems.find(item => pathname.startsWith(item.href));
+    setPageTitle(activeItem?.label || 'Dasbor Admin');
   }, [pathname]);
 
   const handleLogout = () => {
@@ -174,27 +171,34 @@ export default function AdminLayout({
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
+          {isDetailPage ? (
+             <Button variant="outline" size="icon" className="shrink-0 md:hidden" onClick={() => router.back()}>
+                <ArrowLeft className="h-5 w-5" />
+                <span className="sr-only">Kembali</span>
               </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0">
-               <SheetHeader className="p-0 border-b">
-                 <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                 <NavHeader />
-               </SheetHeader>
-              <div className="flex-1 overflow-auto py-2">
-                <NavContent />
-              </div>
-            </SheetContent>
-          </Sheet>
+          ) : (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 md:hidden"
+                >
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex flex-col p-0">
+                <SheetHeader className="p-0 border-b">
+                  <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
+                  <NavHeader />
+                </SheetHeader>
+                <div className="flex-1 overflow-auto py-2">
+                  <NavContent />
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
 
           <div className="w-full flex-1">
             <h1 className="text-lg font-semibold md:text-2xl truncate">

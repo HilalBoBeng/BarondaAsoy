@@ -23,7 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { notFound, usePathname } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
 const editDuesSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
@@ -38,7 +38,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentDue, setCurrentDue] = useState<DuesPayment | null>(null);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
-  const pathname = usePathname();
 
   const { toast } = useToast();
   const editForm = useForm<EditDuesFormValues>({
@@ -56,9 +55,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
       if (userSnap.exists()) {
         const userData = { uid: userSnap.id, ...userSnap.data() } as AppUser;
         setUser(userData);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`userName-${userId}`, userData.displayName || 'Warga');
-        }
       } else {
         notFound();
       }
@@ -79,9 +75,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
 
     return () => {
       unsubPayments();
-      if (typeof window !== 'undefined') {
-          localStorage.removeItem(`userName-${params.userId}`);
-      }
     };
   }, [params.userId]);
 
@@ -140,9 +133,8 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     <>
       <Card>
         <CardHeader>
-             <Button variant="outline" size="sm" className="w-fit" asChild>
-                  <Link href="/admin/dues"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali</Link>
-              </Button>
+           <CardTitle>Riwayat Pembayaran: {loading ? 'Memuat...' : user?.displayName}</CardTitle>
+           <CardDescription>Berikut adalah semua catatan pembayaran iuran untuk warga ini.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
