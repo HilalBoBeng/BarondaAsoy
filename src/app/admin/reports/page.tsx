@@ -8,54 +8,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, CheckCircle, AlertTriangle, HelpCircle, Calendar, User, MessageSquare, Loader2, UserCheck } from 'lucide-react';
-import type { Report, Reply, Staff } from '@/lib/types';
+import { Trash, CheckCircle, AlertTriangle, User, Calendar as CalendarIcon, UserCheck } from 'lucide-react';
+import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { sendReply } from '@/ai/flows/send-reply';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 const REPORTS_PER_PAGE = 5;
 type ReportStatus = 'new' | 'in_progress' | 'resolved';
 
-
-const assignSchema = z.object({
-  handlerId: z.string().min(1, "Petugas harus dipilih."),
-});
-type AssignFormValues = z.infer<typeof assignSchema>;
-
-
 export default function ReportsAdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const { toast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [isLastPage, setIsLastPage] = useState(false);
-
-  const assignForm = useForm<AssignFormValues>({ resolver: zodResolver(assignSchema) });
-
-  const fetchStaff = async () => {
-      const staffQuery = query(collection(db, "staff"), where("status", "==", "active"));
-      const staffSnapshot = await getDocs(staffQuery);
-      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
-      setStaffList(staffData);
-    };
 
   const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
     setLoading(true);
@@ -112,7 +85,6 @@ export default function ReportsAdminPage() {
   };
 
   useEffect(() => {
-    fetchStaff();
     const unsub = fetchReports(1);
     return () => { unsub.then(u => u && u()) };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,65 +103,11 @@ export default function ReportsAdminPage() {
     fetchReports(newPage, 'prev');
   };
 
-
- const handleOpenAssignDialog = (report: Report) => {
-    if (report.status === 'new') {
-        setCurrentReport(report);
-        assignForm.reset({ handlerId: '' });
-        setIsAssignDialogOpen(true);
-    }
-  };
-  
-  const onAssignSubmit = async (values: AssignFormValues) => {
-    if (!currentReport) return;
-    setIsSubmitting(true);
-    const selectedStaff = staffList.find(s => s.id === values.handlerId);
-    if (!selectedStaff) {
-      toast({ variant: 'destructive', title: 'Gagal', description: 'Petugas tidak ditemukan.' });
-      setIsSubmitting(false);
-      return;
-    }
-    
-    try {
-      const reportRef = doc(db, 'reports', currentReport.id);
-      await updateDoc(reportRef, { 
-        status: 'in_progress',
-        handlerId: selectedStaff.id,
-        handlerName: selectedStaff.name,
-      });
-
-      const staffRef = doc(db, 'staff', selectedStaff.id);
-      await updateDoc(staffRef, {
-        points: increment(1)
-      });
-      
-       // Send notification to the assigned staff
-      const notifRef = collection(db, 'notifications');
-      await addDoc(notifRef, {
-          userId: selectedStaff.id,
-          title: "Tugas Laporan Baru",
-          message: `Anda ditugaskan untuk menangani laporan baru: "${currentReport.reportText.substring(0, 50)}..."`,
-          read: false,
-          createdAt: serverTimestamp(),
-          link: `/petugas/reports?reportId=${currentReport.id}`
-      });
-      
-      toast({ title: "Berhasil", description: `Laporan ditugaskan kepada ${selectedStaff.name}.` });
-      setIsAssignDialogOpen(false);
-      setCurrentReport(null);
-    } catch(error) {
-       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menugaskan laporan.' });
-    } finally {
-        setIsSubmitting(false);
-    }
-  }
-
-
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'reports', id));
       toast({ title: "Berhasil", description: "Laporan berhasil dihapus." });
-    } catch (error) => {
+    } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus laporan." });
     }
   };
@@ -233,41 +151,27 @@ export default function ReportsAdminPage() {
     resolved: 'Selesai'
   };
 
-
   const renderActions = (report: Report) => {
-    return (
-        <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
-            {report.status === 'new' && (
-                <Button variant="default" size="sm" onClick={() => handleOpenAssignDialog(report)}>
-                    <UserCheck className="h-4 w-4 mr-0 sm:mr-2" />
-                    <span className="hidden sm:inline">Tugaskan</span>
-                </Button>
-            )}
-            {report.status === 'in_progress' && (
-                <Badge variant="default">Ditangani</Badge>
-            )}
-            {report.status === 'resolved' && (
-                <>
-                    <Badge variant="secondary">Selesai</Badge>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-lg">
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </>
-            )}
-        </div>
-    );
+    if (report.status === 'resolved') {
+      return (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+              <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      );
+    }
+    return null;
   }
   
   return (
@@ -288,7 +192,7 @@ export default function ReportsAdminPage() {
                     <CardTitle className="text-base break-words">{report.reportText}</CardTitle>
                     <CardDescription className="flex flex-col gap-2 pt-2">
                         <span className="flex items-center gap-2"><User className="h-4 w-4" />{report.reporterName}</span>
-                        <span className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(report.createdAt as Date).toLocaleString('id-ID')}</span>
+                        <span className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" />{new Date(report.createdAt as Date).toLocaleString('id-ID')}</span>
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -311,7 +215,9 @@ export default function ReportsAdminPage() {
                     )}
                 </CardContent>
                 <CardFooter className="flex-col items-stretch">
-                  {renderActions(report)}
+                   <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
+                      {renderActions(report)}
+                   </div>
                 </CardFooter>
               </Card>
             ))
@@ -413,50 +319,6 @@ export default function ReportsAdminPage() {
         </div>
       </CardFooter>
     </Card>
-
-    <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="sm:max-w-md w-[90%] rounded-lg">
-            <DialogHeader>
-                <DialogTitle>Tugaskan Laporan</DialogTitle>
-                <CardDescription>Pilih petugas yang akan menangani laporan ini.</CardDescription>
-            </DialogHeader>
-            <Form {...assignForm}>
-                <form onSubmit={assignForm.handleSubmit(onAssignSubmit)} className="space-y-4 pt-4">
-                     <FormField
-                        control={assignForm.control}
-                        name="handlerId"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Petugas</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih petugas" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {staffList.map(s => (
-                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Batal</Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Tugaskan
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
     </>
   );
 }

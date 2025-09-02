@@ -308,7 +308,7 @@ export default function NotificationsAdminPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-lg">
+                                <AlertDialogContent>
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Hapus Pemberitahuan?</AlertDialogTitle>
                                         <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
@@ -357,7 +357,7 @@ export default function NotificationsAdminPage() {
     </Card>
 
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
+        <DialogContent>
             <DialogHeader>
                 <DialogTitle>Kirim Pemberitahuan</DialogTitle>
                 <CardDescription>Kirim pesan ke warga atau staf tertentu.</CardDescription>
@@ -423,7 +423,7 @@ export default function NotificationsAdminPage() {
     </Dialog>
 
     <Dialog open={isViewMessageOpen} onOpenChange={setIsViewMessageOpen}>
-        <DialogContent className="rounded-lg">
+        <DialogContent>
             <DialogHeader>
                 <DialogTitle>Isi Pesan</DialogTitle>
             </DialogHeader>

@@ -252,7 +252,7 @@ export default function PetugasReportsPage() {
     </Card>
 
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
-        <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
+        <DialogContent>
             <DialogHeader>
                 <DialogTitle>Selesaikan & Balas Laporan</DialogTitle>
                 <CardDescription>Anda harus mengirim balasan untuk menyelesaikan laporan ini.</CardDescription>
