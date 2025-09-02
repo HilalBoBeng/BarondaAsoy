@@ -58,6 +58,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const pathname = usePathname();
+    const isUserOnProfilePage = user && pathname.startsWith('/profile');
     
     const [currentPage, setCurrentPage] = useState(1);
     
@@ -182,9 +183,11 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                                 <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                     {statusDisplay[report.status]?.text || report.status}
                                 </Badge>
-                                <Badge variant="outline">
-                                    {categoryDisplay[report.category] || report.category}
-                                </Badge>
+                                {!isUserOnProfilePage && (
+                                  <Badge variant="outline">
+                                      {categoryDisplay[report.category] || report.category}
+                                  </Badge>
+                                )}
                             </div>
                         </div>
                     </CardContent>

@@ -18,11 +18,12 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,11 +32,15 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 
+const NOTIFICATIONS_PER_PAGE = 5;
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [userInfo, setUserInfo] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
+  const [paginatedNotifications, setPaginatedNotifications] = useState<Notification[]>([]);
+  const [notificationPage, setNotificationPage] = useState(1);
   const [greeting, setGreeting] = useState("Selamat Datang");
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
@@ -118,7 +123,7 @@ export default function Home() {
             const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
             return timeB - timeA;
           });
-          setNotifications(sortedNotifs);
+          setAllNotifications(sortedNotifs);
         }, (error) => {
           console.error("Error fetching notifications: ", error);
         });
@@ -129,13 +134,19 @@ export default function Home() {
         };
       } else {
         setUserInfo(null);
-        setNotifications([]);
+        setAllNotifications([]);
         setLoading(false);
       }
     });
 
     return () => unsubscribeAuth();
   }, [auth, router]);
+  
+  useEffect(() => {
+      const start = (notificationPage - 1) * NOTIFICATIONS_PER_PAGE;
+      const end = start + NOTIFICATIONS_PER_PAGE;
+      setPaginatedNotifications(allNotifications.slice(start, end));
+  }, [notificationPage, allNotifications]);
 
   const handleLogout = async () => {
     try {
@@ -164,17 +175,23 @@ export default function Home() {
       }
   }
 
-  const handleNotificationDelete = async (notifId: string) => {
+  const handleAllNotificationsDelete = async () => {
+      if (!user || allNotifications.length === 0) return;
+      
+      const batch = writeBatch(db);
+      allNotifications.forEach(notif => {
+          const docRef = doc(db, 'notifications', notif.id);
+          batch.delete(docRef);
+      });
       try {
-          await deleteDoc(doc(db, "notifications", notifId));
-          toast({ title: 'Berhasil', description: 'Notifikasi telah dihapus.' });
-          setSelectedNotification(null);
+        await batch.commit();
+        toast({ title: 'Berhasil', description: 'Semua notifikasi telah dihapus.' });
       } catch (error) {
-          toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus notifikasi.' });
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus semua notifikasi.' });
       }
   }
   
-  const unreadNotifications = notifications.filter(n => !n.read).length;
+  const unreadNotifications = allNotifications.filter(n => !n.read).length;
 
   if (loading) {
     return (
@@ -225,26 +242,57 @@ export default function Home() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-80" align="end">
-                        <DropdownMenuLabel>Pemberitahuan</DropdownMenuLabel>
+                        <DropdownMenuLabel className="flex justify-between items-center">
+                            <span>Pemberitahuan</span>
+                            {paginatedNotifications.length > 0 && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
+                                      <Trash className="h-4 w-4"/>
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus Semua Notifikasi?</AlertDialogTitle>
+                                    <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleAllNotificationsDelete}>Ya, Hapus</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <p className="px-2 py-1.5 text-xs text-muted-foreground">Tekan untuk lihat selengkapnya</p>
                         
-                        {notifications.length > 0 ? (
-                            notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault();}} className="flex items-start justify-between cursor-pointer p-0">
-                                   <div className="flex-grow py-1.5 pl-2 pr-1" onClick={() => handleNotificationClick(notif)}>
+                        {paginatedNotifications.length > 0 ? (
+                            paginatedNotifications.map(notif => (
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif);}} className="flex items-start justify-between cursor-pointer p-0">
+                                   <div className="flex-grow py-1.5 pl-2 pr-1">
                                         <div className="font-semibold flex items-center gap-2">
-                                            {notif.title}
+                                            <p className="truncate">{notif.title}</p>
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
                                         </div>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
-                                    <Button type="button" variant="ghost" size="icon" className="h-full w-auto p-2 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleNotificationDelete(notif.id);}}>
-                                        <Trash className="h-4 w-4" />
-                                        <span className="sr-only">Hapus</span>
-                                    </Button>
                                 </DropdownMenuItem>
                             ))
                         ) : (
                             <DropdownMenuItem disabled>Tidak ada pemberitahuan</DropdownMenuItem>
+                        )}
+                        {allNotifications.length > NOTIFICATIONS_PER_PAGE && (
+                          <>
+                           <DropdownMenuSeparator />
+                           <DropdownMenuItem className="p-0">
+                              <div className="flex justify-between w-full items-center p-2">
+                                  <Button variant="ghost" size="sm" onClick={() => setNotificationPage(p => p - 1)} disabled={notificationPage === 1}>Sebelumnya</Button>
+                                  <span className="text-xs text-muted-foreground">Hal {notificationPage}</span>
+                                  <Button variant="ghost" size="sm" onClick={() => setNotificationPage(p => p + 1)} disabled={notificationPage * NOTIFICATIONS_PER_PAGE >= allNotifications.length}>Berikutnya</Button>
+                              </div>
+                           </DropdownMenuItem>
+                          </>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>

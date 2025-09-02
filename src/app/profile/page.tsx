@@ -6,13 +6,13 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -43,6 +43,7 @@ export default function ProfilePage() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<FieldName | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const { toast } = useToast();
   const auth = getAuth(app);
@@ -60,7 +61,7 @@ export default function ProfilePage() {
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         const userDocRef = doc(db, 'users', currentUser.uid);
-        
+
         const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
             const userData = { uid: currentUser.uid, ...userDocSnap.data() } as AppUser;
@@ -70,15 +71,45 @@ export default function ProfilePage() {
               phone: userData.phone || '',
               address: userData.address || '',
             });
+            if(userData.lastUpdated) {
+                setLastUpdated((userData.lastUpdated as Timestamp).toDate());
+            }
+
+            // Fetch dues history only after user is loaded
+            const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
+            const unsubDues = onSnapshot(duesQuery, (snapshot) => {
+                const duesData = snapshot.docs.map(d => ({
+                    ...d.data(),
+                    id: d.id,
+                    paymentDate: (d.data().paymentDate as Timestamp).toDate()
+                })) as DuesPayment[];
+                // Client-side sorting to avoid composite index
+                duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
+                setDuesHistory(duesData);
+            }, (error) => {
+                console.error("Error fetching dues:", error);
+                toast({ variant: "destructive", title: "Gagal memuat iuran." });
+            });
+            return () => unsubDues();
+
           } else {
-            setUser(null);
+             // Create user document if it doesn't exist
+             const newUser = {
+                displayName: currentUser.displayName || 'Warga Baru',
+                email: currentUser.email,
+                createdAt: serverTimestamp(),
+                lastUpdated: serverTimestamp(),
+                phone: '',
+                address: ''
+             }
+             setDoc(userDocRef, newUser);
           }
           setLoading(false);
         }, () => {
           setLoading(false);
           toast({ variant: "destructive", title: "Gagal memuat profil." });
         });
-
+        
         return () => unsubscribeUser();
 
       } else {
@@ -89,36 +120,14 @@ export default function ProfilePage() {
 
     return () => unsubscribeAuth();
   }, [auth, router, form, toast]);
-
-  useEffect(() => {
-    if (!user?.uid) {
-        if (!loading) {
-            setDuesHistory([]);
-        }
-        return;
-    };
-    
-    const duesQuery = query(collection(db, 'dues'), where('userId', '==', user.uid), orderBy('paymentDate', 'desc'));
-    
-    const unsubDues = onSnapshot(duesQuery, (snapshot) => {
-        const duesData = snapshot.docs.map(d => ({
-            ...d.data(),
-            id: d.id,
-            paymentDate: (d.data().paymentDate as Timestamp).toDate()
-        })) as DuesPayment[];
-        setDuesHistory(duesData);
-    }, (error) => {
-        console.error("Error fetching dues:", error);
-        toast({ variant: "destructive", title: "Gagal memuat iuran." });
-    });
-
-    return () => unsubDues();
-}, [user, toast, loading]);
-
-
+  
+  const canEdit = !lastUpdated || isBefore(lastUpdated, addDays(new Date(), -7));
 
   const handleEditClick = (field: FieldName) => {
-    if (field === 'displayName') return;
+    if (!canEdit) {
+        toast({ variant: 'destructive', title: 'Data Dikunci', description: 'Anda baru bisa mengubah data lagi setelah 7 hari dari pembaruan terakhir.' });
+        return;
+    }
     setEditingField(field);
     form.setValue(field, user?.[field] || '');
     setIsEditDialogOpen(true);
@@ -129,14 +138,14 @@ export default function ProfilePage() {
       setIsSubmitting(true);
       try {
           const userDocRef = doc(db, 'users', user.uid);
-          const valueToUpdate = data[editingField]
+          const valueToUpdate = data[editingField];
           
           const updateData: { [key: string]: any } = {};
           updateData[editingField] = valueToUpdate;
+          updateData['lastUpdated'] = serverTimestamp();
 
           await updateDoc(userDocRef, updateData);
           
-          setUser(prev => prev ? { ...prev, [editingField]: valueToUpdate } : null);
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           setIsEditDialogOpen(false);
           setEditingField(null);
@@ -151,26 +160,49 @@ export default function ProfilePage() {
   if (loading) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
-
+  
   const fieldLabels: Record<FieldName, string> = {
     displayName: "Nama Lengkap",
     phone: "Nomor HP / WhatsApp",
     address: "Alamat (RT/RW)"
   };
 
-  const renderDataRow = (field: FieldName, value: string | undefined | null) => (
-    <div className="flex items-center justify-between p-3 border-b">
-        <span className="text-sm text-muted-foreground">{fieldLabels[field]}</span>
-        <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold">{value || <span className="text-sm text-muted-foreground italic">Belum diisi</span>}</span>
-            {field !== 'displayName' && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(field)}>
-                    <Pencil className="h-4 w-4" />
-                </Button>
-            )}
+  const fieldIcons: Record<FieldName | 'email', React.ElementType> = {
+    displayName: User,
+    email: Mail,
+    phone: Phone,
+    address: MapPin,
+  };
+
+  const renderDataRow = (field: FieldName, value: string | undefined | null) => {
+    const Icon = fieldIcons[field];
+    return (
+        <div className="flex items-center gap-4">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+            <div className="flex-1">
+                <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
+                <p className="font-medium">{value || 'Belum diisi'}</p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(field)} disabled={!canEdit}>
+                <Pencil className="h-4 w-4" />
+            </Button>
         </div>
-    </div>
-  );
+    );
+  };
+  
+  const EmailRow = ({ email }: { email: string | null | undefined }) => {
+    const Icon = fieldIcons['email'];
+    return (
+        <div className="flex items-center gap-4">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+            <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-medium">{email}</p>
+            </div>
+        </div>
+    );
+  };
+
 
   return (
      <div className="flex min-h-screen flex-col bg-muted/40">
@@ -198,13 +230,19 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Profil Pengguna</CardTitle>
-                        <CardDescription>Informasi akun dan data diri Anda.</CardDescription>
+                 <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted/30 p-4">
+                        <CardTitle className="text-lg">Profil Saya</CardTitle>
                     </CardHeader>
-                     <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center p-3 rounded-md border">
+                     <CardContent className="p-4 md:p-6 space-y-4">
+                        <div className="space-y-4">
+                            {renderDataRow("displayName", user?.displayName)}
+                            <EmailRow email={user?.email} />
+                            {renderDataRow("phone", user?.phone)}
+                            {renderDataRow("address", user?.address)}
+                        </div>
+
+                         <div className="flex justify-between items-center p-3 rounded-md border mt-4">
                             <span className="text-sm font-medium text-muted-foreground">Bergabung Sejak</span>
                              <span className="text-sm font-semibold">{user?.createdAt && user.createdAt instanceof Timestamp ? format(user.createdAt.toDate(), "d MMMM yyyy", { locale: id }) : 'N/A'}</span>
                         </div>
@@ -215,9 +253,16 @@ export default function ProfilePage() {
                                  {user?.isBlocked ? 'Diblokir' : 'Aktif'}
                             </Badge>
                         </div>
-                        {renderDataRow("displayName", user?.displayName)}
-                        {renderDataRow("phone", user?.phone)}
-                        {renderDataRow("address", user?.address)}
+                        
+                        {!canEdit && (
+                            <Alert>
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>Profil Dikunci</AlertTitle>
+                                <AlertDescription>
+                                Anda dapat mengubah data diri Anda lagi setelah 7 hari dari pembaruan terakhir.
+                                </AlertDescription>
+                            </Alert>
+                        )}
                     </CardContent>
                 </Card>
 
