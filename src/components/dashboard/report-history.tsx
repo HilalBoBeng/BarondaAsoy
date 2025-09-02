@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, query, where, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy } from 'firebase/firestore';
+import { collection, query, where, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -50,49 +50,26 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
 );
 
 export default function ReportHistory({ user, showDeleteButton = false }: { user?: User | null, showDeleteButton?: boolean }) {
-    const [reports, setReports] = useState<Report[]>([]);
+    const [allReports, setAllReports] = useState<Report[]>([]);
+    const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     
     const [currentPage, setCurrentPage] = useState(1);
-    const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [isLastPage, setIsLastPage] = useState(false);
     
-    const fetchReports = useCallback(async (direction: 'next' | 'prev' | 'initial') => {
+    const fetchReports = useCallback(async () => {
         setLoading(true);
         try {
             const reportsRef = collection(db, 'reports');
             let q;
-
-            // Base query filters
-            const filters = [];
+            
             if (user) {
-                filters.push(where('userId', '==', user.uid));
+                q = query(reportsRef, where('userId', '==', user.uid));
             } else {
-                filters.push(where('visibility', '==', 'public'));
-            }
-
-            // Pagination logic
-            if (direction === 'next' && lastVisible) {
-                q = query(reportsRef, ...filters, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
-            } else if (direction === 'prev' && firstVisible) {
-                q = query(reportsRef, ...filters, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
-            } else {
-                q = query(reportsRef, ...filters, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
+                q = query(reportsRef, where('visibility', '==', 'public'));
             }
             
             const snapshot = await getDocs(q);
-
-            if (snapshot.empty) {
-                if (direction !== 'initial') {
-                    setIsLastPage(true);
-                } else {
-                    setReports([]);
-                }
-                setLoading(false);
-                return;
-            }
             
             const reportsData = snapshot.docs.map(doc => {
                  const data = doc.data();
@@ -105,11 +82,11 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
                      replies: repliesArray
                  } as Report;
             });
-
-            setReports(reportsData);
-            setFirstVisible(snapshot.docs[0]);
-            setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-            setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
+            
+            // Sort by date client-side
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+            
+            setAllReports(reportsData);
 
         } catch (error) {
             console.error("Error fetching reports:", error);
@@ -117,20 +94,29 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
         } finally {
             setLoading(false);
         }
-    }, [user, lastVisible, firstVisible, toast]);
+    }, [user, toast]);
     
     useEffect(() => {
-        fetchReports('initial');
-    }, [user, fetchReports]); 
+        fetchReports();
+    }, [fetchReports]); 
+
+    useEffect(() => {
+        const start = (currentPage - 1) * REPORTS_PER_PAGE;
+        const end = start + REPORTS_PER_PAGE;
+        setPaginatedReports(allReports.slice(start, end));
+    }, [currentPage, allReports]);
+
 
     const goToNextPage = () => {
-        setCurrentPage(prev => prev + 1);
-        fetchReports('next');
+        if (currentPage * REPORTS_PER_PAGE < allReports.length) {
+            setCurrentPage(prev => prev + 1);
+        }
     };
 
     const goToPrevPage = () => {
-        setCurrentPage(prev => prev - 1);
-        fetchReports('prev');
+        if (currentPage > 1) {
+            setCurrentPage(prev => prev - 1);
+        }
     };
 
 
@@ -138,14 +124,14 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
-            fetchReports('initial'); // Refresh data
+            fetchReports(); // Refresh data
         } catch (error) {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
         }
     };
 
-    if (loading && reports.length === 0) {
+    if (loading) {
         return (
             <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -161,7 +147,7 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
         )
     }
     
-    if (!loading && reports.length === 0) {
+    if (!loading && paginatedReports.length === 0) {
          const message = user ? "Anda belum pernah membuat laporan." : "Belum ada laporan dari komunitas.";
         return (
              <Card>
@@ -174,7 +160,7 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
 
     return (
         <div className="space-y-4">
-            {reports.map((report) => (
+            {paginatedReports.map((report) => (
                 <Card key={report.id}>
                     <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2 gap-2">
@@ -252,7 +238,7 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
                     variant="outline"
                     size="sm"
                     onClick={goToNextPage}
-                    disabled={isLastPage || loading}
+                    disabled={currentPage * REPORTS_PER_PAGE >= allReports.length || loading}
                 >
                     Berikutnya
                 </Button>

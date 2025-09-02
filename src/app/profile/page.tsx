@@ -127,7 +127,7 @@ export default function ProfilePage() {
             </Button>
             <div className="flex items-center space-x-4 text-right">
                 <div>
-                <h1 className="text-xl font-bold">{user?.displayName}</h1>
+                <h2 className="text-base font-semibold">{user?.displayName}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
                  <User className="h-10 w-10 text-muted-foreground" />
@@ -238,5 +238,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
