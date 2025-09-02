@@ -265,7 +265,6 @@ export default function Home() {
                             )}
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <p className="px-2 py-1.5 text-xs text-muted-foreground">Tekan untuk lihat selengkapnya</p>
                         
                         {paginatedNotifications.length > 0 ? (
                             paginatedNotifications.map(notif => (
@@ -275,6 +274,7 @@ export default function Home() {
                                             <p className="truncate">{notif.title}</p>
                                             {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
                                         </div>
+                                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
                                    </div>
                                 </DropdownMenuItem>
@@ -475,27 +475,29 @@ export default function Home() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-        <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
-             {selectedNotification && (
-                <>
-                    <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
-                        <DialogTitle>Pemberitahuan</DialogTitle>
-                         <DialogClose asChild>
-                            <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Tutup</span>
-                            </Button>
-                        </DialogClose>
-                    </DialogHeader>
-                    <div className="p-6 whitespace-pre-wrap break-word min-h-[150px] flex-grow">
-                       <p className="text-foreground">{selectedNotification?.message}</p>
-                    </div>
-                    <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t">
-                        <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>Tutup</Button>
-                    </DialogFooter>
-                </>
-             )}
-        </DialogContent>
+      <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
+        {selectedNotification && (
+          <>
+            <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
+              <DialogTitle>Pemberitahuan</DialogTitle>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Tutup</span>
+                </Button>
+              </DialogClose>
+            </DialogHeader>
+            <div className="p-6 whitespace-pre-wrap break-word min-h-[150px] flex-grow">
+              <p className="text-foreground">{selectedNotification?.message}</p>
+            </div>
+            <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
+              <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>
+                Tutup
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
     </Dialog>
     </>
   );
