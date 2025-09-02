@@ -150,8 +150,7 @@ const sendOtpFlow = ai.defineFlow(
           `;
 
       // 6. Call the new API route to send the email
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-      const emailResponse = await fetch(`${baseUrl}/api/send-email`, {
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
