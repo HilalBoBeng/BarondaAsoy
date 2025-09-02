@@ -84,7 +84,7 @@ export default function Announcements() {
     return (
        <div className="flex space-x-4 overflow-x-auto pb-4 -mx-1 px-1">
         {announcements.map((announcement) => (
-            <Card key={announcement.id} className="min-w-[300px] w-[300px] flex flex-col hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedAnnouncement(announcement)}>
+            <Card key={announcement.id} className="min-w-[300px] w-[300px] flex flex-col hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="text-base line-clamp-2">{announcement.title}</CardTitle>
                 </CardHeader>
@@ -122,9 +122,7 @@ export default function Announcements() {
                             <p className="text-muted-foreground">{selectedAnnouncement.content}</p>
                         </div>
                         <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
-                            <DialogClose asChild>
-                               <Button type="button" variant="secondary" size="sm">Ok</Button>
-                            </DialogClose>
+                             <Button type="button" variant="secondary" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 border-0" onClick={() => setSelectedAnnouncement(null)}>Ok</Button>
                         </DialogFooter>
                     </>
                 )}

@@ -15,6 +15,8 @@ import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { usePathname } from 'next/navigation';
+
 
 const REPORTS_PER_PAGE = 5;
 
@@ -49,11 +51,12 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     </Card>
 );
 
-export default function ReportHistory({ user, showDeleteButton = false }: { user?: User | null, showDeleteButton?: boolean }) {
+export default function ReportHistory({ user }: { user?: User | null }) {
     const [allReports, setAllReports] = useState<Report[]>([]);
     const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const pathname = usePathname();
     
     const [currentPage, setCurrentPage] = useState(1);
     
@@ -83,7 +86,6 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
                  } as Report;
             });
             
-            // Sort by date client-side
             reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
             
             setAllReports(reportsData);
@@ -97,8 +99,10 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
     }, [user, toast]);
     
     useEffect(() => {
-        fetchReports();
-    }, [fetchReports]); 
+        if(user !== undefined) {
+           fetchReports();
+        }
+    }, [user, fetchReports]); 
 
     useEffect(() => {
         const start = (currentPage - 1) * REPORTS_PER_PAGE;
@@ -124,12 +128,14 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
-            fetchReports(); // Refresh data
+            fetchReports();
         } catch (error) {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
         }
     };
+
+    const showDeleteButton = user && pathname.startsWith('/profile');
 
     if (loading) {
         return (
@@ -197,7 +203,7 @@ export default function ReportHistory({ user, showDeleteButton = false }: { user
                             </div>
                         )}
 
-                        {user && showDeleteButton && (
+                        {showDeleteButton && report.userId === user.uid && (
                             <div className="w-full flex justify-end mt-2">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
