@@ -78,7 +78,6 @@ const sendOtpFlow = ai.defineFlow(
       });
 
       // 5. Prepare email content
-      const senderName = "Baronda";
       let subject = '';
       let welcomeMessage = '';
       let securityWarning = '';
@@ -154,7 +153,7 @@ const sendOtpFlow = ai.defineFlow(
       // Construct absolute URL for server-side fetch
       const headersList = headers();
       const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
-      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const protocol = headersList.get('x-forwarded-proto') || 'http';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl);
       

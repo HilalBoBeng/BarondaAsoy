@@ -51,8 +51,6 @@ const resetStaffPasswordFlow = ai.defineFlow(
       const { name, accessCode } = staffData;
 
       // 2. Send email with the existing access code
-      const senderName = "Baronda";
-
       const emailHtml = `
             <!DOCTYPE html>
             <html lang="id">
@@ -95,7 +93,7 @@ const resetStaffPasswordFlow = ai.defineFlow(
       // Automatically determine the base URL
       const headersList = headers();
       const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
-      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const protocol = headersList.get('x-forwarded-proto') || 'http';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
       

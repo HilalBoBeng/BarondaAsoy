@@ -15,17 +15,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields: to, subject, html' }, { status: 400 });
     }
     
-    // Konfigurasi transporter menggunakan environment variables
+    // Kredensial ditanam langsung di sini untuk memastikan berfungsi di mana saja
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS, 
+          user: "bobeng.icu@gmail.com",
+          pass: "hrll wccf slpw shmt", 
         },
     });
 
     const mailOptions = {
-      from: from || `"${process.env.SMTP_SENDER_NAME || 'Baronda'}" <${process.env.SMTP_USER}>`,
+      from: from || `"Baronda" <bobeng.icu@gmail.com>`,
       to: to,
       subject: subject,
       html: html,

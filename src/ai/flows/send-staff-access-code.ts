@@ -37,8 +37,6 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
   },
   async ({ email, name, accessCode }) => {
     try {
-      const senderName = "Baronda";
-
       const emailHtml = `
             <!DOCTYPE html>
             <html lang="id">
@@ -82,7 +80,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
       
       const headersList = headers();
       const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
-      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const protocol = headersList.get('x-forwarded-proto') || 'http';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
 

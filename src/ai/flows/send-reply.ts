@@ -55,8 +55,6 @@ const sendReplyFlow = ai.defineFlow(
 
       const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\n${replyMessage}\n\nTerima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.\n\nHormat kami,\n${replierRole}, Tim Baronda`;
       
-      const senderName = "Baronda";
-
       const emailHtml = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Tanggapan dari ${replierRole}</h2>
@@ -78,7 +76,7 @@ const sendReplyFlow = ai.defineFlow(
       // 1. Send email notification via API route
       const headersList = headers();
       const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
-      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const protocol = headersList.get('x-forwarded-proto') || 'http';
       const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
 
