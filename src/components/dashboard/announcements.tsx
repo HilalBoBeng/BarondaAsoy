@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, runTransaction } from 'firebase/firestore';
-import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
+import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase/client';
 import type { Announcement } from '@/lib/types';
@@ -177,53 +177,66 @@ export default function Announcements() {
     return button;
   }
   
-  const renderAnnouncements = () => {
+ const renderAnnouncements = () => {
     if (loading) {
-      return Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />);
-    }
-    
-    if (announcements.length === 0) {
       return (
-        <div className="text-center text-muted-foreground py-10 col-span-full">
-          Belum ada pengumuman.
+        <div className="flex space-x-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="min-w-[300px] w-[300px]">
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-5/6" />
+              </CardContent>
+              <CardFooter>
+                 <Skeleton className="h-8 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       );
     }
 
-    return announcements.map((announcement) => (
-      <button 
-        key={announcement.id}
-        onClick={() => setSelectedAnnouncement(announcement)}
-        className="w-full p-4 border-b last:border-b-0 text-left hover:bg-muted/50 transition-colors rounded-lg"
-      >
-        <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <Megaphone className="h-5 w-5" />
-                </div>
-                <div>
-                    <h3 className="font-semibold text-base">{announcement.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+    if (announcements.length === 0) {
+      return (
+        <div className="text-center text-muted-foreground py-10 col-span-full flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
+            <MessageCircle className="h-8 w-8 mb-2" />
+            <p>Belum ada pengumuman.</p>
+        </div>
+      );
+    }
+
+    return (
+       <div className="flex space-x-4 overflow-x-auto pb-4 -mx-1 px-1">
+        {announcements.map((announcement) => (
+            <Card key={announcement.id} className="min-w-[300px] w-[300px] flex flex-col hover:shadow-lg transition-shadow">
+                <CardHeader>
+                    <CardTitle className="text-base line-clamp-2">{announcement.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                    <p className="text-sm text-muted-foreground line-clamp-3">{announcement.content}</p>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-3">
+                     <p className="text-xs text-muted-foreground flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         <span>{announcement.date as string}</span>
                     </p>
-                </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground self-center" />
-        </div>
-      </button>
-    ));
+                    <Button variant="secondary" size="sm" className="w-full" onClick={() => setSelectedAnnouncement(announcement)}>
+                        Baca Selengkapnya
+                    </Button>
+                </CardFooter>
+            </Card>
+        ))}
+       </div>
+    );
   };
 
 
   return (
     <div>
-        <div className="flow-root">
-          <div className="-my-4 divide-y divide-border">
-            {renderAnnouncements()}
-          </div>
-        </div>
-
+        {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
             <DialogContent className="sm:max-w-lg">
                 {selectedAnnouncement && (
