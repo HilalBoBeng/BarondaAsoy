@@ -18,11 +18,11 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody, DialogClose } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -202,7 +202,7 @@ export default function Home() {
               alt="Logo" 
               width={40}
               height={40}
-              className="h-10 w-10 object-cover"
+              className="h-10 w-10 rounded-full object-cover"
             />
             <div className="flex flex-col">
               <span className="text-base sm:text-lg font-bold text-primary leading-tight">Baronda</span>
@@ -458,3 +458,5 @@ export default function Home() {
     </>
   );
 }
+
+    

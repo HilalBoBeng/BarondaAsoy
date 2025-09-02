@@ -79,7 +79,7 @@ export default function ProfilePage() {
                   paymentDate: (d.data().paymentDate as Timestamp).toDate()
               })) as DuesPayment[];
               // Sort client-side
-              duesData.sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
+              duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
               setDuesHistory(duesData);
           });
           // Here you could return unsubDues to clean it up, but since the parent is already handling cleanup, it might be okay
@@ -131,12 +131,12 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-            <div className="flex items-center space-x-4 text-right">
-                <div>
-                <h2 className="text-base font-semibold">{user?.displayName}</h2>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <div className="flex items-center space-x-2 text-right">
+                <div className="flex flex-col">
+                  <p className="text-sm font-semibold leading-tight">{user?.displayName}</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{user?.email}</p>
                 </div>
-                 <User className="h-10 w-10 text-muted-foreground" />
+                 <User className="h-8 w-8 text-muted-foreground" />
             </div>
       </div>
 
@@ -222,7 +222,7 @@ export default function ProfilePage() {
                         {duesHistory.length > 0 ? (
                             duesHistory.map(due => (
                                 <TableRow key={due.id}>
-                                    <TableCell>{format(due.paymentDate, "PPP", { locale: id })}</TableCell>
+                                    <TableCell>{due.paymentDate instanceof Date ? format(due.paymentDate, "PPP", { locale: id }) : 'N/A'}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                                     </TableCell>
@@ -256,3 +256,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

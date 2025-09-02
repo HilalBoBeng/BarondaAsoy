@@ -178,8 +178,8 @@ export default function DuesPetugasPage() {
     return payments
       .filter(p => p.userId === selectedUser.uid)
       .sort((a, b) => {
-        const timeA = (a.paymentDate as Timestamp)?.toMillis() || 0;
-        const timeB = (b.paymentDate as Timestamp)?.toMillis() || 0;
+        const timeA = (a.paymentDate instanceof Timestamp) ? a.paymentDate.toMillis() : 0;
+        const timeB = (b.paymentDate instanceof Timestamp) ? b.paymentDate.toMillis() : 0;
         return timeB - timeA;
       });
   }, [payments, selectedUser]);
@@ -493,3 +493,5 @@ export default function DuesPetugasPage() {
     </>
   );
 }
+
+    
