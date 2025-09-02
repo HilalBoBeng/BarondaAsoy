@@ -11,42 +11,21 @@ import type { DuesPayment, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Loader2, Edit, Trash, ArrowLeft, Eye } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-const editDuesSchema = z.object({
-  amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
-  notes: z.string().optional(),
-});
-type EditDuesFormValues = z.infer<typeof editDuesSchema>;
 
 export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
   const { userId } = params;
   const [user, setUser] = useState<AppUser | null>(null);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentDue, setCurrentDue] = useState<DuesPayment | null>(null);
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<string | null>(null);
   
-
   const { toast } = useToast();
-  const editForm = useForm<EditDuesFormValues>({
-    resolver: zodResolver(editDuesSchema),
-  });
 
   useEffect(() => {
     if (!userId) {
@@ -94,61 +73,14 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     });
   }, [payments]);
 
-  const handleOpenEditDialog = (due: DuesPayment) => {
-    setCurrentDue(due);
-    editForm.reset({
-      amount: due.amount,
-      notes: due.notes,
-    });
-    setIsEditDialogOpen(true);
-  };
-  
   const handleOpenNoteDialog = (note: string) => {
     setSelectedNote(note);
     setIsNoteDialogOpen(true);
   }
 
-  const handleEditSubmit = async (values: EditDuesFormValues) => {
-    if (!currentDue) return;
-    setIsSubmittingEdit(true);
-    try {
-      const dueRef = doc(db, 'dues', currentDue.id);
-      await updateDoc(dueRef, {
-        amount: values.amount,
-        notes: values.notes || '',
-      });
-      toast({ title: "Berhasil", description: "Data iuran berhasil diperbarui." });
-      setPayments(prev => prev.map(p => p.id === currentDue.id ? { ...p, ...values } : p));
-      setIsEditDialogOpen(false);
-      setCurrentDue(null);
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui data iuran." });
-    } finally {
-      setIsSubmittingEdit(false);
-    }
-  }
-
-  const handleDeleteDue = async (dueId: string) => {
-    try {
-      await deleteDoc(doc(db, 'dues', dueId));
-      toast({ title: "Berhasil", description: "Data iuran berhasil dihapus." });
-      setPayments(prev => prev.filter(p => p.id !== dueId));
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Gagal", description: "Gagal menghapus data iuran." });
-    }
-  }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
-
-  const formatNumberInput = (value: string) => {
-    // Only allows numbers and removes leading zeros
-    const numericValue = value.replace(/\D/g, '');
-    if (!numericValue) return '';
-    return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
-  };
-
 
   return (
     <>
@@ -168,14 +100,12 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                   <TableHead>Periode</TableHead>
                   <TableHead>Jumlah</TableHead>
                   <TableHead>Catatan</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
@@ -201,33 +131,11 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                             <span className="sr-only">Lihat Catatan</span>
                          </Button>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="icon" onClick={() => handleOpenEditDialog(due)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Hapus Catatan Iuran?</AlertDialogTitle>
-                                <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteDue(due.id)}>Hapus</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={4} className="h-24 text-center">
                       Warga ini belum memiliki riwayat iuran.
                     </TableCell>
                   </TableRow>
@@ -237,64 +145,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
           </div>
         </CardContent>
       </Card>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Iuran</DialogTitle>
-            <CardDescription>
-              Mengedit iuran untuk {currentDue?.userName} periode {currentDue?.month} {currentDue?.year}.
-            </CardDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4 pt-4">
-              <FormField
-                control={editForm.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jumlah (Rp)</FormLabel>
-                    <FormControl>
-                        <Input 
-                            type="text"
-                            inputMode="numeric"
-                            value={field.value ? formatNumberInput(field.value.toString()) : ''}
-                            onChange={(e) => {
-                                const formattedValue = formatNumberInput(e.target.value);
-                                const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
-                                field.onChange(numericValue);
-                            }}
-                            placeholder="20.000"
-                        />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Catatan (Opsional)</FormLabel>
-                    <FormControl><Textarea {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="secondary">Batal</Button>
-                </DialogClose>
-                <Button type="submit" disabled={isSubmittingEdit}>
-                  {isSubmittingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Simpan Perubahan
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
       
        <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
         <DialogContent>

@@ -42,6 +42,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export default function AdminSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { setTheme, theme } = useTheme();
@@ -52,19 +53,13 @@ export default function AdminSettingsPage() {
 
   const onSubmit = async (data: PasswordFormValues) => {
     setIsSubmitting(true);
-    // This is a simplified logic. In a real app, you would validate the current password
-    // against a stored value and then update it. For now, we assume the default admin password.
-    // In a real app, you'd use a secure backend flow to change this.
     if (data.currentPassword === "Admin123") {
       console.log("Admin password changed to:", data.newPassword);
       toast({
         title: "Berhasil",
-        description: "Kata sandi admin berhasil diubah (simulasi). Anda akan dikeluarkan.",
+        description: "Kata sandi admin berhasil diubah (simulasi).",
       });
-      // For security, log out the admin to force re-login with the new password.
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('staffInfo');
-      router.push('/auth/staff-login');
+      setPasswordChanged(true);
     } else {
       toast({
         variant: "destructive",
@@ -97,7 +92,7 @@ export default function AdminSettingsPage() {
                 <FormItem>
                   <FormLabel>Kata Sandi Saat Ini</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input type="password" {...field} readOnly={passwordChanged} value={passwordChanged ? '********' : field.value} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -110,7 +105,7 @@ export default function AdminSettingsPage() {
                 <FormItem>
                   <FormLabel>Kata Sandi Baru</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input type="password" {...field} readOnly={passwordChanged} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -123,16 +118,18 @@ export default function AdminSettingsPage() {
                 <FormItem>
                   <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input type="password" {...field} readOnly={passwordChanged} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Perubahan
-            </Button>
+            {!passwordChanged && (
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Simpan Perubahan
+                </Button>
+            )}
           </form>
         </Form>
         

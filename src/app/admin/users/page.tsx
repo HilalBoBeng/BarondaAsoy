@@ -10,21 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { id } from 'date-fns/locale';
 import type { AppUser, Staff } from '@/lib/types';
 import { sendStaffAccessCode } from '@/ai/flows/send-staff-access-code';
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +112,16 @@ export default function UsersAdminPage() {
     }));
   };
 
+  const handleToggleBlockUser = async (uid: string, isBlocked: boolean) => {
+      const userRef = doc(db, 'users', uid);
+      try {
+        await updateDoc(userRef, { isBlocked: !isBlocked });
+        toast({ title: "Berhasil", description: `Status blokir pengguna telah diperbarui.` });
+      } catch (error) {
+        toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui status pengguna." });
+      }
+  };
+
 
   return (
     <>
@@ -149,6 +147,7 @@ export default function UsersAdminPage() {
                   <TableRow>
                     <TableHead>Pengguna</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -158,7 +157,8 @@ export default function UsersAdminPage() {
                       <TableRow key={i}>
                         <TableCell><div className="flex items-center gap-4"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-40" /></div></TableCell>
                         <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-10 w-20 ml-auto" /></TableCell>
                       </TableRow>
                     ))
                   ) : users.length > 0 ? (
@@ -173,28 +173,39 @@ export default function UsersAdminPage() {
                           </div>
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={user.isBlocked ? 'destructive' : 'secondary'}>
+                            {user.isBlocked ? 'Diblokir' : 'Aktif'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-lg">
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
-                                        <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <div className="flex gap-2 justify-end">
+                                <Button variant="outline" size="sm" onClick={() => handleToggleBlockUser(user.uid, !!user.isBlocked)}>
+                                    {user.isBlocked ? <ShieldCheck className="h-4 w-4" /> : <ShieldX className="h-4 w-4" />}
+                                    <span className="ml-2 hidden sm:inline">{user.isBlocked ? 'Buka Blokir' : 'Blokir'}</span>
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="rounded-lg">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
+                                            <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center h-24">Belum ada warga terdaftar.</TableCell>
+                      <TableCell colSpan={4} className="text-center h-24">Belum ada warga terdaftar.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -239,9 +250,9 @@ export default function UsersAdminPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             {visibleAccessCodes[s.id] ? (
-                                                <span>{s.accessCode}</span>
+                                                <span className="font-mono">{s.accessCode}</span>
                                             ) : (
-                                                <span>••••••••</span>
+                                                <span className="font-mono">••••••••</span>
                                             )}
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleAccessCodeVisibility(s.id)}>
                                                 {visibleAccessCodes[s.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}

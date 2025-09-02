@@ -153,7 +153,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                 <Info className="h-4 w-4" />
                 <AlertTitle>Informasi</AlertTitle>
                 <AlertDescription>
-                    Laporan yang lebih lama dari 24 jam akan dihapus secara otomatis dari riwayat ini untuk menjaga privasi.
+                    Laporan yang lebih lama dari 24 jam tidak akan ditampilkan di riwayat ini untuk menjaga privasi.
                 </AlertDescription>
             </Alert>
             

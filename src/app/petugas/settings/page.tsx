@@ -46,6 +46,7 @@ type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 export default function StaffSettingsPage() {
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string, email: string } | null>(null);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { setTheme, theme } = useTheme();
@@ -81,12 +82,10 @@ export default function StaffSettingsPage() {
         await updateDoc(staffRef, { accessCode: data.newAccessCode.toUpperCase() });
         toast({
             title: "Berhasil",
-            description: "Kode akses Anda telah diubah. Silakan login kembali.",
+            description: "Kode akses Anda telah diubah.",
         });
-        accessCodeForm.reset();
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('staffInfo');
-        router.push('/auth/staff-login');
+        setPasswordChanged(true);
+        accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
     } catch (error) {
         toast({
             variant: "destructive",
@@ -119,7 +118,7 @@ export default function StaffSettingsPage() {
                 <FormItem>
                   <FormLabel>Kode Akses Saat Ini</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input type="password" {...field} readOnly={passwordChanged} value={passwordChanged ? '********' : field.value} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -132,7 +131,7 @@ export default function StaffSettingsPage() {
                 <FormItem>
                   <FormLabel>Kode Akses Baru (15 Karakter)</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} readOnly={passwordChanged} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -145,16 +144,18 @@ export default function StaffSettingsPage() {
                 <FormItem>
                   <FormLabel>Konfirmasi Kode Akses Baru</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} readOnly={passwordChanged} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isSubmittingCode || !staffInfo}>
-              {isSubmittingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Simpan Kode Akses Baru
-            </Button>
+            {!passwordChanged && (
+                <Button type="submit" disabled={isSubmittingCode || !staffInfo}>
+                {isSubmittingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Kode Akses Baru
+                </Button>
+            )}
           </form>
         </Form>
         

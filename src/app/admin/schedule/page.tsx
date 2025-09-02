@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs, increment } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -31,12 +31,24 @@ const scheduleSchema = z.object({
   officerId: z.string().min(1, "Petugas harus dipilih."),
   area: z.string().min(1, "Area tidak boleh kosong."),
   date: z.date({ required_error: "Tanggal patroli harus diisi." }),
-  time: z.string().min(1, "Waktu patroli tidak boleh kosong.").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?-\s?([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format waktu salah. Contoh: 20:00 - 22:00"),
+  startTime: z.string().min(1, "Jam mulai harus dipilih."),
+  endTime: z.string().min(1, "Jam selesai harus dipilih."),
+}).refine(data => {
+    const [startHour] = data.startTime.split(':').map(Number);
+    const [endHour] = data.endTime.split(':').map(Number);
+    return endHour > startHour;
+}, {
+    message: "Jam selesai harus setelah jam mulai.",
+    path: ["endTime"],
 });
 
 type ScheduleFormValues = z.infer<typeof scheduleSchema>;
 
 const daysOfWeek = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+const timeOptions = Array.from({ length: 24 }, (_, i) => {
+    const hour = i.toString().padStart(2, '0');
+    return `${hour}:00`;
+});
 
 
 export default function ScheduleAdminPage() {
@@ -54,7 +66,6 @@ export default function ScheduleAdminPage() {
     defaultValues: {
       officerId: '',
       area: '',
-      time: '',
     },
   });
   
@@ -86,14 +97,16 @@ export default function ScheduleAdminPage() {
   useEffect(() => {
     if (isDialogOpen) {
       if (currentSchedule) {
+        const [startTime, endTime] = currentSchedule.time.split(' - ');
         const defaultValues = {
             ...currentSchedule,
             date: currentSchedule.date instanceof Timestamp ? currentSchedule.date.toDate() : (currentSchedule.date as Date),
+            startTime: startTime || '',
+            endTime: endTime || '',
         };
-        delete (defaultValues as any).status; // remove status from form values
         form.reset(defaultValues as any);
       } else {
-        form.reset({ officerId: '', area: '', time: '', date: undefined });
+        form.reset({ officerId: '', area: '', startTime: undefined, endTime: undefined, date: undefined });
       }
     }
   }, [isDialogOpen, currentSchedule, form]);
@@ -116,7 +129,7 @@ export default function ScheduleAdminPage() {
         officer: selectedStaff.name,
         officerId: selectedStaff.id,
         area: values.area,
-        time: values.time,
+        time: `${values.startTime} - ${values.endTime}`,
         date: Timestamp.fromDate(values.date),
       };
 
@@ -366,9 +379,32 @@ export default function ScheduleAdminPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="time" render={({ field }) => (
-                  <FormItem><FormLabel>Waktu</FormLabel><FormControl><Input placeholder="20:00 - 22:00" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="startTime" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Jam Mulai</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {timeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="endTime" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Jam Selesai</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {timeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
                     <Button type="submit" disabled={isSubmitting}>

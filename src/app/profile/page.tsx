@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -83,14 +83,25 @@ export default function ProfilePage() {
                     displayName: currentUser.displayName || 'Warga Baru',
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
-                    lastUpdated: null,
+                    lastUpdated_displayName: null,
+                    lastUpdated_phone: null,
+                    lastUpdated_address: null,
                     phone: '',
-                    address: ''
+                    address: '',
+                    isBlocked: false,
                 };
                 await setDoc(userDocRef, newUserPayload);
                 const newUserSnap = await getDoc(userDocRef);
                 userData = { uid: currentUser.uid, ...newUserSnap.data() } as AppUser;
             }
+            
+            if (userData.isBlocked) {
+                 toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Akun Anda telah diblokir oleh admin.' });
+                 auth.signOut();
+                 router.push('/auth/login');
+                 return;
+            }
+
 
             setUser(userData);
             form.reset({
@@ -209,9 +220,13 @@ export default function ProfilePage() {
                     )}
                 </div>
             </div>
-            {canEdit && (
+            {canEdit ? (
                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)}>
                     <Pencil className="h-4 w-4" />
+                </Button>
+            ) : (
+                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" disabled>
+                    <Lock className="h-4 w-4" />
                 </Button>
             )}
         </div>
@@ -244,6 +259,15 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
+                {user?.isBlocked && (
+                    <Alert variant="destructive">
+                        <ShieldBan className="h-4 w-4" />
+                        <AlertTitle>Akun Diblokir</AlertTitle>
+                        <AlertDescription>
+                            Akun Anda saat ini sedang diblokir oleh admin. Anda tidak dapat menggunakan fitur-fitur aplikasi. Hubungi admin untuk informasi lebih lanjut.
+                        </AlertDescription>
+                    </Alert>
+                )}
                <Card className="overflow-hidden">
                     <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                         <div className="flex items-center gap-4">
@@ -258,11 +282,6 @@ export default function ProfilePage() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                      <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{user?.displayName || 'Pengguna'}</CardTitle>
-                                     {canEditField('displayName') && (
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick('displayName')}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                     )}
                                 </div>
                                 <CardDescription className="text-primary-foreground/80 truncate">{user?.email}</CardDescription>
                             </div>
@@ -270,6 +289,7 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y">
+                            {renderDataRow("displayName", user?.displayName)}
                             {renderDataRow("phone", user?.phone)}
                             {renderDataRow("address", user?.address)}
                         </div>

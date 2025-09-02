@@ -13,12 +13,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, Upload, Wrench, Check, ShieldCheck, ShieldOff } from 'lucide-react';
-import type { PatrolLog, EquipmentStatus } from '@/lib/types';
+import { Loader2, Send } from 'lucide-react';
+import type { PatrolLog } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const logSchema = z.object({
   title: z.string().min(1, "Judul kejadian tidak boleh kosong."),
@@ -44,10 +43,10 @@ export default function PatrolLogPage() {
         setStaffInfo(info);
 
         if (info.name) {
-            // Fetch logs
             const logsQuery = query(
                 collection(db, "patrol_logs"),
-                where("officerName", "==", info.name)
+                where("officerName", "==", info.name),
+                orderBy("createdAt", "desc")
             );
             const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
                 const logsData = snapshot.docs.map(d => ({ 
@@ -55,10 +54,6 @@ export default function PatrolLogPage() {
                     ...d.data(),
                     createdAt: (d.data().createdAt as Timestamp).toDate(),
                 } as PatrolLog));
-                
-                // Sort client-side
-                logsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
-
                 setLogs(logsData);
                 setLoadingLogs(false);
             });
@@ -108,12 +103,6 @@ export default function PatrolLogPage() {
                              <FormField control={logForm.control} name="description" render={({ field }) => (
                                 <FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Textarea {...field} rows={4} placeholder="Jelaskan detail kejadian..." /></FormControl><FormMessage /></FormItem>
                             )} />
-                            <FormItem>
-                                <FormLabel>Upload Foto</FormLabel>
-                                <FormControl><Input type="file" disabled /></FormControl>
-                                <FormMessage />
-                                <p className="text-xs text-muted-foreground">Fitur upload foto akan segera tersedia.</p>
-                            </FormItem>
                         </CardContent>
                         <CardFooter>
                             <Button type="submit" disabled={isSubmittingLog || !staffInfo} className="w-full">
