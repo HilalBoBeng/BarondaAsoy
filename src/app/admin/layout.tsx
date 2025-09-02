@@ -204,7 +204,7 @@ export default function AdminLayout({
                 alt="Logo" 
                 width={32} 
                 height={32}
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-full object-cover"
               />
           </div>
         </header>

@@ -200,9 +200,9 @@ export default function Home() {
             <Image 
               src="https://iili.io/KJ4aGxp.png" 
               alt="Logo" 
-              width={40} 
+              width={40}
               height={40}
-              className="h-8 w-8 sm:h-10 sm:w-10"
+              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover"
             />
             <div className="flex flex-col">
               <span className="text-base sm:text-lg font-bold text-primary leading-tight">Baronda</span>

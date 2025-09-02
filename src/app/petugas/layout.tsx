@@ -10,7 +10,8 @@ import {
   Menu,
   FileText,
   Settings,
-  Landmark
+  Landmark,
+  Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -89,6 +90,7 @@ export default function PetugasLayout({
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
     { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
+    { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
     { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
   ];
 
@@ -200,7 +202,7 @@ export default function PetugasLayout({
                 alt="Logo"
                 width={32}
                 height={32}
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-full object-cover"
                 priority
               />
           </div>
