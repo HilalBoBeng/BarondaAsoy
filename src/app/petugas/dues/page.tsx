@@ -24,6 +24,7 @@ const months = [
 ];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
+const USERS_PER_PAGE = 20;
 
 export default function DuesPetugasPage() {
   const [payments, setPayments] = useState<DuesPayment[]>([]);
@@ -34,12 +35,13 @@ export default function DuesPetugasPage() {
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { toast } = useToast();
 
   useEffect(() => {
     setLoading(true);
-    const usersQuery = query(collection(db, 'users'));
+    const usersQuery = query(collection(db, 'users'), orderBy('displayName', 'asc'));
     const paymentsQuery = query(collection(db, 'dues'));
 
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
@@ -92,10 +94,16 @@ export default function DuesPetugasPage() {
       }
 
       return filtered
-        .filter(user => user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+        .filter(user => user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   }, [usersWithPaymentStatus, filterStatus, searchTerm]);
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+    return filteredUsers.slice(startIndex, startIndex + USERS_PER_PAGE);
+  }, [filteredUsers, currentPage]);
+
+  const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
 
   const unpaidUsers = useMemo(() => {
     return usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
@@ -235,8 +243,8 @@ export default function DuesPetugasPage() {
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                   </TableRow>
                 ))
-              ) : filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
+              ) : paginatedUsers.length > 0 ? (
+                paginatedUsers.map((user) => (
                   <TableRow key={user.uid}>
                     <TableCell>
                         <Link href={`/petugas/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
@@ -262,6 +270,29 @@ export default function DuesPetugasPage() {
           </Table>
         </div>
       </CardContent>
+       <CardFooter>
+        <div className="flex items-center justify-end space-x-2 w-full">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                disabled={currentPage === 1 || loading}
+            >
+                Sebelumnya
+            </Button>
+            <span className="text-sm text-muted-foreground">Halaman {currentPage} dari {totalPages}</span>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage === totalPages || loading}
+            >
+                Berikutnya
+            </Button>
+        </div>
+      </CardFooter>
     </Card>
   );
 }
+
+    

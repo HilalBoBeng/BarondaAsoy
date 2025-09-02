@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -239,21 +239,22 @@ export default function Announcements() {
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg flex flex-col">
+            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
                 {selectedAnnouncement && (
                     <>
-                        <DialogHeader className="flex items-center justify-between space-y-0 bg-primary p-4 text-primary-foreground">
+                        <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                             <DialogTitle>Pengumuman</DialogTitle>
                             <DialogClose asChild>
-                                <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
+                                <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7 hover:bg-primary/80">
                                     <X className="h-4 w-4" />
                                     <span className="sr-only">Tutup</span>
                                 </Button>
                             </DialogClose>
                         </DialogHeader>
-                        <DialogBody className="whitespace-pre-wrap text-sm text-muted-foreground min-h-[200px] flex-grow">
+                        <div className="p-6 whitespace-pre-wrap text-sm text-muted-foreground min-h-[150px] flex-grow">
+                            <h3 className="font-bold text-lg text-foreground mb-2">{selectedAnnouncement.title}</h3>
                             {selectedAnnouncement.content}
-                        </DialogBody>
+                        </div>
                         <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">
                             <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />
@@ -270,3 +271,5 @@ export default function Announcements() {
     </div>
   );
 }
+
+    

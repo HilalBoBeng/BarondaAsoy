@@ -109,15 +109,6 @@ const DialogDescription = React.forwardRef<
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
-const DialogBody = ({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-    <div className={cn("p-6 flex-grow", className)} {...props} />
-)
-DialogBody.displayName = "DialogBody";
-
-
 export {
   Dialog,
   DialogPortal,
@@ -129,5 +120,6 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-  DialogBody,
 }
+
+    

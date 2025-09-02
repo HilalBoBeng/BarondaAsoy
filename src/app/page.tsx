@@ -22,7 +22,7 @@ import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestam
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -428,22 +428,22 @@ export default function Home() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-        <DialogContent className="w-[90%] sm:max-w-lg rounded-lg flex flex-col">
+        <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
              {selectedNotification && (
                 <>
-                    <DialogHeader className="flex items-center justify-between space-y-0 bg-primary p-4 text-primary-foreground">
+                    <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                         <DialogTitle>Pemberitahuan</DialogTitle>
                          <DialogClose asChild>
-                            <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
+                            <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7 hover:bg-primary/80">
                                 <X className="h-4 w-4" />
                                 <span className="sr-only">Tutup</span>
                             </Button>
                         </DialogClose>
                     </DialogHeader>
-                    <DialogBody className="whitespace-pre-wrap break-words min-h-[200px] flex-grow">
+                    <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
                        <p>{selectedNotification?.message}</p>
-                    </DialogBody>
-                    <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    </div>
+                    <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t">
                         <DialogClose asChild>
                            <Button type="button" variant="secondary" size="sm">Ok</Button>
                         </DialogClose>
@@ -455,3 +455,5 @@ export default function Home() {
     </>
   );
 }
+
+    
