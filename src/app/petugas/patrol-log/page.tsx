@@ -60,7 +60,6 @@ export default function PatrolLogPage() {
             // Fetch logs
             const logsQuery = query(
                 collection(db, "patrol_logs"),
-                orderBy("createdAt", "desc"),
                 where("officerName", "==", info.name)
             );
             const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
@@ -68,7 +67,11 @@ export default function PatrolLogPage() {
                     id: d.id, 
                     ...d.data(),
                     createdAt: (d.data().createdAt as Timestamp).toDate(),
-                } as PatrolLog))
+                } as PatrolLog));
+                
+                // Sort client-side
+                logsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+
                 setLogs(logsData);
                 setLoadingLogs(false);
             });
@@ -214,7 +217,7 @@ export default function PatrolLogPage() {
                 ) : logs.length > 0 ? (
                     logs.map(log => (
                         <div key={log.id} className="border-b pb-2">
-                             <p className="text-sm text-muted-foreground">{format(log.createdAt, "PPP, HH:mm", { locale: id })}</p>
+                             <p className="text-sm text-muted-foreground">{format(log.createdAt as Date, "PPP, HH:mm", { locale: id })}</p>
                              <p className="font-semibold">{log.title}</p>
                              <p className="text-sm text-muted-foreground">{log.description}</p>
                         </div>
