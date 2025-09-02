@@ -14,12 +14,15 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Landmark } from 'lucide-react';
+import { Loader2, Landmark, Check, ChevronsUpDown } from 'lucide-react';
 import type { AppUser, DuesPayment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "cmdk";
+import { cn } from '@/lib/utils';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -45,12 +48,16 @@ export default function DuesPetugasPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string } | null>(null);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<DuesFormValues>({
     resolver: zodResolver(duesSchema),
     defaultValues: { userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' },
   });
+  
+  const selectedUserId = form.watch('userId');
+  const selectedUser = users.find(u => u.uid === selectedUserId);
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -89,8 +96,8 @@ export default function DuesPetugasPage() {
         return;
     }
     setIsSubmitting(true);
-    const selectedUser = users.find(u => u.uid === values.userId);
-    if (!selectedUser) {
+    const userToSave = users.find(u => u.uid === values.userId);
+    if (!userToSave) {
         toast({ variant: 'destructive', title: "Gagal", description: "Data warga tidak ditemukan." });
         setIsSubmitting(false);
         return;
@@ -98,7 +105,7 @@ export default function DuesPetugasPage() {
     try {
       await addDoc(collection(db, 'dues'), {
         ...values,
-        userName: selectedUser.displayName,
+        userName: userToSave.displayName,
         paymentDate: serverTimestamp(),
         recordedBy: staffInfo.name,
         recordedById: staffInfo.id,
@@ -127,22 +134,66 @@ export default function DuesPetugasPage() {
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-4">
-                         <FormField control={form.control} name="userId" render={({ field }) => (
-                            <FormItem>
+                        <FormField
+                            control={form.control}
+                            name="userId"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
                                 <FormLabel>Pilih Warga</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                                    <PopoverTrigger asChild>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Pilih nama warga..." /></SelectTrigger>
+                                        <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn(
+                                            "w-full justify-between",
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                        >
+                                        {field.value
+                                            ? users.find((user) => user.uid === field.value)?.displayName
+                                            : "Pilih warga"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
                                     </FormControl>
-                                    <SelectContent>
-                                        {users.map(user => (
-                                            <SelectItem key={user.uid} value={user.uid}>{user.displayName}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Cari nama warga..." />
+                                            <CommandList>
+                                                <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {users.map((user) => (
+                                                    <CommandItem
+                                                        value={user.displayName || user.uid}
+                                                        key={user.uid}
+                                                        onSelect={() => {
+                                                            form.setValue("userId", user.uid);
+                                                            setComboboxOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            user.uid === field.value
+                                                            ? "opacity-100"
+                                                            : "opacity-0"
+                                                        )}
+                                                        />
+                                                        {user.displayName}
+                                                    </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                {selectedUser && <p className="text-xs text-muted-foreground pt-1">{selectedUser.email}</p>}
                                 <FormMessage />
-                            </FormItem>
-                         )} />
+                                </FormItem>
+                            )}
+                        />
                         <div className="grid grid-cols-2 gap-4">
                             <FormField control={form.control} name="month" render={({ field }) => (
                                 <FormItem>
