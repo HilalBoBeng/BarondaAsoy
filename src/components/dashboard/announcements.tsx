@@ -122,6 +122,7 @@ export default function Announcements() {
         });
 
         // Update local state for immediate feedback
+        setAnnouncements(prev => prev.map(ann => ann.id === announcementId ? { ...ann, likes: newLikes, dislikes: newDislikes, likesBy: newLikesBy, dislikesBy: newDislikesBy } : ann));
         setSelectedAnnouncement(prev => prev ? {
             ...prev,
             likes: newLikes,
@@ -238,7 +239,7 @@ export default function Announcements() {
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
                 {selectedAnnouncement && (
                     <>
                         <DialogHeader>
