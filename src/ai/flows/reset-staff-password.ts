@@ -38,6 +38,10 @@ const resetStaffPasswordFlow = ai.defineFlow(
   },
   async ({ email }) => {
     try {
+      if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        throw new Error('Layanan email belum dikonfigurasi oleh admin.');
+      }
+      
       // 1. Find the staff member by email
       const staffQuery = query(collection(db, 'staff'), where('email', '==', email));
       const staffSnapshot = await getDocs(staffQuery);
@@ -52,17 +56,19 @@ const resetStaffPasswordFlow = ai.defineFlow(
 
       // 2. Send email with the existing access code
       const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
+        secure: Number(process.env.SMTP_PORT) === 465,
         auth: {
-          user: "bobeng.icu@gmail.com",
-          pass: "hrll wccf slpw shmt",
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
       });
 
+      const senderName = process.env.SMTP_SENDER_NAME || 'Baronda';
+
       const mailOptions = {
-        from: `"Baronda" <bobeng.icu@gmail.com>`,
+        from: `"${senderName}" <${process.env.SMTP_USER}>`,
         to: email,
         subject: 'Pengingat Kode Akses Petugas Baronda Anda',
         html: `

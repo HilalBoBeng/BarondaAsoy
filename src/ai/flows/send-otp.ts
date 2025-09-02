@@ -38,6 +38,10 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context = 'register' }) => {
     try {
+      if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        throw new Error('Layanan email belum dikonfigurasi oleh admin.');
+      }
+      
       // Check if user/staff exists if it's a password reset context
       if (context === 'resetPassword' || context === 'staffResetPassword') {
         const collectionName = context === 'resetPassword' ? 'users' : 'staff';
@@ -79,14 +83,16 @@ const sendOtpFlow = ai.defineFlow(
 
       // 5. Send email using nodemailer
       const transporter = nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 587,
-          secure: false, // true for 465, false for other ports
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT),
+          secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
           auth: {
-              user: "bobeng.icu@gmail.com",
-              pass: "hrll wccf slpw shmt",
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
           },
       });
+
+      const senderName = process.env.SMTP_SENDER_NAME || 'Baronda';
       
       let subject = '';
       let welcomeMessage = '';
@@ -120,9 +126,8 @@ const sendOtpFlow = ai.defineFlow(
             break;
       }
 
-
       const mailOptions = {
-          from: `"Baronda" <bobeng.icu@gmail.com>`,
+          from: `"${senderName}" <${process.env.SMTP_USER}>`,
           to: email,
           subject: subject,
           html: `

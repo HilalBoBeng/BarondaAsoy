@@ -43,31 +43,37 @@ const sendReplyFlow = ai.defineFlow(
     outputSchema: SendReplyOutputSchema,
   },
   async ({ reportId, recipientEmail, replyMessage, originalReport, replierRole, userId }) => {
-    let recipientName = 'Warga';
-    if(userId) {
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-            recipientName = userSnap.data().displayName || 'Warga';
-        }
-    }
-
-    const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\n${replyMessage}\n\nTerima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.\n\nHormat kami,\n${replierRole}, Tim Baronda`;
-    
     try {
+      if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        throw new Error('Layanan email belum dikonfigurasi oleh admin.');
+      }
+      
+      let recipientName = 'Warga';
+      if(userId) {
+          const userRef = doc(db, 'users', userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+              recipientName = userSnap.data().displayName || 'Warga';
+          }
+      }
+
+      const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\n${replyMessage}\n\nTerima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.\n\nHormat kami,\n${replierRole}, Tim Baronda`;
+      
       // 1. Send email notification
       const transporter = nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 587,
-          secure: false, 
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT),
+          secure: Number(process.env.SMTP_PORT) === 465,
           auth: {
-              user: "bobeng.icu@gmail.com",
-              pass: "hrll wccf slpw shmt",
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
           },
       });
 
+      const senderName = process.env.SMTP_SENDER_NAME || 'Baronda';
+
       const mailOptions = {
-          from: `"Baronda" <bobeng.icu@gmail.com>`,
+          from: `"${senderName}" <${process.env.SMTP_USER}>`,
           to: recipientEmail,
           subject: `Tanggapan dari ${replierRole} atas Laporan Anda`,
           html: `
