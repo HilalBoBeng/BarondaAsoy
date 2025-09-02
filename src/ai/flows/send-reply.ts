@@ -13,6 +13,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, serverTimestamp, collection, getDoc, addDoc } from 'firebase/firestore';
+import { headers } from 'next/headers';
 
 
 const SendReplyInputSchema = z.object({
@@ -75,10 +76,10 @@ const sendReplyFlow = ai.defineFlow(
           `;
 
       // 1. Send email notification via API route
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      if (!baseUrl) {
-          throw new Error("NEXT_PUBLIC_BASE_URL is not defined in the environment.");
-      }
+      const headersList = headers();
+      const host = headersList.get('host') || 'localhost:9002';
+      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
 
       const emailResponse = await fetch(emailApiUrl, {

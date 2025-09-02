@@ -10,6 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { headers } from 'next/headers';
 
 const SendStaffAccessCodeInputSchema = z.object({
   email: z.string().email(),
@@ -79,10 +80,10 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
             </html>
           `;
       
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      if (!baseUrl) {
-          throw new Error("NEXT_PUBLIC_BASE_URL is not defined in the environment.");
-      }
+      const headersList = headers();
+      const host = headersList.get('host') || 'localhost:9002';
+      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
 
       const emailResponse = await fetch(emailApiUrl, {

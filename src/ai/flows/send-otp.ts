@@ -12,6 +12,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { z } from 'genkit';
+import { headers } from 'next/headers';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -150,10 +151,10 @@ const sendOtpFlow = ai.defineFlow(
           `;
 
       // 6. Call the new API route to send the email
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      if (!baseUrl) {
-          throw new Error("NEXT_PUBLIC_BASE_URL is not defined in the environment.");
-      }
+      const headersList = headers();
+      const host = headersList.get('host') || 'localhost:9002';
+      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
       
       const emailResponse = await fetch(emailApiUrl, {

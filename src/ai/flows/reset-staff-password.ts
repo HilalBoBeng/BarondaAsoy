@@ -13,6 +13,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { z } from 'genkit';
+import { headers } from 'next/headers';
 
 const ResetStaffPasswordInputSchema = z.object({
   email: z.string().email(),
@@ -90,11 +91,12 @@ const resetStaffPasswordFlow = ai.defineFlow(
             </body>
             </html>
           `;
-      
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      if (!baseUrl) {
-          throw new Error("NEXT_PUBLIC_BASE_URL is not defined in the environment.");
-      }
+
+      // Automatically determine the base URL
+      const headersList = headers();
+      const host = headersList.get('host') || 'localhost:9002';
+      const protocol = host.startsWith('localhost') ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
       const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
       
       const emailResponse = await fetch(emailApiUrl, {
