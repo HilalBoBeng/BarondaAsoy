@@ -20,15 +20,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { sendReply } from '@/ai/flows/send-reply';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const replySchema = z.object({
   replyMessage: z.string().min(1, "Balasan tidak boleh kosong."),
 });
 type ReplyFormValues = z.infer<typeof replySchema>;
 
+const REPORTS_PER_PAGE = 10;
+
 export default function PetugasReportsPage() {
   const [allReports, setAllReports] = useState<Report[]>([]);
-  const [displayedReports, setDisplayedReports] = useState<Report[]>([]);
+  const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,8 +40,10 @@ export default function PetugasReportsPage() {
   const { toast } = useToast();
   
   const [filter, setFilter] = useState('new');
+  const [threatFilter, setThreatFilter] = useState('all');
   const [newReportsCount, setNewReportsCount] = useState(0);
   const [myReportsCount, setMyReportsCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
 
@@ -81,15 +86,23 @@ export default function PetugasReportsPage() {
     return () => unsubscribe();
   }, [toast, staffInfo]);
 
-  useEffect(() => {
+  const filteredAndSortedReports = useEffect(() => {
     let filtered = [];
     if (filter === 'new') {
       filtered = allReports.filter(r => r.status === 'new');
     } else if (filter === 'my_reports' && staffInfo) {
       filtered = allReports.filter(r => r.handlerId === staffInfo.id);
     }
-    setDisplayedReports(filtered);
-  }, [filter, allReports, staffInfo]);
+
+    if (threatFilter !== 'all') {
+        filtered = filtered.filter(r => r.triageResult?.threatLevel === threatFilter);
+    }
+    
+    const start = (currentPage - 1) * REPORTS_PER_PAGE;
+    const end = start + REPORTS_PER_PAGE;
+    setPaginatedReports(filtered.slice(start, end));
+
+  }, [filter, allReports, staffInfo, threatFilter, currentPage]);
   
   const handleTakeReport = async (report: Report) => {
     if (!staffInfo) return;
@@ -125,7 +138,6 @@ export default function PetugasReportsPage() {
     }
     setIsSubmitting(true);
     try {
-        // Send reply via Genkit flow
         const result = await sendReply({
             reportId: currentReport.id,
             recipientEmail: currentReport.reporterEmail,
@@ -137,7 +149,6 @@ export default function PetugasReportsPage() {
         
         if (!result.success) throw new Error(result.message);
 
-        // Update report status to resolved
         const reportRef = doc(db, 'reports', currentReport.id);
         await updateDoc(reportRef, { status: 'resolved' });
 
@@ -169,7 +180,7 @@ export default function PetugasReportsPage() {
     <Card className="mt-2 bg-muted/50">
         <CardContent className="p-3">
             <div className="flex justify-between items-start">
-                 <p className="text-xs text-foreground/80 break-word flex-grow pr-2">
+                 <p className="text-xs text-foreground/80 break-words flex-grow pr-2">
                     {reply.message}
                 </p>
                 <div className="flex-shrink-0">
@@ -192,7 +203,7 @@ export default function PetugasReportsPage() {
                  <CardTitle>Laporan Warga</CardTitle>
                 <CardDescription>Tinjau dan tanggapi laporan yang masuk dari warga.</CardDescription>
             </div>
-             <div className="flex gap-2">
+             <div className="flex flex-col sm:flex-row gap-2">
                 <Button variant={filter === 'new' ? 'default' : 'outline'} onClick={() => setFilter('new')}>
                     Laporan Baru
                     {newReportsCount > 0 && <Badge variant="destructive" className="ml-2">{newReportsCount}</Badge>}
@@ -201,14 +212,25 @@ export default function PetugasReportsPage() {
                     Laporan Saya
                     {myReportsCount > 0 && <Badge variant="secondary" className="ml-2">{myReportsCount}</Badge>}
                 </Button>
+                 <Select value={threatFilter} onValueChange={setThreatFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter ancaman" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Semua Ancaman</SelectItem>
+                        <SelectItem value="high">Ancaman Tinggi</SelectItem>
+                        <SelectItem value="medium">Ancaman Sedang</SelectItem>
+                        <SelectItem value="low">Ancaman Rendah</SelectItem>
+                    </SelectContent>
+                </Select>
              </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-lg" />)
-        ) : displayedReports.length > 0 ? (
-            displayedReports.map((report) => (
+        ) : paginatedReports.length > 0 ? (
+            paginatedReports.map((report) => (
                 <Card key={report.id} className="rounded-lg">
                     <CardHeader>
                         <CardTitle className="text-base break-word">{report.reportText}</CardTitle>
@@ -256,10 +278,31 @@ export default function PetugasReportsPage() {
             ))
         ) : (
             <div className="text-center py-12 text-muted-foreground">
-                {filter === 'new' ? 'Tidak ada laporan baru saat ini.' : 'Anda belum menangani laporan apapun.'}
+                Tidak ada laporan yang sesuai dengan filter.
             </div>
         )}
       </CardContent>
+      <CardFooter>
+         <div className="flex items-center justify-end space-x-2 w-full">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => p - 1)}
+                disabled={currentPage === 1}
+            >
+                Sebelumnya
+            </Button>
+            <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={paginatedReports.length < REPORTS_PER_PAGE}
+            >
+                Berikutnya
+            </Button>
+        </div>
+      </CardFooter>
     </Card>
 
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
