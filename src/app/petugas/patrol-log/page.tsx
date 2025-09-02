@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, writeBatch, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc, writeBatch, orderBy, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -64,7 +64,11 @@ export default function PatrolLogPage() {
                 where("officerName", "==", info.name)
             );
             const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-                const logsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PatrolLog))
+                const logsData = snapshot.docs.map(d => ({ 
+                    id: d.id, 
+                    ...d.data(),
+                    createdAt: (d.data().createdAt as Timestamp).toDate(),
+                } as PatrolLog))
                 setLogs(logsData);
                 setLoadingLogs(false);
             });
@@ -210,7 +214,7 @@ export default function PatrolLogPage() {
                 ) : logs.length > 0 ? (
                     logs.map(log => (
                         <div key={log.id} className="border-b pb-2">
-                             <p className="text-sm text-muted-foreground">{format((log.createdAt as any).toDate(), "PPP, HH:mm", { locale: id })}</p>
+                             <p className="text-sm text-muted-foreground">{format(log.createdAt, "PPP, HH:mm", { locale: id })}</p>
                              <p className="font-semibold">{log.title}</p>
                              <p className="text-sm text-muted-foreground">{log.description}</p>
                         </div>

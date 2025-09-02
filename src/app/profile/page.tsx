@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 const profileSchema = z.object({
   displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
@@ -49,7 +50,7 @@ export default function ProfilePage() {
   });
   
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
   useEffect(() => {
@@ -207,7 +208,9 @@ export default function ProfilePage() {
                             duesHistory.map(due => (
                                 <TableRow key={due.id}>
                                     <TableCell>{format(due.paymentDate, "PPP", { locale: id })}</TableCell>
-                                    <TableCell>{due.month} {due.year}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary">{due.month} {due.year}</Badge>
+                                    </TableCell>
                                     <TableCell>{formatCurrency(due.amount)}</TableCell>
                                     <TableCell>{due.recordedBy}</TableCell>
                                 </TableRow>

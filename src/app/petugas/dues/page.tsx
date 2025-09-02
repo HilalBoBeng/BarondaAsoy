@@ -104,7 +104,7 @@ export default function DuesPetugasPage() {
         recordedById: staffInfo.id,
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
-      form.reset();
+      form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
@@ -113,7 +113,7 @@ export default function DuesPetugasPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
   return (
