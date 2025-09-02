@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -62,8 +63,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('userId', '==', user.uid),
-                orderBy('createdAt', 'desc')
+                where('userId', '==', user.uid)
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -79,7 +79,8 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      replies: repliesArray
                  } as Report;
             });
-            
+
+            reportsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
             setAllReports(reportsData);
 
         } catch (error) {
