@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -149,22 +148,26 @@ export default function RecordDuesPage() {
                         <FormLabel>Pilih Warga</FormLabel>
                         <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                             <PopoverTrigger asChild>
-                                 <FormControl>
+                                <FormControl>
                                     <Input
                                         placeholder="Ketik nama warga untuk mencari..."
                                         value={searchValue}
                                         onChange={(e) => {
                                             setSearchValue(e.target.value);
                                             if(!comboboxOpen) setComboboxOpen(true);
+                                            if (e.target.value === '') {
+                                                form.setValue('userId', '');
+                                            }
                                         }}
                                         onClick={() => setComboboxOpen(true)}
                                     />
                                 </FormControl>
                             </PopoverTrigger>
+                            {searchValue && (
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                     <CommandList>
-                                        {filteredUsers.length === 0 && searchValue && (
+                                        {filteredUsers.length === 0 && (
                                             <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
                                         )}
                                         <CommandGroup>
@@ -189,6 +192,7 @@ export default function RecordDuesPage() {
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
+                            )}
                         </Popover>
                         <FormMessage />
                         </FormItem>

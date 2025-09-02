@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -46,7 +45,11 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
 
   useEffect(() => {
     const userId = params.userId;
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      notFound();
+      return;
+    };
 
     setLoading(true);
 
@@ -143,7 +146,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
       <Card>
         <CardHeader>
            <CardTitle>Riwayat Pembayaran</CardTitle>
-           <CardDescription>{loading ? 'Memuat...' : user?.displayName}</CardDescription>
+           <CardDescription>{loading ? <Skeleton className="h-5 w-32" /> : user?.displayName}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
