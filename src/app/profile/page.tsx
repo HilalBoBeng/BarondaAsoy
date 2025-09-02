@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -69,7 +68,8 @@ export default function ProfilePage() {
             phone: userData.phone || '',
             address: userData.address || '',
           });
-          
+
+          // Fetch dues history only after user is confirmed
           const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid), orderBy('paymentDate', 'desc'));
           const unsubDues = onSnapshot(duesQuery, (snapshot) => {
               const duesData = snapshot.docs.map(d => ({
@@ -78,17 +78,24 @@ export default function ProfilePage() {
                   paymentDate: (d.data().paymentDate as Timestamp).toDate()
               })) as DuesPayment[];
               setDuesHistory(duesData);
+          }, (error) => {
+              console.error("Error fetching dues:", error);
+              toast({ variant: "destructive", title: "Gagal memuat riwayat iuran." });
           });
 
           return () => unsubDues();
+        } else {
+            setLoading(false);
         }
       } else {
         router.push('/auth/login');
+        setLoading(false);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, router, form]);
 
   const handleEditClick = (field: FieldName) => {
@@ -104,11 +111,12 @@ export default function ProfilePage() {
       try {
           const userDocRef = doc(db, 'users', user.uid);
           const updateData: { [key: string]: any } = {};
-          updateData[editingField] = data[editingField];
+          const valueToUpdate = data[editingField]
+          updateData[editingField] = valueToUpdate;
 
           await updateDoc(userDocRef, updateData);
           
-          setUser(prev => prev ? { ...prev, ...updateData } : null);
+          setUser(prev => prev ? { ...prev, [editingField]: valueToUpdate } : null);
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           setIsEditDialogOpen(false);
           setEditingField(null);
@@ -161,7 +169,7 @@ export default function ProfilePage() {
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 
-                width={32} 
+                width={32}
                 height={32}
                 className="h-8 w-8 rounded-full object-cover"
               />
@@ -247,7 +255,7 @@ export default function ProfilePage() {
                     <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ReportHistory user={auth.currentUser} showDeleteButton={true} />
+                        <ReportHistory user={auth.currentUser} />
                     </CardContent>
                 </Card>
             </div>

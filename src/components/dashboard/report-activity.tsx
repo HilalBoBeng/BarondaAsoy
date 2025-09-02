@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -53,7 +52,6 @@ export default function ReportActivity({ user }: { user: User | null }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageReportOutput | null>(null);
   const { toast } = useToast();
-  const [currentPosition, setCurrentPosition] = useState<{lat: number, lng: number} | null>(null);
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -69,22 +67,6 @@ export default function ReportActivity({ user }: { user: User | null }) {
       form.setValue('reporterName', user.displayName || user.email || '');
     }
   }, [user, form]);
-  
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const pos = { lat: latitude, lng: longitude };
-          setCurrentPosition(pos);
-          form.setValue('location', pos);
-        },
-        (error) => {
-          console.error("Error getting location", error);
-        }
-      );
-    }
-  }, [form]);
 
 
   const onSubmit = async (data: ReportFormValues) => {
@@ -146,7 +128,7 @@ export default function ReportActivity({ user }: { user: User | null }) {
     <Card className="w-full">
       <CardHeader>
         <CardDescription>
-          Laporan Anda akan dianalisis oleh AI untuk penilaian segera dan disimpan. Lokasi Anda saat ini akan dilampirkan jika diizinkan.
+          Laporan Anda akan dianalisis oleh AI untuk penilaian segera dan disimpan.
         </CardDescription>
       </CardHeader>
       <Form {...form}>

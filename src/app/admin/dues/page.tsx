@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc, Timestamp, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc, Timestamp, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -122,16 +121,19 @@ export default function DuesAdminPage() {
     }
     try {
         for (const user of usersToRemind) {
+            const recipientName = user.displayName || 'Warga';
+            const formattedMessage = `**Yth, ${recipientName.toUpperCase()}**\n\nDengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran.\n\nTerima kasih atas perhatian dan kerja sama Anda.`;
+
             await addDoc(collection(db, 'notifications'), {
                 userId: user.uid,
-                title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
-                message: `Dengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran. Terima kasih atas perhatian dan kerja sama Anda.`,
+                title: \`Pengingat Iuran \${selectedMonth} \${selectedYear}\`,
+                message: formattedMessage,
                 read: false,
                 createdAt: serverTimestamp(),
                 link: '/profile',
             });
         }
-        toast({ title: "Berhasil", description: `Pengingat iuran berhasil dikirim ke ${usersToRemind.length} warga.` });
+        toast({ title: "Berhasil", description: \`Pengingat iuran berhasil dikirim ke \${usersToRemind.length} warga.\` });
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal mengirim pengingat massal." });
     } finally {
@@ -237,7 +239,7 @@ export default function DuesAdminPage() {
                 paginatedUsers.map((user) => (
                   <TableRow key={user.uid}>
                     <TableCell>
-                        <Link href={`/admin/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
+                        <Link href={\`/admin/dues/\${user.uid}\`} className="font-medium text-primary hover:underline text-left">
                             {user.displayName}
                         </Link>
                     </TableCell>
@@ -284,5 +286,3 @@ export default function DuesAdminPage() {
     </Card>
   );
 }
-
-    

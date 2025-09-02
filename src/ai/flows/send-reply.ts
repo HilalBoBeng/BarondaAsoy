@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview This file defines a Genkit flow for sending a reply from an admin to a user's report
@@ -13,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import nodemailer from 'nodemailer';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, serverTimestamp, collection, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, getDoc, addDoc } from 'firebase/firestore';
 
 
 const SendReplyInputSchema = z.object({
@@ -62,8 +61,7 @@ const sendReplyFlow = ai.defineFlow(
     }
 
     const formattedMessage = `
-        Yth, ${recipientName.toUpperCase()}
-        Warga Kelurahan Kilongan
+        **Yth, ${recipientName.toUpperCase()}**
 
         ${replyMessage}
 
@@ -116,21 +114,23 @@ const sendReplyFlow = ai.defineFlow(
       const replyId = doc(collection(db, 'reports')).id; // Generate a unique ID for the reply
       const updateData: { [key: string]: any } = {};
       
-      updateData[`replies.${replyId}`] = {
+      updateData[\`replies.\${replyId}\`] = {
           message: replyMessage,
           replierRole: replierRole,
           timestamp: serverTimestamp(),
       };
       
       // Also add the formatted message to the user's notifications collection
-      await addDoc(collection(db, 'notifications'), {
-        userId: userId,
-        title: `Tanggapan Laporan: ${originalReport.substring(0, 20)}...`,
-        message: formattedMessage,
-        read: false,
-        createdAt: serverTimestamp(),
-        link: '/profile',
-      });
+      if (userId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: userId,
+          title: \`Tanggapan Laporan: \${originalReport.substring(0, 20)}...\`,
+          message: formattedMessage,
+          read: false,
+          createdAt: serverTimestamp(),
+          link: '/profile',
+        });
+      }
 
 
       await updateDoc(reportRef, updateData);
@@ -144,7 +144,7 @@ const sendReplyFlow = ai.defineFlow(
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return {
         success: false,
-        message: `Failed to send reply: ${errorMessage}`,
+        message: \`Failed to send reply: \${errorMessage}\`,
       };
     }
   }
