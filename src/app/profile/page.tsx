@@ -68,13 +68,15 @@ export default function ProfilePage() {
           });
           
           // Fetch Dues History
-          const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid), orderBy('paymentDate', 'desc'));
+          const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
           const unsubDues = onSnapshot(duesQuery, (snapshot) => {
               const duesData = snapshot.docs.map(d => ({
                   ...d.data(),
                   id: d.id,
                   paymentDate: (d.data().paymentDate as Timestamp).toDate()
               })) as DuesPayment[];
+              // Sort client-side
+              duesData.sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
               setDuesHistory(duesData);
           });
           // Here you could return unsubDues to clean it up, but since the parent is already handling cleanup, it might be okay
@@ -234,7 +236,7 @@ export default function ProfilePage() {
           <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
         </CardHeader>
         <CardContent>
-            <ReportHistory user={auth.currentUser} />
+            <ReportHistory user={auth.currentUser} showDeleteButton={true} />
         </CardContent>
       </Card>
 
