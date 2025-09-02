@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -15,9 +15,12 @@ import { Input } from '@/components/ui/input';
 import { Loader2, User, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, DuesPayment } from '@/lib/types';
 import ReportHistory from '@/components/dashboard/report-history';
 import Link from 'next/link';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const profileSchema = z.object({
   displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
@@ -29,6 +32,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [duesHistory, setDuesHistory] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -43,6 +47,10 @@ export default function ProfilePage() {
       address: '',
     },
   });
+  
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+  }
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -57,6 +65,18 @@ export default function ProfilePage() {
             phone: userData.phone || '',
             address: userData.address || '',
           });
+          
+          // Fetch Dues History
+          const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid), orderBy('paymentDate', 'desc'));
+          const unsubDues = onSnapshot(duesQuery, (snapshot) => {
+              const duesData = snapshot.docs.map(d => ({
+                  ...d.data(),
+                  id: d.id,
+                  paymentDate: (d.data().paymentDate as Timestamp).toDate()
+              })) as DuesPayment[];
+              setDuesHistory(duesData);
+          });
+          // Here you could return unsubDues to clean it up, but since the parent is already handling cleanup, it might be okay
         }
       } else {
         router.push('/auth/login');
@@ -95,12 +115,12 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 text-right">
                 <div>
-                <h1 className="text-2xl font-bold text-right">{user?.displayName}</h1>
-                <p className="text-muted-foreground text-right">{user?.email}</p>
+                <h1 className="text-xl font-bold">{user?.displayName}</h1>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
-                 <User className="h-12 w-12 text-muted-foreground" />
+                 <User className="h-10 w-10 text-muted-foreground" />
             </div>
       </div>
       
@@ -158,16 +178,39 @@ export default function ProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Status Akun</CardTitle>
+          <CardTitle>Riwayat Iuran Saya</CardTitle>
+          <CardDescription>Daftar pembayaran iuran yang telah Anda lakukan.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-            <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Status</span>
-                <span className='font-medium text-green-600'>Aktif</span>
-            </div>
-            <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Role</span>
-                <span className='font-medium'>Warga</span>
+        <CardContent>
+            <div className="rounded-lg border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Tanggal Bayar</TableHead>
+                            <TableHead>Periode</TableHead>
+                            <TableHead>Jumlah</TableHead>
+                            <TableHead>Dicatat Oleh</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {duesHistory.length > 0 ? (
+                            duesHistory.map(due => (
+                                <TableRow key={due.id}>
+                                    <TableCell>{format(due.paymentDate, "PPP", { locale: id })}</TableCell>
+                                    <TableCell>{due.month} {due.year}</TableCell>
+                                    <TableCell>{formatCurrency(due.amount)}</TableCell>
+                                    <TableCell>{due.recordedBy}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    Anda belum memiliki riwayat iuran.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
             </div>
         </CardContent>
       </Card>

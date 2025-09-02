@@ -117,3 +117,16 @@ export interface EquipmentLog {
     checkedBy: string;
     officerId: string;
 }
+
+export interface DuesPayment {
+    id: string;
+    userId: string;
+    userName: string;
+    amount: number;
+    month: string;
+    year: string;
+    paymentDate: Date;
+    notes?: string;
+    recordedBy: string; // Staff name
+    recordedById: string; // Staff ID
+}

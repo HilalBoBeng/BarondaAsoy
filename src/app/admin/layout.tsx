@@ -14,6 +14,7 @@ import {
   Menu,
   MessageSquare,
   Settings,
+  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -90,6 +91,7 @@ export default function AdminLayout({
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
     { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
+    { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
     { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
