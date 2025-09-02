@@ -17,14 +17,32 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { notFound } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+
+const editDuesSchema = z.object({
+  amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
+});
+
+type EditDuesFormValues = z.infer<typeof editDuesSchema>;
 
 export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
   const { userId } = params;
   const [user, setUser] = useState<AppUser | null>(null);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentPayment, setCurrentPayment] = useState<DuesPayment | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { toast } = useToast();
+
+  const form = useForm<EditDuesFormValues>({
+    resolver: zodResolver(editDuesSchema),
+  });
 
   useEffect(() => {
     if (!userId) {
@@ -63,6 +81,12 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     };
   }, [userId]);
 
+  useEffect(() => {
+    if (currentPayment) {
+        form.setValue("amount", currentPayment.amount);
+    }
+  }, [currentPayment, form]);
+
   const userPaymentHistory = useMemo(() => {
     return payments.sort((a, b) => {
       const timeA = (a.paymentDate as Timestamp)?.toMillis() || 0;
@@ -80,9 +104,37 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     }
   }
 
+  const handleEditOpen = (payment: DuesPayment) => {
+      setCurrentPayment(payment);
+      setIsEditDialogOpen(true);
+  }
+
+  const onEditSubmit = async (values: EditDuesFormValues) => {
+      if (!currentPayment) return;
+      setIsSubmitting(true);
+      try {
+          const paymentRef = doc(db, 'dues', currentPayment.id);
+          await updateDoc(paymentRef, { amount: values.amount });
+          toast({ title: 'Berhasil', description: 'Jumlah iuran berhasil diperbarui.' });
+          setIsEditDialogOpen(false);
+          setCurrentPayment(null);
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memperbarui jumlah iuran.' });
+      } finally {
+          setIsSubmitting(false);
+      }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
+
+  const formatNumberInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    if (!numericValue) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
+  };
+
 
   return (
     <>
@@ -124,7 +176,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                       <TableCell>{formatCurrency(due.amount)}</TableCell>
                        <TableCell className="text-right">
                          <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="sm" disabled>
+                            <Button variant="outline" size="sm" onClick={() => handleEditOpen(due)}>
                                 <Edit className="h-4 w-4" />
                             </Button>
                              <AlertDialog>
@@ -163,6 +215,47 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
         </CardContent>
       </Card>
       
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Jumlah Iuran</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Jumlah (Rp)</FormLabel>
+                    <FormControl>
+                       <Input 
+                          type="text"
+                          inputMode="numeric"
+                          value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                          onChange={(e) => {
+                              const formattedValue = formatNumberInput(e.target.value);
+                              const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
+                              field.onChange(numericValue);
+                          }}
+                          placeholder="20.000"
+                        />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan Perubahan
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

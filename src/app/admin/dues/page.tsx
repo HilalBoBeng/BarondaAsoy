@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -122,7 +123,7 @@ export default function DuesAdminPage() {
     try {
         for (const user of usersToRemind) {
             const recipientName = user.displayName || 'Warga';
-            const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\nDengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran.\n\nTerima kasih atas perhatian dan kerja sama Anda.`;
+            const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\nDengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran.\n\nTerima kasih atas perhatian dan kerja sama Anda.\n\nHormat kami,\nAdmin, Tim Baronda`;
 
             await addDoc(collection(db, 'notifications'), {
                 userId: user.uid,

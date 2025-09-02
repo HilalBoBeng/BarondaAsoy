@@ -157,14 +157,17 @@ export default function NotificationsPetugasPage() {
 
         const batch = writeBatch(db);
         const title = values.title;
-        const message = values.message;
-
+        
         values.recipientIds.forEach(userId => {
+          const recipient = userMap.get(userId);
+          const recipientName = recipient?.displayName || recipient?.name || 'Warga';
+          const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\n${values.message}\n\nTerima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.\n\nHormat kami,\nPetugas, Tim Baronda`;
+
           const newNotifRef = doc(collection(db, 'notifications'));
           batch.set(newNotifRef, {
             userId: userId,
             title: title,
-            message: message,
+            message: formattedMessage,
             read: false,
             createdAt: serverTimestamp(),
           });
@@ -423,8 +426,7 @@ export default function NotificationsPetugasPage() {
             <DialogHeader>
                 <DialogTitle>Isi Pesan</DialogTitle>
             </DialogHeader>
-            <div className="py-4 whitespace-pre-wrap">
-                {selectedMessage}
+            <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedMessage.replace(/\n/g, '<br />') }}>
             </div>
             <DialogFooter>
                 <Button onClick={() => setIsViewMessageOpen(false)}>Tutup</Button>

@@ -29,7 +29,6 @@ const duesSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
   month: z.string().min(1, "Bulan harus dipilih."),
   year: z.string().min(1, "Tahun harus dipilih."),
-  notes: z.string().optional(),
 });
 
 type DuesFormValues = z.infer<typeof duesSchema>;
@@ -43,7 +42,7 @@ export default function RecordDuesPage() {
 
   const form = useForm<DuesFormValues>({
     resolver: zodResolver(duesSchema),
-    defaultValues: { userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' },
+    defaultValues: { userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString() },
   });
   
   useEffect(() => {
@@ -99,13 +98,12 @@ export default function RecordDuesPage() {
         amount: values.amount,
         month: values.month,
         year: values.year,
-        notes: values.notes,
         paymentDate: serverTimestamp(),
         recordedBy: staffInfo.name,
         recordedById: staffInfo.id,
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
-      form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
+      form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString() });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
@@ -195,13 +193,6 @@ export default function RecordDuesPage() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="notes" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Catatan (Opsional)</FormLabel>
-                  <FormControl><Textarea {...field} rows={2} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
@@ -214,5 +205,3 @@ export default function RecordDuesPage() {
     </Card>
   );
 }
-
-    
