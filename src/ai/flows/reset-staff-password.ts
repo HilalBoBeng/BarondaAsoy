@@ -91,7 +91,13 @@ const resetStaffPasswordFlow = ai.defineFlow(
             </html>
           `;
       
-      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/send-email`, {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+      if (!baseUrl) {
+          throw new Error("NEXT_PUBLIC_BASE_URL is not defined in the environment.");
+      }
+      const emailApiUrl = new URL('/api/send-email', baseUrl).toString();
+      
+      const emailResponse = await fetch(emailApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
