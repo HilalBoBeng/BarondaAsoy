@@ -480,8 +480,8 @@ export default function Home() {
             <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
               <DialogTitle>Pemberitahuan</DialogTitle>
             </DialogHeader>
-            <div className="p-6 whitespace-pre-wrap break-word min-h-[150px] flex-grow">
-              <p className="text-foreground">{selectedNotification?.message}</p>
+            <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
+              <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\n/g, '<br />') }}></p>
             </div>
             <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
               <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>

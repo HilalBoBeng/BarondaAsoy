@@ -61,16 +61,7 @@ const sendReplyFlow = ai.defineFlow(
         }
     }
 
-    const formattedMessage = `
-        **Yth, ${recipientName.toUpperCase()}**
-
-        ${replyMessage}
-
-        Terima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.
-
-        Hormat kami,
-        ${replierRole}, Tim Baronda
-    `;
+    const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\n${replyMessage}\n\nTerima kasih atas partisipasi Anda dalam menjaga keamanan lingkungan.\n\nHormat kami,\n${replierRole}, Tim Baronda`;
     
     try {
       // 1. Send email notification

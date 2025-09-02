@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -44,8 +45,8 @@ export default function ProfilePage() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<FieldName | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [canEdit, setCanEdit] = useState(true);
+  
+  const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
 
   const { toast } = useToast();
   const auth = getAuth(app);
@@ -58,6 +59,13 @@ export default function ProfilePage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
+
+  const canEditField = (field: FieldName) => {
+    const lastUpdateDate = lastUpdated[field];
+    if (!lastUpdateDate) return true;
+    return isBefore(lastUpdateDate, addDays(new Date(), -7));
+  };
+
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
@@ -75,7 +83,7 @@ export default function ProfilePage() {
                     displayName: currentUser.displayName || 'Warga Baru',
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
-                    lastUpdated: serverTimestamp(),
+                    lastUpdated: null,
                     phone: '',
                     address: ''
                 };
@@ -91,13 +99,13 @@ export default function ProfilePage() {
                 address: userData.address || '',
             });
 
-            if (userData.lastUpdated) {
-                const lastUpdatedDate = (userData.lastUpdated as Timestamp).toDate();
-                setLastUpdated(lastUpdatedDate);
-                setCanEdit(isBefore(lastUpdatedDate, addDays(new Date(), -7)));
-            } else {
-                 setCanEdit(true);
-            }
+            // Set last updated dates for each field
+            const lastUpdatedDates: { [key in FieldName]?: Date | null } = {};
+            if (userData.lastUpdated_displayName) lastUpdatedDates.displayName = (userData.lastUpdated_displayName as Timestamp).toDate();
+            if (userData.lastUpdated_phone) lastUpdatedDates.phone = (userData.lastUpdated_phone as Timestamp).toDate();
+            if (userData.lastUpdated_address) lastUpdatedDates.address = (userData.lastUpdated_address as Timestamp).toDate();
+            setLastUpdated(lastUpdatedDates);
+
 
             const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
             const duesSnapshot = await getDocs(duesQuery);
@@ -122,12 +130,13 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribeAuth();
-  }, [auth, router, toast, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth, router, toast]);
   
 
   const handleEditClick = (field: FieldName) => {
-    if (!canEdit) {
-        toast({ variant: 'destructive', title: 'Data Dikunci', description: 'Anda baru bisa mengubah data lagi setelah 7 hari dari pembaruan terakhir.' });
+    if (!canEditField(field)) {
+        toast({ variant: 'destructive', title: 'Data Dikunci', description: 'Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.' });
         return;
     }
     setEditingField(field);
@@ -144,17 +153,16 @@ export default function ProfilePage() {
           
           const updateData: { [key: string]: any } = {};
           updateData[editingField] = valueToUpdate;
-          updateData['lastUpdated'] = serverTimestamp();
+          updateData[`lastUpdated_${editingField}`] = serverTimestamp();
 
           await updateDoc(userDocRef, updateData);
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           
           const newLastUpdatedDate = new Date();
-          const updatedUser = { ...user, [editingField]: valueToUpdate, lastUpdated: newLastUpdatedDate };
-          setUser(updatedUser);
-          setLastUpdated(newLastUpdatedDate);
-          setCanEdit(false);
+          const updatedUser = { ...user, [editingField]: valueToUpdate };
+          setUser(updatedUser as AppUser);
+          setLastUpdated(prev => ({ ...prev, [editingField]: newLastUpdatedDate }));
 
           setIsEditDialogOpen(false);
           setEditingField(null);
@@ -183,8 +191,10 @@ export default function ProfilePage() {
     address: MapPin,
   };
 
-  const renderDataRow = (field: 'phone' | 'address', value: string | undefined | null) => {
+  const renderDataRow = (field: FieldName, value: string | undefined | null) => {
     const Icon = fieldIcons[field];
+    const canEdit = canEditField(field);
+
     return (
         <div className="flex items-start justify-between gap-4 p-4 border-b last:border-b-0">
             <div className="flex items-center gap-4">
@@ -192,6 +202,11 @@ export default function ProfilePage() {
                 <div className="flex-1">
                     <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
                     <p className="font-medium">{value || 'Belum diisi'}</p>
+                     {!canEdit && lastUpdated[field] && (
+                        <p className="text-xs text-muted-foreground italic mt-1">
+                            Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdated[field]!, 7), { addSuffix: true, locale: id })}
+                        </p>
+                    )}
                 </div>
             </div>
             {canEdit && (
@@ -243,7 +258,7 @@ export default function ProfilePage() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                      <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{user?.displayName || 'Pengguna'}</CardTitle>
-                                     {canEdit && (
+                                     {canEditField('displayName') && (
                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick('displayName')}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -258,17 +273,7 @@ export default function ProfilePage() {
                             {renderDataRow("phone", user?.phone)}
                             {renderDataRow("address", user?.address)}
                         </div>
-                         {!canEdit && (
-                            <div className="p-4">
-                                <Alert>
-                                    <Info className="h-4 w-4" />
-                                    <AlertTitle>Profil Dikunci</AlertTitle>
-                                    <AlertDescription>
-                                    Anda dapat mengubah data diri Anda lagi setelah 7 hari dari pembaruan terakhir.
-                                    </AlertDescription>
-                                </Alert>
-                            </div>
-                        )}
+                         
                     </CardContent>
                 </Card>
 
