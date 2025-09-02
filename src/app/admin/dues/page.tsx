@@ -231,7 +231,6 @@ export default function DuesAdminPage() {
                         <Link href={`/admin/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
                             {user.displayName}
                         </Link>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.paymentStatus === 'Lunas' ? 'secondary' : 'destructive'} 
