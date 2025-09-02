@@ -19,7 +19,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reacting, setReacting] = useState<string | null>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   const auth = getAuth();
@@ -42,10 +41,6 @@ export default function Announcements() {
             month: 'long',
             day: 'numeric',
           }) : data.date,
-          likes: data.likes || 0,
-          dislikes: data.dislikes || 0,
-          likesBy: data.likesBy || [],
-          dislikesBy: data.dislikesBy || [],
         });
       });
       setAnnouncements(announcementsData);
@@ -54,129 +49,6 @@ export default function Announcements() {
 
     return () => unsubscribe();
   }, []);
-
-  const handleReaction = async (announcementId: string, reaction: 'like' | 'dislike') => {
-    if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'Akses Dibutuhkan',
-        description: 'Anda harus masuk untuk memberikan reaksi.'
-      });
-      router.push('/auth/login');
-      return;
-    }
-    if (reacting) return;
-
-    setReacting(announcementId);
-    const docRef = doc(db, 'announcements', announcementId);
-
-    try {
-      await runTransaction(db, async (transaction) => {
-        const annDoc = await transaction.get(docRef);
-        if (!annDoc.exists()) {
-          throw "Document does not exist!";
-        }
-
-        const data = annDoc.data();
-        const likesBy = data.likesBy || [];
-        const dislikesBy = data.dislikesBy || [];
-        const hasLiked = likesBy.includes(user.uid);
-        const hasDisliked = dislikesBy.includes(user.uid);
-
-        let newLikes = data.likes || 0;
-        let newDislikes = data.dislikes || 0;
-        let newLikesBy = [...likesBy];
-        let newDislikesBy = [...dislikesBy];
-
-        if (reaction === 'like') {
-          if (hasLiked) {
-            newLikes--;
-            newLikesBy = newLikesBy.filter(uid => uid !== user.uid);
-          } else {
-            newLikes++;
-            newLikesBy.push(user.uid);
-            if (hasDisliked) {
-              newDislikes--;
-              newDislikesBy = newDislikesBy.filter(uid => uid !== user.uid);
-            }
-          }
-        } else if (reaction === 'dislike') {
-          if (hasDisliked) {
-            newDislikes--;
-            newDislikesBy = newDislikesBy.filter(uid => uid !== user.uid);
-          } else {
-            newDislikes++;
-            newDislikesBy.push(user.uid);
-            if (hasLiked) {
-              newLikes--;
-              newLikesBy = newLikesBy.filter(uid => uid !== user.uid);
-            }
-          }
-        }
-        
-        transaction.update(docRef, {
-            likes: newLikes,
-            dislikes: newDislikes,
-            likesBy: newLikesBy,
-            dislikesBy: newDislikesBy
-        });
-
-        // Update local state for immediate feedback
-        setAnnouncements(prev => prev.map(ann => ann.id === announcementId ? { ...ann, likes: newLikes, dislikes: newDislikes, likesBy: newLikesBy, dislikesBy: newDislikesBy } : ann));
-        setSelectedAnnouncement(prev => prev ? {
-            ...prev,
-            likes: newLikes,
-            dislikes: newDislikes,
-            likesBy: newLikesBy,
-            dislikesBy: newDislikesBy
-        } : null);
-
-      });
-    } catch (error) {
-      console.error("Transaction failed: ", error);
-      toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memberikan reaksi.' });
-    } finally {
-      setReacting(null);
-    }
-  };
-
-  const ReactionButton = ({ announcement, type }: { announcement: Announcement, type: 'like' | 'dislike' }) => {
-    const hasReacted = user ? (type === 'like' ? announcement.likesBy?.includes(user.uid) : announcement.dislikesBy?.includes(user.uid)) : false;
-    const count = type === 'like' ? announcement.likes : announcement.dislikes;
-    const Icon = type === 'like' ? ThumbsUp : ThumbsDown;
-
-    const button = (
-       <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            "flex items-center gap-1.5",
-            hasReacted && (type === 'like' ? "text-green-600 border-green-300 bg-green-50 dark:bg-green-900/50 dark:text-green-400 dark:border-green-800" : "text-red-600 border-red-300 bg-red-50 dark:bg-red-900/50 dark:text-red-400 dark:border-red-800")
-          )}
-          onClick={(e) => { e.stopPropagation(); handleReaction(announcement.id, type)}}
-          disabled={reacting === announcement.id}
-        >
-          <Icon className="h-4 w-4" /> {count}
-        </Button>
-    );
-    
-    if (!user) {
-        return (
-             <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        {button}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Masuk untuk memberi reaksi</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        )
-    }
-
-    return button;
-  }
   
  const renderAnnouncements = () => {
     if (loading) {
@@ -249,11 +121,7 @@ export default function Announcements() {
                             <h3 className="font-bold text-lg text-foreground mb-2">{selectedAnnouncement.title}</h3>
                             {selectedAnnouncement.content}
                         </div>
-                        <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">
-                            <div className="flex items-center gap-2">
-                                <ReactionButton announcement={selectedAnnouncement} type="like" />
-                                <ReactionButton announcement={selectedAnnouncement} type="dislike" />
-                            </div>
+                        <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
                             <DialogClose asChild>
                                <Button type="button" variant="secondary" size="sm">Ok</Button>
                             </DialogClose>

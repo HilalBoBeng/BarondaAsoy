@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getAuth } from 'firebase/auth';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -24,34 +24,34 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const profileSchema = z.object({
-  displayName: z.string(),
+  displayName: z.string().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
+type FieldName = keyof ProfileFormValues;
 
 export default function ProfilePage() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [duesHistory, setDuesHistory] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProfileLocked, setIsProfileLocked] = useState(false);
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingField, setEditingField] = useState<FieldName | null>(null);
+
   const { toast } = useToast();
   const auth = getAuth(app);
   const router = useRouter();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      displayName: '',
-      phone: '',
-      address: '',
-    },
   });
-  
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
@@ -69,26 +69,18 @@ export default function ProfilePage() {
             phone: userData.phone || '',
             address: userData.address || '',
           });
-
-          // Profile locking logic
-          if (userData.profileLastUpdated) {
-            const lastUpdatedDate = (userData.profileLastUpdated as unknown as Timestamp).toDate();
-            const unlockDate = addDays(lastUpdatedDate, 7);
-            if (isBefore(new Date(), unlockDate)) {
-              setIsProfileLocked(true);
-            }
-          }
           
-          const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
+          const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid), orderBy('paymentDate', 'desc'));
           const unsubDues = onSnapshot(duesQuery, (snapshot) => {
               const duesData = snapshot.docs.map(d => ({
                   ...d.data(),
                   id: d.id,
                   paymentDate: (d.data().paymentDate as Timestamp).toDate()
               })) as DuesPayment[];
-              duesData.sort((a, b) => (b.paymentDate as Date).getTime() - (a.paymentDate as Date).getTime());
               setDuesHistory(duesData);
           });
+
+          return () => unsubDues();
         }
       } else {
         router.push('/auth/login');
@@ -99,32 +91,55 @@ export default function ProfilePage() {
     return () => unsubscribe();
   }, [auth, router, form]);
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    if (!user || isProfileLocked) return;
-    setIsSubmitting(true);
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const dataToUpdate = {
-        phone: data.phone,
-        address: data.address,
-        profileLastUpdated: serverTimestamp(),
-      };
-      await updateDoc(userDocRef, dataToUpdate);
-      
-      setUser(prev => prev ? { ...prev, ...dataToUpdate, profileLastUpdated: new Date() } : null);
-      setIsProfileLocked(true);
-
-      toast({ title: 'Berhasil', description: 'Profil berhasil disimpan dan akan dikunci selama 7 hari.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan profil.' });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEditClick = (field: FieldName) => {
+    if (field === 'displayName') return; // Nama tidak bisa diganti
+    setEditingField(field);
+    form.setValue(field, user?.[field] || '');
+    setIsEditDialogOpen(true);
   };
+  
+  const onSubmit = async (data: ProfileFormValues) => {
+      if (!user || !editingField) return;
+      setIsSubmitting(true);
+      try {
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, {
+              [editingField]: data[editingField]
+          });
+          setUser(prev => prev ? { ...prev, [editingField]: data[editingField] } : null);
+          toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
+          setIsEditDialogOpen(false);
+          setEditingField(null);
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memperbarui profil.' });
+      } finally {
+          setIsSubmitting(false);
+      }
+  }
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
+
+  const fieldLabels: Record<FieldName, string> = {
+    displayName: "Nama Lengkap",
+    phone: "Nomor HP / WhatsApp",
+    address: "Alamat (RT/RW)"
+  };
+
+  const renderDataRow = (field: FieldName, value: string | undefined | null) => (
+    <div className="flex items-center justify-between p-3 border-b">
+        <span className="text-sm text-muted-foreground">{fieldLabels[field]}</span>
+        <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold">{value || <span className="text-sm text-muted-foreground italic">Belum diisi</span>}</span>
+            {field !== 'displayName' && (
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(field)}>
+                    <Pencil className="h-4 w-4" />
+                </Button>
+            )}
+        </div>
+    </div>
+  );
 
   return (
      <div className="flex min-h-screen flex-col bg-muted/40">
@@ -135,33 +150,23 @@ export default function ProfilePage() {
                 Kembali
                 </Link>
             </Button>
-             <div className="flex items-center gap-2 text-right">
+            <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
-                  <span className="text-lg font-bold text-primary leading-tight">Baronda</span>
+                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
               </div>
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 
-                width={40} 
-                height={40}
-                className="h-10 w-10 rounded-full object-cover"
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
               />
           </div>
        </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-4xl space-y-8">
-                {isProfileLocked && (
-                    <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
-                        <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <AlertTitle className="text-blue-800 dark:text-blue-300">Data Diri Dikunci</AlertTitle>
-                        <AlertDescription className="text-blue-700 dark:text-blue-400">
-                        Untuk keamanan, data Anda tidak dapat diubah selama 7 hari setelah pembaruan terakhir. Fitur ini akan terbuka kembali secara otomatis.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                 
                  <Card>
                     <CardHeader>
                         <CardTitle>Biodata Pengguna</CardTitle>
@@ -185,55 +190,13 @@ export default function ProfilePage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Data Diri</CardTitle>
-                        <CardDescription>Perbarui informasi profil Anda.</CardDescription>
+                        <CardDescription>Perbarui informasi profil Anda dengan menekan ikon pensil.</CardDescription>
                     </CardHeader>
-                    <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)}>
-                        <CardContent className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="displayName"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Nama Lengkap</FormLabel>
-                                <FormControl><Input {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Nomor HP / WhatsApp</FormLabel>
-                                <FormControl><Input placeholder="08..." {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="address"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Alamat (RT/RW)</FormLabel>
-                                <FormControl><Input placeholder="Contoh: RT 01 / RW 02" {...field} readOnly={isProfileLocked} className={isProfileLocked ? "bg-muted/50 cursor-not-allowed" : ""} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        </CardContent>
-                        {!isProfileLocked && (
-                             <CardFooter className="border-t px-6 py-4">
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Simpan Perubahan
-                                </Button>
-                            </CardFooter>
-                        )}
-                    </form>
-                    </Form>
+                    <CardContent className="p-0">
+                        {renderDataRow("displayName", user?.displayName)}
+                        {renderDataRow("phone", user?.phone)}
+                        {renderDataRow("address", user?.address)}
+                    </CardContent>
                 </Card>
 
                 <Card>
@@ -286,6 +249,37 @@ export default function ProfilePage() {
                 </Card>
             </div>
         </main>
+        
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit {fieldLabels[editingField!]}</DialogTitle>
+                </DialogHeader>
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                        <FormField
+                            control={form.control}
+                            name={editingField!}
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{fieldLabels[editingField!]}</FormLabel>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Simpan
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
     </div>
   );
 }

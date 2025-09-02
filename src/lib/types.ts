@@ -8,10 +8,6 @@ export interface Announcement {
   content: string;
   date: string | Date | Timestamp;
   target?: 'all' | 'users' | 'staff';
-  likes?: number;
-  dislikes?: number;
-  likesBy?: string[];
-  dislikesBy?: string[];
 }
 
 export interface ScheduleEntry {
@@ -63,7 +59,6 @@ export interface AppUser {
   phone?: string;
   address?: string;
   isBlocked?: boolean;
-  profileLastUpdated?: Timestamp | Date;
 }
 
 export interface Staff {
