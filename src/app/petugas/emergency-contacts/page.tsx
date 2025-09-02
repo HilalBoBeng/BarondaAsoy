@@ -156,7 +156,7 @@ export default function EmergencyContactsPetugasPage() {
                       </Card>
                   ))
               ) : (
-                  <div className="text-center py-12 text-muted-foreground">Belum ada kontak.</div>
+                  <div className="text-center py-12 text-muted-foreground">Belum ada kontak darurat yang ditambahkan.</div>
               )}
           </div>
 
@@ -190,7 +190,7 @@ export default function EmergencyContactsPetugasPage() {
                 ) : (
                     <TableRow>
                     <TableCell colSpan={3} className="text-center h-24">
-                        Belum ada kontak darurat.
+                        Belum ada kontak darurat yang ditambahkan.
                     </TableCell>
                     </TableRow>
                 )}

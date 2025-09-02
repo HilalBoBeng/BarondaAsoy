@@ -202,20 +202,20 @@ export default function ScheduleAdminPage() {
       </CardHeader>
       <CardContent>
          {/* Mobile View */}
-        <div className="sm:hidden space-y-4">
+        <div className="sm:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
            {loading ? (
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)
           ) : filteredSchedule.length > 0 ? (
             filteredSchedule.map((item) => (
-              <Card key={item.id}>
-                <CardHeader>
+              <Card key={item.id} className="flex flex-col">
+                <CardHeader className="flex-grow">
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" /> {item.officer}</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> {item.area}</CardTitle>
                     <StatusBadge status={item.status} />
                   </div>
-                  <CardDescription className="flex items-center gap-2 pt-1"><MapPin className="h-4 w-4" />{item.area}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardContent className="space-y-2 text-sm flex-grow">
+                   <p className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> {item.officer}</p>
                    <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" /> {item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</p>
                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> {item.time}</p>
                 </CardContent>
@@ -244,7 +244,7 @@ export default function ScheduleAdminPage() {
               </Card>
             ))
            ) : (
-            <div className="text-center py-12 text-muted-foreground">Belum ada jadwal untuk hari yang dipilih.</div>
+            <div className="text-center py-12 text-muted-foreground col-span-full">Belum ada jadwal untuk hari yang dipilih.</div>
           )}
         </div>
 

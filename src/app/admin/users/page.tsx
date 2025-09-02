@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -38,6 +38,7 @@ export default function UsersAdminPage() {
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visibleAccessCodes, setVisibleAccessCodes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setLoading(true);
@@ -115,6 +116,14 @@ export default function UsersAdminPage() {
       console.error("Delete failed:", error);
     }
   }
+  
+  const toggleAccessCodeVisibility = (staffId: string) => {
+    setVisibleAccessCodes(prev => ({
+        ...prev,
+        [staffId]: !prev[staffId]
+    }));
+  };
+
 
   return (
     <>
@@ -227,7 +236,18 @@ export default function UsersAdminPage() {
                                             {s.points || 0}
                                         </div>
                                     </TableCell>
-                                    <TableCell>{s.accessCode}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            {visibleAccessCodes[s.id] ? (
+                                                <span>{s.accessCode}</span>
+                                            ) : (
+                                                <span>••••••••</span>
+                                            )}
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleAccessCodeVisibility(s.id)}>
+                                                {visibleAccessCodes[s.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                                            </Button>
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>

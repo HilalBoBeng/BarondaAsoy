@@ -100,94 +100,92 @@ export default function StaffSettingsPage() {
   
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Pengaturan Akun Petugas</CardTitle>
-          <CardDescription>
-            Ubah kode akses atau informasi akun Anda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          <Form {...accessCodeForm}>
-            <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="max-w-md space-y-4">
-              <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" /> Ubah Kode Akses</h3>
-              <FormField
-                control={accessCodeForm.control}
-                name="currentAccessCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kode Akses Saat Ini</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={accessCodeForm.control}
-                name="newAccessCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kode Akses Baru (15 Karakter)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={accessCodeForm.control}
-                name="confirmNewAccessCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Konfirmasi Kode Akses Baru</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isSubmittingCode || !staffInfo}>
-                {isSubmittingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Kode Akses Baru
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-        <CardTitle>Pengaturan Tampilan</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle>Pengaturan</CardTitle>
         <CardDescription>
-            Pilih tema tampilan untuk aplikasi.
+          Kelola pengaturan akun Anda dan tampilan aplikasi.
         </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                    <h3 className="font-medium">Tema Aplikasi</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Pilih antara mode terang atau gelap.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
-                        <Sun className="h-5 w-5" />
-                        <span className="sr-only">Light</span>
-                    </Button>
-                    <Button variant={theme === 'dark' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("dark")}>
-                        <Moon className="h-5 w-5" />
-                        <span className="sr-only">Dark</span>
-                    </Button>
-                </div>
-            </div>
-        </CardContent>
-      </Card>
-    </div>
+      </CardHeader>
+      <CardContent className="space-y-8">
+        {/* Change Access Code Form */}
+        <Form {...accessCodeForm}>
+          <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="max-w-md space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" /> Ubah Kode Akses</h3>
+            <FormField
+              control={accessCodeForm.control}
+              name="currentAccessCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kode Akses Saat Ini</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={accessCodeForm.control}
+              name="newAccessCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kode Akses Baru (15 Karakter)</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={accessCodeForm.control}
+              name="confirmNewAccessCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Konfirmasi Kode Akses Baru</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isSubmittingCode || !staffInfo}>
+              {isSubmittingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Kode Akses Baru
+            </Button>
+          </form>
+        </Form>
+        
+        <Separator />
+        
+        {/* Display Settings */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Pengaturan Tampilan</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+              Pilih tema tampilan untuk aplikasi.
+          </p>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                  <h3 className="font-medium">Tema Aplikasi</h3>
+                  <p className="text-sm text-muted-foreground">
+                      Pilih antara mode terang atau gelap.
+                  </p>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
+                      <Sun className="h-5 w-5" />
+                      <span className="sr-only">Light</span>
+                  </Button>
+                  <Button variant={theme === 'dark' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("dark")}>
+                      <Moon className="h-5 w-5" />
+                      <span className="sr-only">Dark</span>
+                  </Button>
+              </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

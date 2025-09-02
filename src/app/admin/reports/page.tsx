@@ -16,43 +16,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const REPORTS_PER_PAGE = 5;
 type ReportStatus = 'new' | 'in_progress' | 'resolved';
 
 export default function ReportsAdminPage() {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [allReports, setAllReports] = useState<Report[]>([]);
+  const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
+  
+  const [threatFilter, setThreatFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [isLastPage, setIsLastPage] = useState(false);
 
-  const fetchReports = async (page: number, direction: 'next' | 'prev' | 'initial' = 'initial') => {
-    setLoading(true);
-    try {
-      let q;
-      const reportsRef = collection(db, "reports");
-
-      if (direction === 'next' && lastVisible) {
-        q = query(reportsRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(REPORTS_PER_PAGE));
-      } else if (direction === 'prev' && firstVisible) {
-        q = query(reportsRef, orderBy('createdAt', 'desc'), endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
-      } else {
-        q = query(reportsRef, orderBy('createdAt', 'desc'), limit(REPORTS_PER_PAGE));
-      }
-      
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (snapshot.empty && direction !== 'initial') {
-            setIsLastPage(true);
-            setReports([]);
-            setLoading(false);
-            if (direction === 'next') setCurrentPage(prev => prev > 1 ? prev -1 : 1);
-            return;
-        }
-
+  useEffect(() => {
+    const q = query(collection(db, "reports"), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const reportsData = snapshot.docs.map(doc => {
             const data = doc.data();
             const repliesObject = data.replies || {};
@@ -64,11 +44,7 @@ export default function ReportsAdminPage() {
                 replies: repliesArray,
             } as Report;
         });
-
-        setReports(reportsData);
-        setFirstVisible(snapshot.docs[0] || null);
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
-        setIsLastPage(snapshot.docs.length < REPORTS_PER_PAGE);
+        setAllReports(reportsData);
         setLoading(false);
       }, (error) => {
         console.error("Error fetching reports:", error);
@@ -76,32 +52,21 @@ export default function ReportsAdminPage() {
         setLoading(false);
       });
       return unsubscribe;
-
-    } catch (error) {
-        console.error("Error fetching reports:", error);
-        toast({ variant: 'destructive', title: 'Gagal Memuat Laporan' });
-        setLoading(false);
-    }
-  };
-
+  }, [toast]);
+  
   useEffect(() => {
-    const unsub = fetchReports(1);
-    return () => { unsub.then(u => u && u()) };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let filtered = allReports;
 
-  const goToNextPage = () => {
-    const newPage = currentPage + 1;
-    setCurrentPage(newPage);
-    fetchReports(newPage, 'next');
-  };
+    if (threatFilter !== 'all') {
+        filtered = filtered.filter(r => r.triageResult?.threatLevel === threatFilter);
+    }
+    
+    const start = (currentPage - 1) * REPORTS_PER_PAGE;
+    const end = start + REPORTS_PER_PAGE;
+    setPaginatedReports(filtered.slice(start, end));
 
-  const goToPrevPage = () => {
-    if (currentPage === 1) return;
-    const newPage = currentPage - 1;
-    setCurrentPage(newPage);
-    fetchReports(newPage, 'prev');
-  };
+  }, [allReports, threatFilter, currentPage]);
+
 
   const handleDelete = async (id: string) => {
     try {
@@ -184,15 +149,32 @@ export default function ReportsAdminPage() {
     <>
     <Card>
       <CardHeader>
-        <CardTitle>Manajemen Laporan Masuk</CardTitle>
-        <CardDescription>Tanggapi, ubah status, dan kelola laporan dari warga.</CardDescription>
+         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                 <CardTitle>Manajemen Laporan Masuk</CardTitle>
+                <CardDescription>Tanggapi, ubah status, dan kelola laporan dari warga.</CardDescription>
+            </div>
+             <div className="flex flex-col sm:flex-row gap-2">
+                 <Select value={threatFilter} onValueChange={setThreatFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter ancaman" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Semua Ancaman</SelectItem>
+                        <SelectItem value="high">Ancaman Tinggi</SelectItem>
+                        <SelectItem value="medium">Ancaman Sedang</SelectItem>
+                        <SelectItem value="low">Ancaman Rendah</SelectItem>
+                    </SelectContent>
+                </Select>
+             </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="sm:hidden space-y-4">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-64 w-full" />)
-          ) : reports.length > 0 ? (
-            reports.map((report) => (
+          ) : paginatedReports.length > 0 ? (
+            paginatedReports.map((report) => (
               <Card key={report.id}>
                 <CardHeader>
                     <CardTitle className="text-base break-words">{report.reportText}</CardTitle>
@@ -258,8 +240,8 @@ export default function ReportsAdminPage() {
                     <TableCell className="text-right"><Skeleton className="h-8 w-[100px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : reports.length > 0 ? (
-                reports.map((report) => (
+              ) : paginatedReports.length > 0 ? (
+                paginatedReports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell>{new Date(report.createdAt as Date).toLocaleString('id-ID')}</TableCell>
                     <TableCell className="font-medium">{report.reporterName}</TableCell>
@@ -308,7 +290,7 @@ export default function ReportsAdminPage() {
             <Button
                 variant="outline"
                 size="sm"
-                onClick={goToPrevPage}
+                onClick={() => setCurrentPage(p => p - 1)}
                 disabled={currentPage === 1 || loading}
             >
                 Sebelumnya
@@ -317,8 +299,8 @@ export default function ReportsAdminPage() {
             <Button
                 variant="outline"
                 size="sm"
-                onClick={goToNextPage}
-                disabled={isLastPage || loading}
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={paginatedReports.length < REPORTS_PER_PAGE || loading}
             >
                 Berikutnya
             </Button>

@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { Separator } from "@/components/ui/separator";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Kata sandi saat ini diperlukan."),
@@ -75,77 +76,73 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Pengaturan Akun Admin</CardTitle>
-          <CardDescription>
-            Kelola pengaturan untuk akun super-admin.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md space-y-6">
-              <h3 className="text-lg font-medium">Ubah Kata Sandi Admin</h3>
-              <p className="text-sm text-muted-foreground">
-                  Kata sandi admin saat ini adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
-              </p>
-              <FormField
-                control={form.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kata Sandi Baru</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmNewPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Perubahan
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-        <CardTitle>Pengaturan Tampilan</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle>Pengaturan</CardTitle>
         <CardDescription>
-            Pilih tema tampilan untuk aplikasi.
+          Kelola pengaturan untuk akun super-admin dan tampilan aplikasi.
         </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      </CardHeader>
+      <CardContent className="space-y-8">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md space-y-6">
+            <h3 className="text-lg font-medium">Ubah Kata Sandi Admin</h3>
+            <p className="text-sm text-muted-foreground">
+                Kata sandi admin saat ini adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
+            </p>
+            <FormField
+              control={form.control}
+              name="currentPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kata Sandi Saat Ini</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="newPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kata Sandi Baru</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmNewPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Simpan Perubahan
+            </Button>
+          </form>
+        </Form>
+        
+        <Separator />
+
+        <div>
+            <h3 className="text-lg font-medium mb-2">Pengaturan Tampilan</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+                Pilih tema tampilan untuk aplikasi.
+            </p>
             <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                     <h3 className="font-medium">Tema Aplikasi</h3>
@@ -164,8 +161,8 @@ export default function AdminSettingsPage() {
                     </Button>
                 </div>
             </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
