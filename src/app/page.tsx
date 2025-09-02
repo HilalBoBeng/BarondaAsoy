@@ -269,10 +269,10 @@ export default function Home() {
                         {paginatedNotifications.length > 0 ? (
                             paginatedNotifications.map(notif => (
                                 <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif);}} className="flex items-start justify-between cursor-pointer p-0">
-                                   <div className="flex-grow py-1.5 pl-2 pr-1">
-                                        <div className="font-semibold flex items-center gap-2">
-                                            <p className="truncate">{notif.title}</p>
-                                            {!notif.read && <Badge className="h-4 px-1.5 text-[10px]">Baru</Badge>}
+                                   <div className="flex w-full flex-grow flex-col py-1.5 pl-2 pr-1 min-w-0">
+                                        <div className="font-semibold flex items-center gap-2 w-full">
+                                            <p className="truncate flex-grow w-0 min-w-0">{notif.title}</p>
+                                            {!notif.read && <Badge className="h-4 px-1.5 text-[10px] flex-shrink-0">Baru</Badge>}
                                         </div>
                                         <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{notif.createdAt ? formatDistanceToNow((notif.createdAt as any).toDate(), { addSuffix: true, locale: id }) : ''}</p>
