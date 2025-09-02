@@ -150,14 +150,13 @@ const sendOtpFlow = ai.defineFlow(
           `;
 
       // 6. Call the new API route to send the email
-      // Construct absolute URL for server-side fetch
+      // Automatically determine the base URL for server-side fetch
       const headersList = headers();
-      const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:9002';
+      const host = headersList.get('x-forwarded-host') || headersList.get('host');
       const protocol = headersList.get('x-forwarded-proto') || 'http';
-      const baseUrl = `${protocol}://${host}`;
-      const emailApiUrl = new URL('/api/send-email', baseUrl);
-      
-      const emailResponse = await fetch(emailApiUrl.toString(), {
+      const baseUrl = host ? `${protocol}://${host}` : 'http://localhost:9002';
+
+      const emailResponse = await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
