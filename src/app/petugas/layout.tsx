@@ -41,6 +41,15 @@ export default function PetugasLayout({
   const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
   const [isDetailPage, setIsDetailPage] = useState(false);
 
+  const navItems = [
+    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports + badgeCounts.myReports },
+    { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
+    { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
+    { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
+    { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+    { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
+  ];
+
   useEffect(() => {
     setIsClient(true);
     const userRole = localStorage.getItem('userRole');
@@ -84,19 +93,18 @@ export default function PetugasLayout({
     const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
     const duesDetailMatch = pathname.match(duesDetailRegex);
     const isDuesRecord = pathname === '/petugas/dues/record';
-    
-    const isDetail = isDuesRecord || !!duesDetailMatch;
+
+    const isDetail = !!duesDetailMatch || isDuesRecord;
     setIsDetailPage(isDetail);
 
     if (duesDetailMatch) {
-      setPageTitle("Riwayat Iuran");
+        setPageTitle("Riwayat Iuran");
     } else if (isDuesRecord) {
         setPageTitle("Catat Iuran Warga");
     } else {
         const activeItem = navItems.find(item => pathname.startsWith(item.href));
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-    
   }, [pathname]);
 
   const handleLogout = () => {
@@ -106,15 +114,6 @@ export default function PetugasLayout({
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
     router.push('/');
   };
-
-  const navItems = [
-    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports + badgeCounts.myReports },
-    { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
-    { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
-    { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-    { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
-  ];
 
   if (!isClient) {
     return null;

@@ -47,6 +47,17 @@ export default function AdminLayout({
   const [pageTitle, setPageTitle] = useState("Dasbor Admin");
   const [isDetailPage, setIsDetailPage] = useState(false);
 
+    const navItems = [
+        { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: badgeCounts.newReports },
+        { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
+        { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
+        { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
+        { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
+        { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+        { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
+        { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
+    ];
+
   useEffect(() => {
     setIsClient(true);
     const userRole = localStorage.getItem('userRole');
@@ -86,14 +97,14 @@ export default function AdminLayout({
     const duesDetailMatch = pathname.match(duesDetailRegex);
 
     if (duesDetailMatch) {
-        setIsDetailPage(true);
-        setPageTitle('Riwayat Iuran');
+      setIsDetailPage(true);
+      setPageTitle('Riwayat Iuran');
     } else {
-        setIsDetailPage(false);
-        const activeItem = navItems.find(item => pathname.startsWith(item.href));
-        setPageTitle(activeItem?.label || 'Dasbor Admin');
+      setIsDetailPage(false);
+      const activeItem = navItems.find(item => pathname.startsWith(item.href));
+      setPageTitle(activeItem?.label || 'Dasbor Admin');
     }
-}, [pathname]);
+  }, [pathname]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -102,17 +113,6 @@ export default function AdminLayout({
     toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
     router.push('/');
   };
-
-  const navItems = [
-    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: badgeCounts.newReports },
-    { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
-    { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
-    { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
-    { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-    { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
-    { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
-  ];
   
   if (!isClient) {
       return null;

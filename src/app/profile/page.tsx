@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const profileSchema = z.object({
   displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
@@ -134,9 +135,12 @@ export default function ProfilePage() {
             <div className="flex items-center space-x-2 text-right">
                 <div className="flex flex-col">
                   <p className="text-xs font-semibold leading-tight">{user?.displayName}</p>
-                  <p className="text-xs text-muted-foreground leading-tight">{user?.email}</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight">{user?.email}</p>
                 </div>
-                 <User className="h-8 w-8 text-muted-foreground" />
+                 <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.photoURL || ''} alt="User profile" />
+                    <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
+                </Avatar>
             </div>
       </div>
 
