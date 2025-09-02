@@ -12,19 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Bell, Loader2, Search, PlusCircle, Edit, Trash, MessageSquareWarning } from 'lucide-react';
+import { Bell, Loader2, Search, PlusCircle, MessageSquareWarning } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
-import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -33,12 +25,6 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
-const editDuesSchema = z.object({
-  amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
-  notes: z.string().optional(),
-});
-type EditDuesFormValues = z.infer<typeof editDuesSchema>;
-
 export default function DuesPetugasPage() {
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -46,21 +32,11 @@ export default function DuesPetugasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>(months[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
-  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSendingReminder, setIsSendingReminder] = useState<string | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
-  
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentDue, setCurrentDue] = useState<DuesPayment | null>(null);
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   const { toast } = useToast();
-  const editForm = useForm<EditDuesFormValues>({
-    resolver: zodResolver(editDuesSchema),
-  });
-
 
   useEffect(() => {
     setLoading(true);
@@ -149,13 +125,15 @@ export default function DuesPetugasPage() {
   const handleBroadcastReminders = async () => {
     setIsBroadcasting(true);
     
-    if (unpaidUsers.length === 0) {
+    const usersToRemind = unpaidUsers;
+
+    if (usersToRemind.length === 0) {
         toast({ variant: 'destructive', title: 'Tidak Ada Tindakan', description: 'Tidak ada warga yang belum membayar pada periode ini.' });
         setIsBroadcasting(false);
         return;
     }
     try {
-        for (const user of unpaidUsers) {
+        for (const user of usersToRemind) {
             await addDoc(collection(db, 'notifications'), {
                 userId: user.uid,
                 title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
@@ -165,7 +143,7 @@ export default function DuesPetugasPage() {
                 link: '/profile',
             });
         }
-        toast({ title: "Berhasil", description: `Pengingat iuran berhasil dikirim ke ${unpaidUsers.length} warga.` });
+        toast({ title: "Berhasil", description: `Pengingat iuran berhasil dikirim ke ${usersToRemind.length} warga.` });
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal mengirim pengingat massal." });
     } finally {
@@ -173,68 +151,7 @@ export default function DuesPetugasPage() {
     }
   };
 
-  const userPaymentHistory = useMemo(() => {
-    if (!selectedUser) return [];
-    return payments
-      .filter(p => p.userId === selectedUser.uid)
-      .sort((a, b) => {
-        const timeA = (a.paymentDate instanceof Timestamp) ? a.paymentDate.toMillis() : 0;
-        const timeB = (b.paymentDate instanceof Timestamp) ? b.paymentDate.toMillis() : 0;
-        return timeB - timeA;
-      });
-  }, [payments, selectedUser]);
-  
-  const handleViewHistory = (user: AppUser) => {
-    setSelectedUser(user);
-    setIsHistoryOpen(true);
-  }
-  
-  const handleOpenEditDialog = (due: DuesPayment) => {
-    setCurrentDue(due);
-    editForm.reset({
-        amount: due.amount,
-        notes: due.notes,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const handleEditSubmit = async (values: EditDuesFormValues) => {
-      if (!currentDue) return;
-      setIsSubmittingEdit(true);
-      try {
-          const dueRef = doc(db, 'dues', currentDue.id);
-          await updateDoc(dueRef, {
-              amount: values.amount,
-              notes: values.notes || '',
-          });
-          toast({ title: "Berhasil", description: "Data iuran berhasil diperbarui." });
-          // Refresh local data
-          setPayments(prev => prev.map(p => p.id === currentDue.id ? {...p, ...values} : p));
-          setIsEditDialogOpen(false);
-          setCurrentDue(null);
-      } catch (error) {
-          toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui data iuran."});
-      } finally {
-          setIsSubmittingEdit(false);
-      }
-  }
-
-  const handleDeleteDue = async (dueId: string) => {
-      try {
-          await deleteDoc(doc(db, 'dues', dueId));
-          toast({ title: "Berhasil", description: "Data iuran berhasil dihapus." });
-          setPayments(prev => prev.filter(p => p.id !== dueId));
-      } catch (error) {
-          toast({ variant: 'destructive', title: "Gagal", description: "Gagal menghapus data iuran."});
-      }
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  }
-
   return (
-    <>
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -338,9 +255,9 @@ export default function DuesPetugasPage() {
                 filteredUsers.map((user) => (
                   <TableRow key={user.uid}>
                     <TableCell>
-                        <button onClick={() => handleViewHistory(user)} className="font-medium text-primary hover:underline text-left">
+                        <Link href={`/petugas/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
                             {user.displayName}
-                        </button>
+                        </Link>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                     </TableCell>
                     <TableCell>
@@ -371,125 +288,5 @@ export default function DuesPetugasPage() {
         </div>
       </CardContent>
     </Card>
-
-    <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="sm:max-w-4xl">
-            <DialogHeader>
-                <DialogTitle>Riwayat Iuran: {selectedUser?.displayName}</DialogTitle>
-                <CardDescription>{selectedUser?.email}</CardDescription>
-            </DialogHeader>
-            <div className="py-4">
-                 <div className="rounded-lg border max-h-96 overflow-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Tanggal Bayar</TableHead>
-                                <TableHead>Periode</TableHead>
-                                <TableHead>Jumlah</TableHead>
-                                <TableHead>Dicatat Oleh</TableHead>
-                                <TableHead>Catatan</TableHead>
-                                <TableHead className="text-right">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                         <TableBody>
-                            {userPaymentHistory.length > 0 ? (
-                                userPaymentHistory.map(due => (
-                                    <TableRow key={due.id}>
-                                        <TableCell>{due.paymentDate instanceof Timestamp ? format(due.paymentDate.toDate(), "PPP", { locale: id }) : 'N/A'}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary">{due.month} {due.year}</Badge>
-                                        </TableCell>
-                                        <TableCell>{formatCurrency(due.amount)}</TableCell>
-                                        <TableCell>{due.recordedBy}</TableCell>
-                                        <TableCell className="max-w-xs truncate">{due.notes || '-'}</TableCell>
-                                        <TableCell className="text-right">
-                                             <div className="flex gap-2 justify-end">
-                                                <Button variant="outline" size="icon" onClick={() => handleOpenEditDialog(due)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Hapus Catatan Iuran?</AlertDialogTitle>
-                                                            <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteDue(due.id)}>Hapus</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        Warga ini belum memiliki riwayat iuran.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                 </div>
-            </div>
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button">Tutup</Button>
-                </DialogClose>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-
-    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Iuran</DialogTitle>
-                <CardDescription>
-                    Mengedit iuran untuk {currentDue?.userName} periode {currentDue?.month} {currentDue?.year}.
-                </CardDescription>
-            </DialogHeader>
-            <Form {...editForm}>
-                <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4 pt-4">
-                    <FormField
-                        control={editForm.control}
-                        name="amount"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Jumlah (Rp)</FormLabel>
-                            <FormControl><Input type="number" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={editForm.control}
-                        name="notes"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Catatan (Opsional)</FormLabel>
-                            <FormControl><Textarea {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                     <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Batal</Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={isSubmittingEdit}>
-                            {isSubmittingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Simpan Perubahan
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
-    </>
   );
 }
