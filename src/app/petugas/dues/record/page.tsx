@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -17,6 +16,10 @@ import { Loader2, Landmark, Check, ChevronsUpDown, ArrowLeft } from 'lucide-reac
 import type { AppUser, DuesPayment } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from '@/lib/utils';
+
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -27,7 +30,7 @@ const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString
 
 
 const duesSchema = z.object({
-  userName: z.string().min(1, "Nama warga harus diisi."),
+  userId: z.string({ required_error: "Nama warga harus dipilih."}).min(1, "Nama warga harus diisi."),
   amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
   month: z.string().min(1, "Bulan harus dipilih."),
   year: z.string().min(1, "Tahun harus dipilih."),
@@ -41,11 +44,12 @@ export default function RecordDuesPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string } | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<DuesFormValues>({
     resolver: zodResolver(duesSchema),
-    defaultValues: { userName: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' },
+    defaultValues: { userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' },
   });
   
   useEffect(() => {
@@ -73,11 +77,10 @@ export default function RecordDuesPage() {
     }
     setIsSubmitting(true);
     
-    // Find user by name
-    const userToSave = users.find(u => u.displayName?.toLowerCase() === values.userName.toLowerCase());
+    const userToSave = users.find(u => u.uid === values.userId);
     
     if (!userToSave) {
-        toast({ variant: 'destructive', title: "Gagal", description: "Warga dengan nama tersebut tidak ditemukan. Pastikan nama lengkap sudah benar." });
+        toast({ variant: 'destructive', title: "Gagal", description: "Warga tidak ditemukan. Silakan pilih dari daftar." });
         setIsSubmitting(false);
         return;
     }
@@ -108,7 +111,7 @@ export default function RecordDuesPage() {
         recordedById: staffInfo.id,
       });
       toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
-      form.reset({ userName: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
+      form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
     } finally {
@@ -124,107 +127,136 @@ export default function RecordDuesPage() {
 
   return (
     <Card>
-        <CardHeader className="flex-row items-center justify-start gap-4">
-            <Button asChild variant="outline" size="icon">
-                <Link href="/petugas/dues">
-                    <ArrowLeft className="h-4 w-4" />
-                    <span className="sr-only">Kembali</span>
-                </Link>
-            </Button>
-            <div>
-                 <CardTitle>Catat Iuran Warga</CardTitle>
-                 <CardDescription>Masukkan detail pembayaran iuran dari warga.</CardDescription>
-            </div>
-        </CardHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent>
-                 <div className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="userName"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Nama Warga</FormLabel>
-                            <FormControl>
-                                <Input 
-                                    placeholder="Ketik nama lengkap warga..." 
-                                    {...field}
-                                    list="users-datalist"
-                                />
-                            </FormControl>
-                            <datalist id="users-datalist">
-                                {users.map((user) => (
-                                    <option key={user.uid} value={user.displayName || ''} />
-                                ))}
-                            </datalist>
-                            <FormMessage />
-                            </FormItem>
-                        )}
+      <CardHeader>
+      </CardHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Nama Warga</FormLabel>
+                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? users.find(
+                                  (user) => user.uid === field.value
+                                )?.displayName
+                              : "Pilih warga"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Cari nama warga..." />
+                          <CommandList>
+                            <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
+                            <CommandGroup>
+                              {users.map((user) => (
+                                <CommandItem
+                                  value={user.displayName || user.uid}
+                                  key={user.uid}
+                                  onSelect={() => {
+                                    form.setValue("userId", user.uid)
+                                    setPopoverOpen(false)
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      user.uid === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {user.displayName}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="month" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bulan</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="year" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tahun</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="amount" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Jumlah (Rp)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="text"
+                      inputMode="numeric"
+                      value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                      onChange={(e) => {
+                          const formattedValue = formatNumberInput(e.target.value);
+                          e.target.value = formattedValue;
+                          const numericValue = parseInt(formattedValue.replace(/[^0-9]/g, ''), 10) || 0;
+                          field.onChange(numericValue);
+                      }}
+                      placeholder="20.000"
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="month" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Bulan</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                            <FormField control={form.control} name="year" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tahun</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                    </div>
-                        <FormField control={form.control} name="amount" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Jumlah (Rp)</FormLabel>
-                            <FormControl>
-                                <Input 
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={field.value ? formatNumberInput(field.value.toString()) : ''}
-                                    onChange={(e) => {
-                                        const formattedValue = formatNumberInput(e.target.value);
-                                        e.target.value = formattedValue;
-                                        const numericValue = parseInt(formattedValue.replace(/[^0-9]/g, ''), 10) || 0;
-                                        field.onChange(numericValue);
-                                    }}
-                                    placeholder="20.000"
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="notes" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Catatan (Opsional)</FormLabel>
-                            <FormControl><Textarea {...field} rows={2} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                 </div>
-            </CardContent>
-            <CardFooter>
-                <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Landmark className="mr-2 h-4 w-4" />}
-                    Simpan Pembayaran
-                </Button>
-            </CardFooter>
-            </form>
-        </Form>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="notes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catatan (Opsional)</FormLabel>
+                  <FormControl><Textarea {...field} rows={2} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Landmark className="mr-2 h-4 w-4" />}
+              Simpan Pembayaran
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 }
