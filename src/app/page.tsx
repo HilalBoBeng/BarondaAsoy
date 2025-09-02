@@ -327,7 +327,7 @@ export default function Home() {
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-screen-2xl space-y-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                 {greeting}, {user?.displayName || 'Warga'}!
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base mt-2">
@@ -433,12 +433,18 @@ export default function Home() {
                 <>
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
                         <DialogTitle>Pemberitahuan</DialogTitle>
+                         <DialogClose asChild>
+                            <Button type="button" variant="ghost" size="icon" className="text-primary-foreground h-7 w-7">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Tutup</span>
+                            </Button>
+                        </DialogClose>
                     </DialogHeader>
-                    <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
-                       <p className="text-foreground break-all">{selectedNotification?.message}</p>
+                    <div className="p-6 whitespace-pre-wrap min-h-[150px] flex-grow">
+                       <p className="text-foreground break-word">{selectedNotification?.message}</p>
                     </div>
                     <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t">
-                        <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>Tutup</Button>
+                        <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>Ok</Button>
                     </DialogFooter>
                 </>
              )}

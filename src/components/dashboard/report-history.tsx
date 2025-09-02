@@ -37,7 +37,7 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     <Card className="mt-2 bg-muted/50">
         <CardContent className="p-3">
             <div className="flex justify-between items-start">
-                 <p className="text-xs text-foreground/80 break-words flex-grow pr-2">
+                 <p className="text-xs text-foreground/80 break-word flex-grow pr-2">
                     {reply.message}
                 </p>
                 <div className="flex-shrink-0">
@@ -170,7 +170,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                         <div className="flex justify-between items-start mb-2 gap-2">
                             <div className="flex-grow">
                                 {!user && <p className="text-xs font-bold">{report.reporterName}</p>}
-                                <p className="text-sm text-foreground/90 break-words">
+                                <p className="text-sm text-foreground/90 break-word">
                                     {report.reportText}
                                 </p>
                                     <p className="text-xs text-muted-foreground mt-2">
