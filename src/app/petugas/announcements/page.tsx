@@ -9,12 +9,12 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription, DialogBody } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash, Loader2, ThumbsUp, ThumbsDown, X } from 'lucide-react';
 import type { Announcement } from '@/lib/types';
@@ -233,7 +233,7 @@ export default function AnnouncementsPetugasPage() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <DialogBody>
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -256,7 +256,7 @@ export default function AnnouncementsPetugasPage() {
                       </FormItem>
                     )}
                   />
-                </DialogBody>
+                </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>
@@ -274,3 +274,5 @@ export default function AnnouncementsPetugasPage() {
     </Card>
   );
 }
+
+    
