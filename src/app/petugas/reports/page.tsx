@@ -233,6 +233,9 @@ export default function PetugasReportsPage() {
                            {report.status === 'in_progress' && report.handlerId === staffInfo?.id && (
                                 <Button size="sm" onClick={() => handleOpenReplyDialog(report)}>Selesaikan & Balas Laporan</Button>
                            )}
+                           {report.status === 'in_progress' && report.handlerId !== staffInfo?.id && (
+                                <Badge variant="outline">Ditangani petugas lain</Badge>
+                           )}
                            {report.status === 'resolved' && (
                                 <Badge variant="secondary">Selesai</Badge>
                            )}

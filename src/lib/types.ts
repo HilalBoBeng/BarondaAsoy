@@ -117,20 +117,3 @@ export interface EquipmentLog {
     checkedBy: string;
     officerId: string;
 }
-
-
-// New type for Change Email Flow
-export interface ChangeEmailContext {
-  flow: 'changeEmail';
-  userId: string;
-  newEmail: string;
-  // We don't store password directly in localStorage for safety.
-  // It's used once and then discarded.
-}
-
-export interface ChangeStaffEmailContext {
-  flow: 'changeStaffEmail';
-  staffId: string;
-  newEmail: string;
-  accessCode: string;
-}

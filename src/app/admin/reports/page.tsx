@@ -27,10 +27,6 @@ import { id } from 'date-fns/locale';
 const REPORTS_PER_PAGE = 5;
 type ReportStatus = 'new' | 'in_progress' | 'resolved';
 
-const replySchema = z.object({
-  replyMessage: z.string().min(1, "Balasan tidak boleh kosong."),
-});
-type ReplyFormValues = z.infer<typeof replySchema>;
 
 const assignSchema = z.object({
   handlerId: z.string().min(1, "Petugas harus dipilih."),
@@ -42,7 +38,6 @@ export default function ReportsAdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
@@ -53,7 +48,6 @@ export default function ReportsAdminPage() {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [isLastPage, setIsLastPage] = useState(false);
 
-  const replyForm = useForm<ReplyFormValues>({ resolver: zodResolver(replySchema), defaultValues: { replyMessage: '' } });
   const assignForm = useForm<AssignFormValues>({ resolver: zodResolver(assignSchema) });
 
   const fetchStaff = async () => {
@@ -121,6 +115,7 @@ export default function ReportsAdminPage() {
     fetchStaff();
     const unsub = fetchReports(1);
     return () => { unsub.then(u => u && u()) };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const goToNextPage = () => {
@@ -137,22 +132,11 @@ export default function ReportsAdminPage() {
   };
 
 
-  const handleStatusChange = async (id: string, status: ReportStatus) => {
-    const reportToUpdate = reports.find(r => r.id === id);
-    if (!reportToUpdate) return;
-
-    if (status === 'in_progress' && reportToUpdate.status === 'new') {
-        setCurrentReport(reportToUpdate);
+ const handleOpenAssignDialog = (report: Report) => {
+    if (report.status === 'new') {
+        setCurrentReport(report);
         assignForm.reset({ handlerId: '' });
         setIsAssignDialogOpen(true);
-    } else if (status === 'resolved' && reportToUpdate.status === 'in_progress') {
-       try {
-        const docRef = doc(db, 'reports', id);
-        await updateDoc(docRef, { status });
-        toast({ title: "Berhasil", description: "Status laporan berhasil diperbarui." });
-      } catch (error) {
-        toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat memperbarui status." });
-      }
     }
   };
   
@@ -205,43 +189,8 @@ export default function ReportsAdminPage() {
     try {
       await deleteDoc(doc(db, 'reports', id));
       toast({ title: "Berhasil", description: "Laporan berhasil dihapus." });
-    } catch (error) {
+    } catch (error) => {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus laporan." });
-    }
-  };
-  
-  const handleOpenReplyDialog = (report: Report) => {
-    setCurrentReport(report);
-    replyForm.reset({ replyMessage: '' });
-    setIsReplyDialogOpen(true);
-  };
-
-  const onReplySubmit = async (values: ReplyFormValues) => {
-    if (!currentReport || !currentReport.reporterEmail) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'Email pelapor tidak ditemukan.' });
-        return;
-    }
-    setIsSubmitting(true);
-    try {
-        const result = await sendReply({
-            reportId: currentReport.id,
-            recipientEmail: currentReport.reporterEmail,
-            replyMessage: values.replyMessage,
-            originalReport: currentReport.reportText,
-            replierRole: 'Admin'
-        });
-
-        if (result.success) {
-            toast({ title: 'Berhasil', description: 'Balasan berhasil dikirim dan disimpan.' });
-            setIsReplyDialogOpen(false);
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak diketahui.';
-        toast({ variant: 'destructive', title: 'Gagal Mengirim Balasan', description: errorMessage });
-    } finally {
-        setIsSubmitting(false);
     }
   };
   
@@ -278,48 +227,44 @@ export default function ReportsAdminPage() {
     </Badge>;
   }
   
-  const statusOptions: {value: ReportStatus; label: string; disabled?: (currentStatus: ReportStatus) => boolean}[] = [
-    { value: 'new', label: 'Baru', disabled: (currentStatus) => currentStatus !== 'new' },
-    { value: 'in_progress', label: 'Ditangani', disabled: (currentStatus) => currentStatus === 'resolved' || currentStatus === 'in_progress' },
-    { value: 'resolved', label: 'Selesai', disabled: (currentStatus) => currentStatus === 'new' },
-  ];
+  const statusDisplay: Record<ReportStatus, string> = {
+    new: 'Baru',
+    in_progress: 'Ditangani',
+    resolved: 'Selesai'
+  };
+
 
   const renderActions = (report: Report) => {
-    const hasReplies = report.replies && report.replies.length > 0;
     return (
         <div className="flex flex-col sm:flex-row gap-2 items-stretch mt-4 sm:mt-0">
-            <Button variant="outline" size="sm" onClick={() => handleOpenReplyDialog(report)} disabled={!report.reporterEmail || hasReplies}>
-                <MessageSquare className="h-4 w-4 mr-0 sm:mr-2" />
-                <span className="hidden sm:inline">{hasReplies ? 'Sudah Dibalas' : 'Balas'}</span>
-            </Button>
-            <Select value={report.status} onValueChange={(value) => handleStatusChange(report.id, value as ReportStatus)}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                    <SelectValue placeholder="Ubah Status" />
-                </SelectTrigger>
-                <SelectContent>
-                    {statusOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value} disabled={option.disabled && option.disabled(report.status)}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            {report.status === 'new' && (
+                <Button variant="default" size="sm" onClick={() => handleOpenAssignDialog(report)}>
+                    <UserCheck className="h-4 w-4 mr-0 sm:mr-2" />
+                    <span className="hidden sm:inline">Tugaskan</span>
+                </Button>
+            )}
+            {report.status === 'in_progress' && (
+                <Badge variant="default">Ditangani</Badge>
+            )}
             {report.status === 'resolved' && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-lg">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                            <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                <>
+                    <Badge variant="secondary">Selesai</Badge>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm"><Trash className="h-4 w-4" /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-lg">
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </>
             )}
         </div>
     );
@@ -384,7 +329,8 @@ export default function ReportsAdminPage() {
                 <TableHead>Laporan & Balasan</TableHead>
                 <TableHead>Penanggung Jawab</TableHead>
                 <TableHead>Ancaman</TableHead>
-                <TableHead className="w-[350px] text-right">Aksi</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[150px] text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -396,7 +342,8 @@ export default function ReportsAdminPage() {
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-[280px] ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-[100px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : reports.length > 0 ? (
@@ -421,6 +368,11 @@ export default function ReportsAdminPage() {
                     <TableCell>
                        <ThreatLevelBadge level={report.triageResult?.threatLevel} />
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={report.status === 'resolved' ? 'secondary' : report.status === 'in_progress' ? 'default' : 'destructive'}>
+                        {statusDisplay[report.status]}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                            {renderActions(report)}
@@ -430,7 +382,7 @@ export default function ReportsAdminPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">
+                  <TableCell colSpan={7} className="text-center h-24">
                     Belum ada laporan masuk.
                   </TableCell>
                 </TableRow>
@@ -461,44 +413,6 @@ export default function ReportsAdminPage() {
         </div>
       </CardFooter>
     </Card>
-
-     <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
-        <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
-            <DialogHeader>
-                <DialogTitle>Balas Laporan</DialogTitle>
-            </DialogHeader>
-            <Form {...replyForm}>
-                <form onSubmit={replyForm.handleSubmit(onReplySubmit)} className="space-y-4">
-                    <div className="space-y-2 text-sm">
-                        <p><strong>Pelapor:</strong> {currentReport?.reporterName}</p>
-                        <p className="text-muted-foreground break-words"><strong>Laporan:</strong> {currentReport?.reportText}</p>
-                    </div>
-                    <FormField
-                        control={replyForm.control}
-                        name="replyMessage"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pesan Balasan</FormLabel>
-                            <FormControl>
-                                <Textarea {...field} rows={5} placeholder="Tulis balasan Anda di sini..." />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Batal</Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Kirim Balasan
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
 
     <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
         <DialogContent className="sm:max-w-md w-[90%] rounded-lg">

@@ -23,12 +23,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AtSign, KeyRound } from "lucide-react";
+import { Loader2, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Separator } from "@/components/ui/separator";
-import { changeStaffEmail } from "@/ai/flows/change-staff-email";
 
 
 const accessCodeSchema = z.object({
@@ -42,16 +41,9 @@ const accessCodeSchema = z.object({
 
 type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 
-const emailSchema = z.object({
-  newEmail: z.string().email("Format email tidak valid."),
-  accessCode: z.string().min(1, "Kode akses diperlukan untuk verifikasi."),
-});
-type EmailFormValues = z.infer<typeof emailSchema>;
-
 
 export default function StaffSettingsPage() {
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
-  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [staffInfo, setStaffInfo] = useState<{ id: string, name: string, email: string } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -68,10 +60,6 @@ export default function StaffSettingsPage() {
 
   const accessCodeForm = useForm<AccessCodeFormValues>({
     resolver: zodResolver(accessCodeSchema),
-  });
-
-  const emailForm = useForm<EmailFormValues>({
-    resolver: zodResolver(emailSchema),
   });
 
   const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
@@ -108,36 +96,6 @@ export default function StaffSettingsPage() {
     }
   };
   
-  const onEmailSubmit = async (data: EmailFormValues) => {
-    if (!staffInfo) return;
-    setIsSubmittingEmail(true);
-    try {
-        const result = await changeStaffEmail({
-            staffId: staffInfo.id,
-            newEmail: data.newEmail,
-            accessCode: data.accessCode,
-        });
-
-        if (result.success) {
-            localStorage.setItem('verificationContext', JSON.stringify({
-                flow: 'changeStaffEmail',
-                staffId: staffInfo.id,
-                newEmail: data.newEmail,
-                accessCode: data.accessCode 
-            }));
-            toast({ title: "Verifikasi Diperlukan", description: `Kode OTP telah dikirim ke ${data.newEmail}.` });
-            router.push('/auth/verify-otp');
-        } else {
-            throw new Error(result.message);
-        }
-
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: "Gagal", description: error.message || "Kode akses salah atau terjadi kesalahan." });
-    } finally {
-      setIsSubmittingEmail(false);
-    }
-  };
-
 
   return (
     <div className="space-y-6">
@@ -198,39 +156,6 @@ export default function StaffSettingsPage() {
             </form>
           </Form>
 
-          <Separator className="my-8" />
-            
-          <Form {...emailForm}>
-            <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="max-w-md space-y-4">
-                <h3 className="text-lg font-medium flex items-center gap-2"><AtSign className="h-5 w-5" /> Ubah Email</h3>
-                 <FormField
-                    control={emailForm.control}
-                    name="newEmail"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email Baru</FormLabel>
-                            <FormControl><Input type="email" placeholder="email.baru@contoh.com" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={emailForm.control}
-                    name="accessCode"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Verifikasi Kode Akses Saat Ini</FormLabel>
-                            <FormControl><Input type="password" placeholder="Masukkan kode akses Anda" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <Button type="submit" disabled={isSubmittingEmail || !staffInfo}>
-                    {isSubmittingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Lanjutkan ke Verifikasi
-                </Button>
-            </form>
-          </Form>
         </CardContent>
       </Card>
     </div>
