@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where, deleteDoc, doc, orderBy, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast } from 'firebase/firestore';
+import { useEffect, useState, useCallback } from 'react';
+import { collection, onSnapshot, query, where, deleteDoc, doc, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -59,22 +59,21 @@ export default function ReportHistory({ user }: { user?: User | null }) {
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
     const [isLastPage, setIsLastPage] = useState(false);
 
-    const fetchReports = async (direction: 'next' | 'prev' | 'initial') => {
+    const fetchReports = useCallback(async (direction: 'next' | 'prev' | 'initial') => {
         setLoading(true);
         try {
             const reportsRef = collection(db, 'reports');
             let q;
 
-            // Base query with optional user filter. Sorting will be done client-side.
+            // Base query without ordering
             const baseQuery = user 
-                ? [where('userId', '==', user.uid), orderBy('createdAt', 'desc')]
-                : [where('visibility', '==', 'public'), orderBy('createdAt', 'desc')];
-
+                ? [where('userId', '==', user.uid)]
+                : [where('visibility', '==', 'public')];
 
             if (direction === 'next' && lastVisible) {
-                q = query(reportsRef, ...baseQuery, startAfter(lastVisible), limit(REPORTS_PER_PAGE));
+                q = query(reportsRef, ...baseQuery, limit(REPORTS_PER_PAGE), startAfter(lastVisible));
             } else if (direction === 'prev' && firstVisible) {
-                 q = query(reportsRef, ...baseQuery, endBefore(firstVisible), limitToLast(REPORTS_PER_PAGE));
+                 q = query(reportsRef, ...baseQuery, limitToLast(REPORTS_PER_PAGE), endBefore(firstVisible));
             } else {
                 q = query(reportsRef, ...baseQuery, limit(REPORTS_PER_PAGE));
             }
@@ -91,7 +90,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                 return;
             }
             
-             const reportsData = snapshot.docs.map(doc => {
+            const reportsData = snapshot.docs.map(doc => {
                  const data = doc.data();
                  const repliesObject = data.replies || {};
                  const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
@@ -101,7 +100,10 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
                      replies: repliesArray
                  } as Report;
-             });
+            });
+            
+            // Sort on the client side
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
 
             setReports(reportsData);
@@ -115,12 +117,11 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, lastVisible, firstVisible, toast]);
     
     useEffect(() => {
         fetchReports('initial');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user]); // Removed fetchReports from dependency array as it is now wrapped in useCallback
 
     const goToNextPage = () => {
         setCurrentPage(prev => prev + 1);
