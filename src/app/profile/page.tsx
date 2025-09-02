@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const profileSchema = z.object({
   displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
@@ -52,6 +53,8 @@ export default function ProfilePage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
+  
+  const isProfileComplete = !!user?.phone && !!user?.address;
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -136,6 +139,16 @@ export default function ProfilePage() {
                  <User className="h-10 w-10 text-muted-foreground" />
             </div>
       </div>
+
+       {!isProfileComplete && (
+            <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Lengkapi Profil Anda!</AlertTitle>
+                <AlertDescription>
+                    Nomor HP dan alamat Anda belum diisi. Mohon lengkapi data diri Anda untuk mempermudah komunikasi dan verifikasi.
+                </AlertDescription>
+            </Alert>
+        )}
       
       <Card>
         <CardHeader>

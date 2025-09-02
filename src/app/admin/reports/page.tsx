@@ -10,10 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, CheckCircle, AlertTriangle, User, Calendar as CalendarIcon, UserCheck } from 'lucide-react';
+import { Trash, CheckCircle, AlertTriangle, User, Calendar as CalendarIcon, UserCheck, X } from 'lucide-react';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter, DialogBody } from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -161,6 +161,12 @@ export default function ReportsAdminPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+              <DialogClose asChild>
+                    <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Tutup</span>
+                    </Button>
+                </DialogClose>
               <AlertDialogDescription>Tindakan ini akan menghapus laporan secara permanen.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -9,14 +9,14 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, ThumbsUp, ThumbsDown, X } from 'lucide-react';
 import type { Announcement } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -130,9 +130,15 @@ export default function AnnouncementsAdminPage() {
             <span className="sr-only">Hapus</span>
           </Button>
         </AlertDialogTrigger>
-        <AlertDialogContent className="rounded-lg">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+            <DialogClose asChild>
+                <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Tutup</span>
+                </Button>
+            </DialogClose>
             <AlertDialogDescription>
               Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengumuman secara permanen.
             </AlertDialogDescription>
@@ -239,34 +245,42 @@ export default function AnnouncementsAdminPage() {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
+                <DialogClose asChild>
+                    <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Tutup</span>
+                    </Button>
+                </DialogClose>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Judul</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Isi Pengumuman</FormLabel>
-                      <FormControl><Textarea {...field} rows={5} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <DialogBody>
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Judul</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Isi Pengumuman</FormLabel>
+                        <FormControl><Textarea {...field} rows={5} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>

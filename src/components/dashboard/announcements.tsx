@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, runTransaction } from 'firebase/firestore';
-import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight, MessageCircle } from 'lucide-react';
+import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight, MessageCircle, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase/client';
 import type { Announcement } from '@/lib/types';
@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '../ui/dialog';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -239,19 +239,27 @@ export default function Announcements() {
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
+            <DialogContent>
                 {selectedAnnouncement && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="text-xl">{selectedAnnouncement.title}</DialogTitle>
-                            <DialogDescription className="flex items-center gap-2 pt-1">
-                                <Calendar className="h-4 w-4" />
-                                {selectedAnnouncement.date as string}
+                            <DialogTitle className="text-xl pr-10">{selectedAnnouncement.title}</DialogTitle>
+                             <DialogClose asChild>
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                                    <X className="h-4 w-4" />
+                                    <span className="sr-only">Tutup</span>
+                                </Button>
+                            </DialogClose>
+                            <DialogDescription>
+                                <div className="flex items-center gap-2 pt-1">
+                                    <Calendar className="h-4 w-4" />
+                                    {selectedAnnouncement.date as string}
+                                </div>
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="py-4 whitespace-pre-wrap text-sm text-muted-foreground">
+                        <DialogBody className="whitespace-pre-wrap text-sm text-muted-foreground">
                             {selectedAnnouncement.content}
-                        </div>
+                        </DialogBody>
                         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t gap-4">
                              <div className="flex items-center gap-2">
                                 <ReactionButton announcement={selectedAnnouncement} type="like" />

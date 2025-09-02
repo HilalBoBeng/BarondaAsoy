@@ -22,7 +22,7 @@ import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc, orderB
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -202,7 +202,7 @@ export default function Home() {
               alt="Logo" 
               width={40}
               height={40}
-              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover"
+              className="h-10 w-10 object-cover"
             />
             <div className="flex flex-col">
               <span className="text-base sm:text-lg font-bold text-primary leading-tight">Baronda</span>
@@ -426,24 +426,30 @@ export default function Home() {
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
         <DialogContent className="rounded-lg">
             <DialogHeader>
-                 <div className="flex justify-between items-start">
-                    <div className="flex-grow pr-10">
-                        <DialogTitle>{selectedNotification?.title}</DialogTitle>
-                        <DialogDescription>
-                            {selectedNotification?.createdAt ? new Date((selectedNotification.createdAt as any).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
-                        </DialogDescription>
+                 <div className="flex items-center justify-between">
+                    <DialogTitle>{selectedNotification?.title}</DialogTitle>
+                    <div className="flex-shrink-0">
+                         <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                            if(selectedNotification) handleNotificationDelete(selectedNotification.id)
+                        }}>
+                            <Trash className="h-4 w-4" />
+                            <span className="sr-only">Hapus</span>
+                        </Button>
+                        <DialogClose asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Tutup</span>
+                            </Button>
+                        </DialogClose>
                     </div>
-                     <Button type="button" variant="ghost" size="icon" className="flex-shrink-0" onClick={() => {
-                        if(selectedNotification) handleNotificationDelete(selectedNotification.id)
-                    }}>
-                        <Trash className="h-4 w-4" />
-                        <span className="sr-only">Hapus</span>
-                    </Button>
                  </div>
+                 <DialogDescription>
+                    {selectedNotification?.createdAt ? new Date((selectedNotification.createdAt as any).toDate()).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : ''}
+                </DialogDescription>
             </DialogHeader>
-            <div className="py-4 whitespace-pre-wrap break-words">
+            <DialogBody className="whitespace-pre-wrap break-words">
                 <p>{selectedNotification?.message}</p>
-            </div>
+            </DialogBody>
             <DialogFooter>
                 <Button onClick={() => setSelectedNotification(null)}>Tutup</Button>
             </DialogFooter>

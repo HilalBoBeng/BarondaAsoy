@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Calendar, User, CheckCircle, AlertTriangle, Loader2, UserCheck } from 'lucide-react';
+import { MessageSquare, Calendar, User, CheckCircle, AlertTriangle, Loader2, UserCheck, X } from 'lucide-react';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter, DialogBody, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
@@ -262,30 +262,38 @@ export default function PetugasReportsPage() {
     </Card>
 
      <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
-        <DialogContent className="rounded-lg">
+        <DialogContent>
             <DialogHeader>
                 <DialogTitle>Selesaikan & Balas Laporan</DialogTitle>
-                <CardDescription>Anda harus mengirim balasan untuk menyelesaikan laporan ini.</CardDescription>
+                <DialogClose asChild>
+                    <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Tutup</span>
+                    </Button>
+                </DialogClose>
+                <DialogDescription>Anda harus mengirim balasan untuk menyelesaikan laporan ini.</DialogDescription>
             </DialogHeader>
             <Form {...replyForm}>
                 <form onSubmit={replyForm.handleSubmit(onReplySubmit)} className="space-y-4 pt-4">
-                    <div className="space-y-2 text-sm">
-                        <p><strong>Pelapor:</strong> {currentReport?.reporterName}</p>
-                        <p className="text-muted-foreground break-words"><strong>Laporan:</strong> {currentReport?.reportText}</p>
-                    </div>
-                    <FormField
-                        control={replyForm.control}
-                        name="replyMessage"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pesan Balasan</FormLabel>
-                            <FormControl>
-                                <Textarea {...field} rows={5} placeholder="Contoh: Terima kasih atas laporannya. Kami telah menindaklanjuti dan situasi sudah aman terkendali." />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                    <DialogBody>
+                        <div className="space-y-2 text-sm">
+                            <p><strong>Pelapor:</strong> {currentReport?.reporterName}</p>
+                            <p className="text-muted-foreground break-words"><strong>Laporan:</strong> {currentReport?.reportText}</p>
+                        </div>
+                        <FormField
+                            control={replyForm.control}
+                            name="replyMessage"
+                            render={({ field }) => (
+                            <FormItem className='mt-4'>
+                                <FormLabel>Pesan Balasan</FormLabel>
+                                <FormControl>
+                                    <Textarea {...field} rows={5} placeholder="Contoh: Terima kasih atas laporannya. Kami telah menindaklanjuti dan situasi sudah aman terkendali." />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </DialogBody>
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Batal</Button>
