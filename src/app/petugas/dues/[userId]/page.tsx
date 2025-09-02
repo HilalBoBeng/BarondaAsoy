@@ -11,19 +11,18 @@ import type { DuesPayment, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Loader2, ArrowLeft, Eye } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye, Edit, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { notFound } from 'next/navigation';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
   const { userId } = params;
   const [user, setUser] = useState<AppUser | null>(null);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -72,9 +71,13 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
     });
   }, [payments]);
   
-  const handleOpenNoteDialog = (note: string) => {
-    setSelectedNote(note);
-    setIsNoteDialogOpen(true);
+  const handleDelete = async (paymentId: string) => {
+    try {
+        await deleteDoc(doc(db, 'dues', paymentId));
+        toast({ title: 'Berhasil', description: 'Data pembayaran berhasil dihapus.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus data pembayaran.' });
+    }
   }
 
   const formatCurrency = (amount: number) => {
@@ -98,7 +101,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                   <TableHead>Tanggal Bayar</TableHead>
                   <TableHead>Periode</TableHead>
                   <TableHead>Jumlah</TableHead>
-                  <TableHead>Catatan</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -108,7 +111,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-9 w-[90px] ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : userPaymentHistory.length > 0 ? (
@@ -119,16 +122,31 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                       </TableCell>
                       <TableCell>{formatCurrency(due.amount)}</TableCell>
-                       <TableCell>
-                         <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={!due.notes}
-                            onClick={() => due.notes && handleOpenNoteDialog(due.notes)}
-                            >
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">Lihat Catatan</span>
-                         </Button>
+                       <TableCell className="text-right">
+                         <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" disabled>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <Trash className="h-4 w-4" />
+                                </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus Pembayaran?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    Tindakan ini tidak dapat dibatalkan.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(due.id)}>Hapus</AlertDialogAction>
+                                </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                         </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -145,19 +163,6 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
         </CardContent>
       </Card>
       
-      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Isi Catatan</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 whitespace-pre-wrap">
-            {selectedNote}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsNoteDialogOpen(false)}>Tutup</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
