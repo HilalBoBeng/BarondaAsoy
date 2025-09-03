@@ -37,6 +37,7 @@ const scheduleSchema = z.object({
   startTime: z.string().regex(timeRegex, "Format jam mulai tidak valid (HH:MM)."),
   endTime: z.string().regex(timeRegex, "Format jam selesai tidak valid (HH:MM)."),
 }).refine(data => {
+    if (!data.startTime || !data.endTime) return true;
     const [startHour, startMinute] = data.startTime.split(':').map(Number);
     const [endHour, endMinute] = data.endTime.split(':').map(Number);
     return endHour > startHour || (endHour === startHour && endMinute > startMinute);
@@ -387,7 +388,7 @@ export default function ScheduleAdminPage() {
                         <FormItem>
                             <FormLabel>Jam Mulai</FormLabel>
                             <FormControl>
-                              <Input type="text" {...field} placeholder="HH:MM" />
+                              <Input type="time" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -396,7 +397,7 @@ export default function ScheduleAdminPage() {
                         <FormItem>
                             <FormLabel>Jam Selesai</FormLabel>
                             <FormControl>
-                                <Input type="text" {...field} placeholder="HH:MM"/>
+                                <Input type="time" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -417,4 +418,3 @@ export default function ScheduleAdminPage() {
     </Card>
   );
 }
-

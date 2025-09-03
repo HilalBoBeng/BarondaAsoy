@@ -89,8 +89,7 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
         </div>
 
         <div className="p-4 border rounded-lg bg-white">
-             {/* Placeholder QR Code - In a real app, this would be dynamically generated */}
-            <Image
+             <Image
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${schedule.id}`}
                 alt={`QR Code untuk jadwal ${schedule.id}`}
                 width={200}
