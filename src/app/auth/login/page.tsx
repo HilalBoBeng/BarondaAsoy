@@ -269,7 +269,7 @@ function LoginForm() {
                   Akun {suspensionInfo?.isBlocked ? 'Diblokir' : 'Ditangguhkan'}
               </DialogTitle>
               <DialogDescription className="text-center px-4">
-                  Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir' : 'ditangguhkan sementara'} oleh admin.
+                  Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir secara permanen' : 'ditangguhkan sementara'} oleh admin.
               </DialogDescription>
             </DialogHeader>
            <div className="space-y-4 py-4 text-sm">
@@ -295,7 +295,7 @@ function LoginForm() {
                 
                 {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
                      <div className="text-center">
-                        <h4 className="font-semibold">Penangguhan Berakhir:</h4>
+                        <h4 className="font-semibold">Penangguhan Berakhir dalam:</h4>
                         <p className="text-primary font-mono font-semibold text-lg">{countdown || 'Menghitung...'}</p>
                     </div>
                 )}

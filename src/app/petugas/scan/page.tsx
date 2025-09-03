@@ -18,10 +18,11 @@ function ScanPageContent() {
   const token = searchParams.get('token');
   const { toast } = useToast();
   
-  const [isProcessing, setIsProcessing] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState('Arahkan kamera ke QR code absensi...');
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -36,7 +37,6 @@ function ScanPageContent() {
       } catch (error) {
         console.error('Error accessing rear camera, trying front camera:', error);
         try {
-            // Fallback to any camera if rear camera fails
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
             if (videoRef.current) {
@@ -59,10 +59,16 @@ function ScanPageContent() {
   useEffect(() => {
     const processScan = async () => {
         if (!token) {
-            setError('Token absensi tidak ditemukan di URL. Silakan pindai QR code yang benar.');
+            // No token in URL, so we are in "waiting to scan" state.
+            // Do not show an error immediately.
+            setMessage('Arahkan kamera ke QR code absensi...');
             setIsProcessing(false);
             return;
         }
+        
+        setIsProcessing(true);
+        setMessage('Memvalidasi token...');
+        setError(null);
 
         try {
             await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing delay
@@ -106,6 +112,7 @@ function ScanPageContent() {
         }
     };
     
+    // Only process if we have camera permission.
     if (hasCameraPermission) {
         processScan();
     }
@@ -115,9 +122,9 @@ function ScanPageContent() {
     <div className="flex flex-col items-center justify-center h-full">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Memproses Absensi Anda</CardTitle>
+          <CardTitle>Pindai Kode QR Absensi</CardTitle>
           <CardDescription>
-            Harap tunggu, sistem sedang memvalidasi kode absensi Anda.
+            {message}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -138,7 +145,7 @@ function ScanPageContent() {
           {isProcessing && (
              <div className="flex items-center justify-center p-4 rounded-md bg-muted">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                <p className="text-muted-foreground">Memvalidasi token...</p>
+                <p className="text-muted-foreground">{message}</p>
              </div>
           )}
           {error && (

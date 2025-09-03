@@ -43,9 +43,12 @@ export default function AttendancePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const staffQuery = query(collection(db, "staff"), where('status', '==', 'active'), orderBy('name'));
+    const staffQuery = query(collection(db, "staff"), where('status', '==', 'active'));
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
-        setStaff(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff)));
+        const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
+        // Sort client-side to avoid composite index
+        staffData.sort((a, b) => a.name.localeCompare(b.name));
+        setStaff(staffData);
     });
 
     const scheduleQuery = query(collection(db, 'schedules'), orderBy('date', 'desc'));
