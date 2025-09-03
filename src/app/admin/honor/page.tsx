@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -25,9 +25,17 @@ import { id } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
+const months = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
+
 const honorariumSchema = z.object({
   staffId: z.string().min(1, "Petugas harus dipilih."),
-  period: z.string().min(1, "Periode harus diisi (contoh: Juli 2024)."),
+  month: z.string().min(1, "Bulan harus dipilih."),
+  year: z.string().min(1, "Tahun harus dipilih."),
   amount: z.coerce.number().min(1, "Jumlah honor tidak boleh kosong."),
   status: z.enum(['Dibayarkan', 'Tertunda', 'Dipotong', 'Batal'], { required_error: "Status harus dipilih." }),
   notes: z.string().optional(),
@@ -53,30 +61,35 @@ export default function HonorariumAdminPage() {
 
   const form = useForm<HonorariumFormValues>({
     resolver: zodResolver(honorariumSchema),
+    defaultValues: { month: months[new Date().getMonth()], year: currentYear.toString() }
   });
   
-  const watchedPeriod = form.watch('period');
+  const watchedMonth = form.watch('month');
+  const watchedYear = form.watch('year');
 
   const availableStaff = useMemo(() => {
-    if (!watchedPeriod) {
+    if (!watchedMonth || !watchedYear) {
         return staff;
     }
+    const period = `${watchedMonth} ${watchedYear}`;
     const paidStaffIds = honorariums
-        .filter(h => h.period === watchedPeriod)
+        .filter(h => h.period === period)
         .map(h => h.staffId);
     
     return staff.filter(s => 
         !paidStaffIds.includes(s.id) || 
         (currentHonorarium && s.id === currentHonorarium.staffId)
     );
-  }, [staff, honorariums, watchedPeriod, currentHonorarium]);
+  }, [staff, honorariums, watchedMonth, watchedYear, currentHonorarium]);
 
   useEffect(() => {
-    const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'), orderBy('name'));
+    const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'));
     const honorQuery = query(collection(db, 'honorariums'), orderBy('issueDate', 'desc'));
 
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
-      setStaff(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff)));
+      const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
+      staffData.sort((a, b) => a.name.localeCompare(b.name));
+      setStaff(staffData);
     });
 
     const unsubHonor = onSnapshot(honorQuery, (snapshot) => {
@@ -97,20 +110,29 @@ export default function HonorariumAdminPage() {
   useEffect(() => {
     if (isDialogOpen) {
       if (currentHonorarium) {
+        const [month, year] = currentHonorarium.period.split(' ');
         form.reset({
           staffId: currentHonorarium.staffId,
-          period: currentHonorarium.period,
+          month: month || '',
+          year: year || '',
           amount: currentHonorarium.amount,
           status: currentHonorarium.status,
           notes: currentHonorarium.notes || '',
         });
       } else {
-        form.reset({ staffId: '', period: '', amount: 0, status: 'Tertunda', notes: '' });
+        form.reset({ staffId: '', month: months[new Date().getMonth()], year: currentYear.toString(), amount: 0, status: 'Tertunda', notes: '' });
       }
     }
   }, [isDialogOpen, currentHonorarium, form]);
 
-  const formatCurrency = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(value);
+  const formatCurrency = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+
+  const formatNumberInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    if (!numericValue) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
+  };
+
 
   const onSubmit = async (values: HonorariumFormValues) => {
     setIsSubmitting(true);
@@ -122,14 +144,21 @@ export default function HonorariumAdminPage() {
     }
 
     try {
-      const payload = { ...values, staffName: selectedStaff.name };
+      const payload = { 
+          ...values, 
+          staffName: selectedStaff.name,
+          period: `${values.month} ${values.year}`,
+       };
+      // remove month and year from payload
+      const { month, year, ...finalPayload } = payload;
+
 
       if (currentHonorarium) {
         const docRef = doc(db, 'honorariums', currentHonorarium.id);
-        await updateDoc(docRef, payload);
+        await updateDoc(docRef, finalPayload);
         toast({ title: "Berhasil", description: "Data honorarium berhasil diperbarui." });
       } else {
-        await addDoc(collection(db, 'honorariums'), { ...payload, issueDate: serverTimestamp() });
+        await addDoc(collection(db, 'honorariums'), { ...finalPayload, issueDate: serverTimestamp() });
         toast({ title: "Berhasil", description: "Data honorarium berhasil ditambahkan." });
       }
       setIsDialogOpen(false);
@@ -189,7 +218,7 @@ export default function HonorariumAdminPage() {
                     <TableCell>{h.staffName}</TableCell>
                     <TableCell>{h.period}</TableCell>
                     <TableCell>{formatCurrency(h.amount)}</TableCell>
-                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge></TableCell>
                     <TableCell className="max-w-xs truncate">{h.notes || '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
@@ -227,18 +256,37 @@ export default function HonorariumAdminPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <FormField control={form.control} name="period" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Periode</FormLabel>
-                  <FormControl><Input {...field} placeholder="Contoh: Juli 2024" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="month" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bulan</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                 <FormField control={form.control} name="year" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tahun</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
               <FormField control={form.control} name="staffId" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nama Petugas</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                    <FormControl><SelectTrigger disabled={!watchedPeriod}><SelectValue placeholder={!watchedPeriod ? "Isi periode dulu" : "Pilih petugas"} /></SelectTrigger></FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger disabled={!watchedMonth || !watchedYear}><SelectValue placeholder={!watchedMonth || !watchedYear ? "Pilih periode dulu" : "Pilih petugas"} /></SelectTrigger></FormControl>
                     <SelectContent>
                       {availableStaff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
@@ -249,14 +297,26 @@ export default function HonorariumAdminPage() {
               <FormField control={form.control} name="amount" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Jumlah (Rp)</FormLabel>
-                  <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormControl>
+                    <Input 
+                      type="text"
+                      inputMode="numeric"
+                      value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                      onChange={(e) => {
+                          const formattedValue = formatNumberInput(e.target.value);
+                          const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
+                          field.onChange(numericValue);
+                      }}
+                      placeholder="Contoh: 500.000"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="Dibayarkan">Dibayarkan</SelectItem>
