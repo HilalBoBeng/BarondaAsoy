@@ -23,9 +23,8 @@ function ScanPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Use a ref to hold the Html5Qrcode instance to prevent re-renders from affecting it.
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const scannerStarted = useRef(false);
 
   const processDecodedText = useCallback(async (decodedText: string) => {
     if (isProcessing) return;
@@ -71,25 +70,23 @@ function ScanPageContent() {
       const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
       setError(errorMessage);
       setMessage('Gagal. Silakan coba lagi.');
-      // Restart the scanner after a short delay on failure
       setTimeout(() => {
-        startScanner();
+          if (html5QrCodeRef.current && !html5QrCodeRef.current.isScanning) {
+            startScanner();
+          }
       }, 2000);
     } finally {
-       // We don't set isProcessing to false here because on success we navigate away.
-       // On failure, we want the user to re-scan, which will be handled by the scanner restart.
+       setIsProcessing(false);
     }
   }, [isProcessing, router, toast]);
 
   const startScanner = useCallback(() => {
-    if (html5QrCodeRef.current && !html5QrCodeRef.current.isScanning) {
+    if (html5QrCodeRef.current && !html5QrCodeRef.current.isScanning && scannerStarted.current) {
         setError(null);
         setMessage('Arahkan kamera ke QR code absensi...');
         setIsProcessing(false);
-        const config = {
-            fps: 10,
-            qrbox: 250,
-        };
+        const config = { fps: 10, qrbox: 250 };
+        
         html5QrCodeRef.current.start(
             { facingMode: 'environment' },
             config,
@@ -108,39 +105,41 @@ function ScanPageContent() {
   }, [processDecodedText]);
   
   useEffect(() => {
-    // This effect runs only once on mount to initialize and start the scanner.
-    html5QrCodeRef.current = new Html5Qrcode(qrReaderId);
+    if (!scannerStarted.current) {
+        html5QrCodeRef.current = new Html5Qrcode(qrReaderId);
+        scannerStarted.current = true;
 
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        setHasCameraPermission(true);
-        startScanner();
-      } else {
-        setHasCameraPermission(false);
-      }
-    }).catch(err => {
-      setHasCameraPermission(false);
-    });
+        Html5Qrcode.getCameras().then(devices => {
+          if (devices && devices.length) {
+            setHasCameraPermission(true);
+            startScanner();
+          } else {
+            setHasCameraPermission(false);
+          }
+        }).catch(err => {
+          setHasCameraPermission(false);
+          setError("Tidak dapat mengakses kamera. Mohon periksa izin pada browser Anda.");
+        });
+    }
 
     return () => {
-      // Cleanup function to stop the scanner when the component unmounts
       if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
         html5QrCodeRef.current.stop().catch(e => console.error("Gagal menghentikan scanner.", e));
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [startScanner]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && !isProcessing) {
-       // We can use the same instance for file scanning
-      if (html5QrCodeRef.current?.isScanning) {
+       if (html5QrCodeRef.current?.isScanning) {
           await html5QrCodeRef.current.stop();
       }
        try {
-        const decodedText = await html5QrCodeRef.current.scanFile(file, false);
-        processDecodedText(decodedText);
+        const decodedText = await html5QrCodeRef.current?.scanFile(file, false);
+        if (decodedText) {
+          processDecodedText(decodedText);
+        }
       } catch (err) {
         setError("Gagal memindai gambar. Pastikan gambar jelas dan merupakan QR code yang valid.");
       } finally {
@@ -180,7 +179,6 @@ function ScanPageContent() {
             </Button>
             <input type="file" accept="image/png, image/jpeg" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-
           {isProcessing && (
              <div className="flex items-center justify-center p-4 rounded-md bg-muted">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -212,5 +210,3 @@ export default function ScanPage() {
         </Suspense>
     )
 }
-
-    

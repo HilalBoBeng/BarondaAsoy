@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/toast"
 
 export function Toaster() {
-  const { toasts, remove } = useToast()
+  const { toasts } = useToast()
 
   return (
     <ToastProvider>
@@ -21,11 +21,6 @@ export function Toaster() {
           <Toast 
             key={id} 
             {...props}
-            onAnimationEnd={() => {
-                if (props.open === false) {
-                    remove(id);
-                }
-            }}
           >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
