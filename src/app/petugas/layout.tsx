@@ -111,7 +111,8 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href));
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-  }, [pathname, navItems]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
