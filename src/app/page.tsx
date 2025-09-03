@@ -185,6 +185,28 @@ export default function Home() {
         toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat menghapus semua notifikasi.' });
       }
   }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
+      toast({
+        title: "Berhasil Keluar",
+        description: "Anda akan diarahkan ke halaman utama.",
+      });
+      setTimeout(() => {
+          router.push('/');
+          setIsLoggingOut(false);
+      }, 2000);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Gagal Keluar",
+        description: "Terjadi kesalahan saat mencoba keluar.",
+      });
+      setIsLoggingOut(false);
+    }
+  };
   
   const unreadNotifications = allNotifications.filter(n => !n.read).length;
   
@@ -329,6 +351,12 @@ export default function Home() {
                            <span>Pengaturan</span>
                          </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Keluar</span>
+                            {isLoggingOut && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
+                        </DropdownMenuItem>
                     </>
                    ) : (
                     <>
@@ -478,3 +506,5 @@ export default function Home() {
     </>
   );
 }
+
+    
