@@ -40,16 +40,20 @@ export default function HonorariumPetugasPage() {
 
     const honorQuery = query(
       collection(db, 'honorariums'),
-      where('staffId', '==', staffId),
-      orderBy('issueDate', 'desc')
+      where('staffId', '==', staffId)
     );
 
     const unsubscribe = onSnapshot(honorQuery, (snapshot) => {
-      setHonorariums(snapshot.docs.map(doc => ({
+      const honorData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        issueDate: (doc.data().issueDate as Timestamp).toDate(),
-      } as Honorarium)));
+        issueDate: (doc.data().issueDate as Timestamp)?.toDate(),
+      } as Honorarium));
+      
+      // Sort on the client side
+      honorData.sort((a, b) => (b.issueDate as Date).getTime() - (a.issueDate as Date).getTime());
+
+      setHonorariums(honorData);
       setLoading(false);
     });
 

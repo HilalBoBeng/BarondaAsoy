@@ -39,7 +39,7 @@ export default function PetugasLayout({
   const [isClient, setIsClient] = useState(false);
   const [staffName, setStaffName] = useState("Petugas");
   const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
-  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0 });
+  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, newHonors: 0 });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
   const [isDetailPage, setIsDetailPage] = useState(false);
@@ -49,7 +49,7 @@ export default function PetugasLayout({
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
     { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
-    { href: "/petugas/honor", icon: Banknote, label: "Honor Saya" },
+    { href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badge: badgeCounts.newHonors },
     { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
@@ -78,14 +78,18 @@ export default function PetugasLayout({
         
         const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', staffInfo.id), where('status', '==', 'Pending'));
         
+        const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', staffInfo.id), where('status', '==', 'Tertunda'));
+
         const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
         const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
         const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
+        const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
         
         return () => {
           unsubNewReports();
           unsubMyReports();
           unsubSchedules();
+          unsubHonors();
         }
     }
   }, [router]);

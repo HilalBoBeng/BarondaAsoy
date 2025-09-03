@@ -128,7 +128,7 @@ function LoginForm() {
 
             if (userData.isBlocked) {
                 await auth.signOut();
-                setSuspensionInfo({ user: fullUserData, reason: userData.suspensionReason || 'Akun Anda telah diblokir oleh admin.', endDate: null, isBlocked: true });
+                setSuspensionInfo({ user: fullUserData, reason: "Akun Anda telah diblokir secara permanen oleh admin karena pelanggaran berat.", endDate: null, isBlocked: true });
                 setIsSubmitting(false);
                 return;
             }
@@ -260,18 +260,20 @@ function LoginForm() {
         </Form>
       </Card>
       <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-destructive flex items-center gap-2">
-                <ShieldAlert className="h-7 w-7" />
-                Akun {suspensionInfo?.isBlocked ? 'Diblokir' : 'Ditangguhkan'}
-            </DialogTitle>
-             <DialogDescription>
-                Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir' : 'ditangguhkan sementara'} oleh admin.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-md text-center">
+            <DialogHeader className="items-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 mb-2">
+                <ShieldAlert className="h-7 w-7 text-destructive" />
+              </div>
+              <DialogTitle className="text-2xl text-foreground">
+                  Akun {suspensionInfo?.isBlocked ? 'Diblokir' : 'Ditangguhkan'}
+              </DialogTitle>
+              <DialogDescription className="text-center px-4">
+                  Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir' : 'ditangguhkan sementara'} oleh admin.
+              </DialogDescription>
+            </DialogHeader>
            <div className="space-y-4 py-4 text-sm">
-                <div className="space-y-2 rounded-md border p-4">
+                <div className="space-y-2 rounded-md border p-4 text-left">
                     <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{suspensionInfo?.user.displayName}</span>
@@ -286,13 +288,13 @@ function LoginForm() {
                     </div>
                 </div>
 
-                <div>
+                <div className="text-center">
                     <h4 className="font-semibold">Alasan:</h4>
                     <p className="text-destructive font-bold">{suspensionInfo?.reason}</p>
                 </div>
                 
                 {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
-                     <div>
+                     <div className="text-center">
                         <h4 className="font-semibold">Penangguhan Berakhir:</h4>
                         <p className="text-primary font-mono font-semibold text-lg">{countdown || 'Menghitung...'}</p>
                     </div>
