@@ -32,11 +32,12 @@ const rejectionSchema = z.object({
 });
 type RejectionFormValues = z.infer<typeof rejectionSchema>;
 
-const suspensionSchema = z.object({
-  reason: z.string().min(10, 'Alasan penangguhan minimal 10 karakter.'),
-  duration: z.string().min(1, 'Durasi harus dipilih.'),
+const actionReasonSchema = z.object({
+  reason: z.string().min(10, 'Alasan minimal 10 karakter.'),
+  duration: z.string().optional(),
 });
-type SuspensionFormValues = z.infer<typeof suspensionSchema>;
+type ActionReasonFormValues = z.infer<typeof actionReasonSchema>;
+
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -52,12 +53,12 @@ export default function UsersAdminPage() {
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [selectedStaffForRejection, setSelectedStaffForRejection] = useState<Staff | null>(null);
 
-  const [isSuspensionDialogOpen, setIsSuspensionDialogOpen] = useState(false);
-  const [selectedUserForSuspension, setSelectedUserForSuspension] = useState<AppUser | Staff | null>(null);
-  const [suspensionType, setSuspensionType] = useState<'user' | 'staff' | null>(null);
+  const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
+  const [selectedUserForAction, setSelectedUserForAction] = useState<AppUser | Staff | null>(null);
+  const [actionType, setActionType] = useState<'suspend' | 'block' | null>(null);
 
   const rejectionForm = useForm<RejectionFormValues>({ resolver: zodResolver(rejectionSchema) });
-  const suspensionForm = useForm<SuspensionFormValues>({ resolver: zodResolver(suspensionSchema) });
+  const actionReasonForm = useForm<ActionReasonFormValues>({ resolver: zodResolver(actionReasonSchema) });
 
   useEffect(() => {
     setLoading(true);
@@ -136,64 +137,77 @@ export default function UsersAdminPage() {
     }
   };
 
-  const openSuspensionDialog = (user: AppUser | Staff, type: 'user' | 'staff') => {
-      setSelectedUserForSuspension(user);
-      setSuspensionType(type);
-      suspensionForm.reset();
-      setIsSuspensionDialogOpen(true);
+  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block') => {
+      setSelectedUserForAction(user);
+      setActionType(type);
+      actionReasonForm.reset();
+      setIsActionDialogOpen(true);
   }
 
-  const onSuspensionSubmit = async (values: SuspensionFormValues) => {
-      if (!selectedUserForSuspension || !suspensionType) return;
-      setIsSubmitting(true);
+  const onActionSubmit = async (values: ActionReasonFormValues) => {
+    if (!selectedUserForAction || !actionType) return;
+    setIsSubmitting(true);
 
-      const [count, unit] = values.duration.split('_');
-      let endDate: Date | null = new Date();
-      if (unit === 'permanent') {
-          endDate = null;
-      } else {
-          endDate = add(endDate, { [unit]: parseInt(count) });
-      }
+    const isUserType = 'uid' in selectedUserForAction;
+    const collectionName = isUserType ? 'users' : 'staff';
+    const docId = isUserType ? selectedUserForAction.uid : selectedUserForAction.id;
+    const userRef = doc(db, collectionName, docId);
 
-      const collectionName = suspensionType === 'user' ? 'users' : 'staff';
-      const docId = (selectedUserForSuspension as AppUser).uid || (selectedUserForSuspension as Staff).id;
-      const userRef = doc(db, collectionName, docId);
-      
-      const statusField = suspensionType === 'user' ? 'isSuspended' : 'status';
-      const statusValue = suspensionType === 'user' ? true : 'suspended';
-      
-      try {
-        await updateDoc(userRef, {
-            [statusField]: statusValue,
-            suspensionReason: values.reason,
-            suspensionEndDate: endDate ? Timestamp.fromDate(endDate) : null,
-        });
-        toast({ title: 'Berhasil', description: `Pengguna berhasil ditangguhkan.` });
-        setIsSuspensionDialogOpen(false);
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal', description: `Gagal menangguhkan pengguna.` });
-      } finally {
+    try {
+        let updateData: any = { suspensionReason: values.reason };
+
+        if (actionType === 'suspend') {
+            if (!values.duration) {
+                toast({ variant: 'destructive', title: 'Gagal', description: 'Durasi penangguhan harus dipilih.' });
+                setIsSubmitting(false);
+                return;
+            }
+            const [count, unit] = values.duration.split('_');
+            let endDate: Date | null = new Date();
+            if (unit === 'permanent') {
+                endDate = null;
+            } else {
+                endDate = add(endDate, { [unit]: parseInt(count) });
+            }
+            updateData.suspensionEndDate = endDate ? Timestamp.fromDate(endDate) : null;
+            updateData[isUserType ? 'isSuspended' : 'status'] = isUserType ? true : 'suspended';
+            updateData.isBlocked = false; // Ensure not blocked
+        } else if (actionType === 'block') {
+            updateData.isBlocked = true;
+            updateData.isSuspended = false; // Ensure not suspended
+            updateData.suspensionEndDate = null;
+        }
+
+        await updateDoc(userRef, updateData);
+        toast({ title: 'Berhasil', description: `Pengguna berhasil di${actionType === 'suspend' ? 'tangguhkan' : 'blokir'}.` });
+        setIsActionDialogOpen(false);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal', description: `Gagal melakukan tindakan.` });
+    } finally {
         setIsSubmitting(false);
-      }
-  };
+    }
+};
+
   
-  const handleRemoveSuspension = async (user: AppUser | Staff, type: 'user' | 'staff') => {
-      const collectionName = type === 'user' ? 'users' : 'staff';
-      const docId = (user as AppUser).uid || (user as Staff).id;
+  const handleRemoveRestriction = async (user: AppUser | Staff) => {
+      const isUserType = 'uid' in user;
+      const collectionName = isUserType ? 'users' : 'staff';
+      const docId = isUserType ? user.uid : user.id;
       const userRef = doc(db, collectionName, docId);
 
-      const statusField = type === 'user' ? 'isSuspended' : 'status';
-      const statusValue = type === 'user' ? false : 'active';
+      const statusField = isUserType ? 'isSuspended' : 'status';
+      const statusValue = isUserType ? false : 'active';
       
       try {
         await updateDoc(userRef, {
             [statusField]: statusValue,
+            isBlocked: false,
             suspensionReason: null,
             suspensionEndDate: null,
         });
-        toast({ title: 'Berhasil', description: 'Penangguhan pengguna telah dicabut.' });
+        toast({ title: 'Berhasil', description: 'Batasan pengguna telah dicabut.' });
       } catch (error) {
-         toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencabut penangguhan.' });
+         toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencabut batasan.' });
       }
   };
 
@@ -219,21 +233,86 @@ export default function UsersAdminPage() {
     }
   };
 
-  const handleToggleBlockUser = async (uid: string, isBlocked: boolean) => {
-      const userRef = doc(db, 'users', uid);
-      try {
-        await updateDoc(userRef, { isBlocked: !isBlocked });
-        toast({ title: "Berhasil", description: `Status blokir pengguna telah diperbarui.` });
-      } catch (error) {
-        toast({ variant: 'destructive', title: "Gagal", description: "Gagal memperbarui status pengguna." });
-      }
-  };
-
   const getUserStatus = (user: AppUser) => {
     if (user.isBlocked) return { text: 'Diblokir', className: 'bg-red-100 text-red-800' };
     if (user.isSuspended) return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
     return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
   }
+
+  const getStaffStatus = (staff: Staff) => {
+    if (staff.status === 'suspended') return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
+    return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
+  };
+
+  const ActionButtons = ({ user } : { user: AppUser }) => {
+    const isRestricted = user.isBlocked || user.isSuspended;
+    return (
+        <div className="flex gap-2 justify-end">
+            {isRestricted ? (
+                <Button variant="outline" size="icon" onClick={() => handleRemoveRestriction(user)} className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
+                    <ShieldCheck className="h-4 w-4" />
+                </Button>
+            ) : (
+                <>
+                    <Button variant="outline" size="icon" onClick={() => openActionDialog(user, 'suspend')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                        <ShieldAlert className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => openActionDialog(user, 'block')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                        <ShieldX className="h-4 w-4" />
+                    </Button>
+                </>
+            )}
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-lg">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
+                        <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+    );
+  };
+  
+   const StaffActionButtons = ({ staffMember }: { staffMember: Staff }) => {
+    const isRestricted = staffMember.status === 'suspended';
+    return (
+        <div className="flex gap-2 justify-end">
+            {isRestricted ? (
+                <Button variant="outline" size="icon" onClick={() => handleRemoveRestriction(staffMember)} className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
+                    <ShieldCheck className="h-4 w-4" />
+                </Button>
+            ) : (
+                 <Button variant="outline" size="icon" onClick={() => openActionDialog(staffMember, 'suspend')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                    <ShieldAlert className="h-4 w-4" />
+                </Button>
+            )}
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-lg">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Hapus Staf?</AlertDialogTitle>
+                        <AlertDialogDescription>Tindakan ini akan menghapus staf secara permanen.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteStaff(staffMember.id)}>Hapus</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+    );
+  };
+
 
   return (
     <>
@@ -291,36 +370,7 @@ export default function UsersAdminPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
-                               {user.isSuspended ? (
-                                    <Button variant="outline" size="icon" onClick={() => handleRemoveSuspension(user, 'user')}>
-                                      <ShieldCheck className="h-4 w-4" />
-                                    </Button>
-                                ) : (
-                                    <Button variant="outline" size="icon" onClick={() => openSuspensionDialog(user, 'user')}>
-                                      <ShieldAlert className="h-4 w-4" />
-                                    </Button>
-                                )}
-                                <Button variant="outline" size="sm" onClick={() => handleToggleBlockUser(user.uid, !!user.isBlocked)}>
-                                    {user.isBlocked ? <ShieldCheck className="h-4 w-4" /> : <ShieldX className="h-4 w-4" />}
-                                    <span className="ml-2 hidden sm:inline">{user.isBlocked ? 'Buka Blokir' : 'Blokir'}</span>
-                                </Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-lg">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
-                                            <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
+                           <ActionButtons user={user} />
                         </TableCell>
                       </TableRow>
                     ))
@@ -390,37 +440,12 @@ export default function UsersAdminPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={s.status === 'active' ? 'secondary' : 'default'} className={cn(s.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800')}>
-                                          {s.status === 'active' ? 'Aktif' : 'Ditangguhkan'}
+                                        <Badge variant={'secondary'} className={getStaffStatus(s).className}>
+                                          {getStaffStatus(s).text}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                       <div className="flex gap-2 justify-end">
-                                          {s.status === 'suspended' ? (
-                                              <Button variant="outline" size="icon" onClick={() => handleRemoveSuspension(s, 'staff')}>
-                                                <ShieldCheck className="h-4 w-4" />
-                                              </Button>
-                                          ) : (
-                                              <Button variant="outline" size="icon" onClick={() => openSuspensionDialog(s, 'staff')}>
-                                                <ShieldAlert className="h-4 w-4" />
-                                              </Button>
-                                          )}
-                                          <AlertDialog>
-                                              <AlertDialogTrigger asChild>
-                                                  <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                              </AlertDialogTrigger>
-                                              <AlertDialogContent className="rounded-lg">
-                                                  <AlertDialogHeader>
-                                                      <AlertDialogTitle>Hapus Staf?</AlertDialogTitle>
-                                                      <AlertDialogDescription>Tindakan ini akan menghapus staf secara permanen.</AlertDialogDescription>
-                                                  </AlertDialogHeader>
-                                                  <AlertDialogFooter>
-                                                      <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                      <AlertDialogAction onClick={() => handleDeleteStaff(s.id)}>Hapus</AlertDialogAction>
-                                                  </AlertDialogFooter>
-                                              </AlertDialogContent>
-                                          </AlertDialog>
-                                       </div>
+                                       <StaffActionButtons staffMember={s} />
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -530,23 +555,23 @@ export default function UsersAdminPage() {
             </Form>
         </DialogContent>
     </Dialog>
-
-    <Dialog open={isSuspensionDialogOpen} onOpenChange={setIsSuspensionDialogOpen}>
+    
+    <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Tangguhkan Pengguna</DialogTitle>
+                <DialogTitle>{actionType === 'block' ? 'Blokir' : 'Tangguhkan'} Pengguna</DialogTitle>
                 <DialogDescription>
-                  Pengguna yang ditangguhkan tidak akan bisa masuk ke aplikasi untuk sementara waktu.
+                  Pengguna yang di{actionType === 'block' ? 'blokir' : 'tangguhkan'} tidak akan bisa masuk ke aplikasi.
                 </DialogDescription>
             </DialogHeader>
-             <Form {...suspensionForm}>
-                <form onSubmit={suspensionForm.handleSubmit(onSuspensionSubmit)} className="space-y-4 pt-4">
+             <Form {...actionReasonForm}>
+                <form onSubmit={actionReasonForm.handleSubmit(onActionSubmit)} className="space-y-4 pt-4">
                     <FormField
-                      control={suspensionForm.control}
+                      control={actionReasonForm.control}
                       name="reason"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Alasan Penangguhan</FormLabel>
+                          <FormLabel>Alasan {actionType === 'block' ? 'Pemblokiran' : 'Penangguhan'}</FormLabel>
                           <FormControl>
                             <Textarea {...field} rows={3} placeholder="Contoh: Melanggar aturan komunitas..." />
                           </FormControl>
@@ -554,32 +579,34 @@ export default function UsersAdminPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={suspensionForm.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Durasi Penangguhan</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger><SelectValue placeholder="Pilih durasi..." /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="7_days">7 Hari</SelectItem>
-                              <SelectItem value="14_days">14 Hari</SelectItem>
-                              <SelectItem value="1_months">1 Bulan</SelectItem>
-                              <SelectItem value="0_permanent">Permanen</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {actionType === 'suspend' && (
+                        <FormField
+                        control={actionReasonForm.control}
+                        name="duration"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Durasi Penangguhan</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Pilih durasi..." /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="7_days">7 Hari</SelectItem>
+                                <SelectItem value="14_days">14 Hari</SelectItem>
+                                <SelectItem value="1_months">1 Bulan</SelectItem>
+                                <SelectItem value="0_permanent">Permanen</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    )}
                     <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsSuspensionDialogOpen(false)}>Batal</Button>
+                        <Button type="button" variant="secondary" onClick={() => setIsActionDialogOpen(false)}>Batal</Button>
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Tangguhkan
+                            {actionType === 'block' ? 'Blokir Pengguna' : 'Tangguhkan'}
                         </Button>
                     </DialogFooter>
                 </form>
