@@ -61,11 +61,6 @@ export default function PetugasLayout({
 
     if (userRole !== 'petugas') {
       router.replace('/auth/staff-login');
-       toast({
-        variant: "destructive",
-        title: "Akses Ditolak",
-        description: "Anda harus masuk sebagai petugas untuk mengakses halaman ini.",
-      });
     } else {
         if (staffInfo.name) {
             setStaffName(staffInfo.name);
@@ -113,14 +108,30 @@ export default function PetugasLayout({
 
   const handleLogout = () => {
     setIsLoggingOut(true);
+    toast({ title: "Berhasil Keluar", description: "Anda sedang dialihkan..." });
+
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
-    toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
-    router.push('/');
+    
+    setTimeout(() => {
+        router.push('/');
+    }, 1500);
   };
-
-  if (!isClient) {
-    return null;
+  
+  if (!isClient || isLoggingOut) {
+      return (
+        <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
+            <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Loading Logo" 
+                width={120} 
+                height={120} 
+                className="animate-logo-pulse"
+                priority
+            />
+            {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
+        </div>
+      );
   }
   
   const NavHeader = () => (

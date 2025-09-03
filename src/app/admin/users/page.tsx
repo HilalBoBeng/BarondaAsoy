@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
-import { Dialog, DialogContent, DialogBody, DialogClose, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -350,11 +350,11 @@ export default function UsersAdminPage() {
                                     <TableCell>{s.addressDetail}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
-                                            <Button size="sm" onClick={() => handleStaffApproval(s, true)} disabled={isSubmitting}>
-                                                <Check className="h-4 w-4 mr-2" /> Setujui
+                                            <Button size="icon" className="bg-green-500 hover:bg-green-600" onClick={() => handleStaffApproval(s, true)} disabled={isSubmitting}>
+                                                <Check className="h-4 w-4" />
                                             </Button>
-                                            <Button size="sm" variant="destructive" onClick={() => openRejectionDialog(s)} disabled={isSubmitting}>
-                                                <X className="h-4 w-4 mr-2" /> Tolak
+                                            <Button size="icon" variant="destructive" onClick={() => openRejectionDialog(s)} disabled={isSubmitting}>
+                                                <X className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -384,7 +384,7 @@ export default function UsersAdminPage() {
             </DialogHeader>
             <Form {...rejectionForm}>
                 <form onSubmit={rejectionForm.handleSubmit(onRejectionSubmit)} className="space-y-4">
-                    <DialogBody>
+                    <div className="py-4">
                         <FormField
                             control={rejectionForm.control}
                             name="rejectionReason"
@@ -398,8 +398,8 @@ export default function UsersAdminPage() {
                                 </FormItem>
                             )}
                         />
-                    </DialogBody>
-                    <AlertDialogFooter>
+                    </div>
+                    <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Batal</Button>
                         </DialogClose>
@@ -407,7 +407,7 @@ export default function UsersAdminPage() {
                              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Kirim Penolakan
                         </Button>
-                    </AlertDialogFooter>
+                    </DialogFooter>
                 </form>
             </Form>
         </DialogContent>
@@ -415,5 +415,3 @@ export default function UsersAdminPage() {
     </>
   );
 }
-
-    

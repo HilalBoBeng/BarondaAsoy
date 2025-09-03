@@ -65,11 +65,6 @@ export default function AdminLayout({
 
     if (userRole !== 'admin') {
       router.replace('/auth/staff-login');
-      toast({
-        variant: "destructive",
-        title: "Akses Ditolak",
-        description: "Anda harus masuk sebagai admin untuk mengakses halaman ini.",
-      });
     } else {
         if (staffInfo.name) {
             setAdminName(staffInfo.name);
@@ -108,13 +103,17 @@ export default function AdminLayout({
 
   const handleLogout = () => {
     setIsLoggingOut(true);
+    toast({ title: "Berhasil Keluar", description: "Anda sedang dialihkan..." });
+    
+    // Clear local storage first
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
-    toast({ title: "Berhasil Keluar", description: "Anda telah keluar." });
-     setTimeout(() => {
-      router.push('/');
-      setIsLoggingOut(false);
-    }, 2000);
+
+    // Then redirect
+    setTimeout(() => {
+        router.push('/');
+        // No need to set isLoggingOut to false as the component will unmount
+    }, 1500); 
   };
   
   if (!isClient || isLoggingOut) {
@@ -247,5 +246,3 @@ export default function AdminLayout({
     </div>
   );
 }
-
-    
