@@ -23,177 +23,180 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Moon, Sun, KeyRound } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { addDays, isBefore, subDays } from 'date-fns';
-import { Timestamp } from "firebase/firestore";
+import { Switch } from "@/components/ui/switch";
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from "@/lib/firebase/client";
 
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, "Kata sandi saat ini diperlukan."),
-  newPassword: z.string().min(8, "Kata sandi baru minimal 8 karakter."),
-  confirmNewPassword: z.string(),
-}).refine(data => data.newPassword === data.confirmNewPassword, {
-    message: "Konfirmasi kata sandi baru tidak cocok.",
-    path: ["confirmNewPassword"],
+const settingsSchema = z.object({
+  appName: z.string().min(1, "Nama aplikasi tidak boleh kosong."),
+  appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")),
+  maintenanceMode: z.boolean(),
 });
 
-
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 export default function AdminSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastPasswordChange, setLastPasswordChange] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const router = useRouter();
   const { setTheme, theme } = useTheme();
 
-  // This is a simulation. In a real app, you'd fetch this from the database.
-  useEffect(() => {
-    const lastChangeStr = localStorage.getItem('adminPasswordLastChange');
-    if (lastChangeStr) {
-      setLastPasswordChange(new Date(lastChangeStr));
-    }
-  }, []);
-
-  const canChangePassword = !lastPasswordChange || isBefore(lastPasswordChange, subDays(new Date(), 7));
-
-  const form = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
     defaultValues: {
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: ''
-    }
+      appName: "Baronda",
+      appLogoUrl: "https://iili.io/KJ4aGxp.png",
+      maintenanceMode: false,
+    },
   });
+  
+  useEffect(() => {
+    const fetchSettings = async () => {
+        setLoading(true);
+        const settingsRef = doc(db, 'app_settings', 'config');
+        const docSnap = await getDoc(settingsRef);
+        if (docSnap.exists()) {
+            form.reset(docSnap.data() as SettingsFormValues);
+        }
+        setLoading(false);
+    };
+    fetchSettings();
+  }, [form]);
 
-  const onSubmit = async (data: PasswordFormValues) => {
+  const onSubmit = async (data: SettingsFormValues) => {
     setIsSubmitting(true);
-    // This is a simulation. In a real app, you'd call a backend function.
-    if (data.currentPassword === "Admin123") {
-      // In a real app, you would update the password in your database.
-      // For this simulation, we'll just show success and update the UI state.
-      console.log("Admin password changed to:", data.newPassword);
-      toast({
-        title: "Berhasil",
-        description: "Kata sandi admin berhasil diubah (simulasi).",
-      });
-      const now = new Date();
-      setLastPasswordChange(now);
-      localStorage.setItem('adminPasswordLastChange', now.toISOString());
-      form.reset();
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Gagal",
-        description: "Kata sandi saat ini salah.",
-      });
+    try {
+        const settingsRef = doc(db, 'app_settings', 'config');
+        await setDoc(settingsRef, data, { merge: true });
+        toast({
+            title: "Berhasil",
+            description: "Pengaturan tampilan berhasil disimpan.",
+        });
+    } catch (error) {
+         toast({
+            variant: "destructive",
+            title: "Gagal",
+            description: "Gagal menyimpan pengaturan.",
+        });
+    } finally {
+        setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent className="space-y-8">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pengaturan</CardTitle>
+        <CardTitle>Atur Tampilan & Sistem</CardTitle>
         <CardDescription>
-          Kelola pengaturan untuk akun super-admin dan tampilan aplikasi.
+          Kelola tampilan umum aplikasi dan status sistem.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div>
-                <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" />Ubah Kata Sandi Admin</h3>
+                <h3 className="text-lg font-medium flex items-center gap-2"><Paintbrush className="h-5 w-5" />Tampilan Umum</h3>
                 <p className="text-sm text-muted-foreground">
-                    Kata sandi admin default adalah `Admin123`. Demi keamanan, ubah kata sandi ini segera.
+                   Ubah judul dan logo yang muncul di seluruh aplikasi.
                 </p>
             </div>
-            {canChangePassword ? (
-                <>
-                    <FormField
-                    control={form.control}
-                    name="currentPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                        <FormControl>
-                            <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+             <FormField
+              control={form.control}
+              name="appName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Judul Aplikasi</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g. Baronda App" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="appLogoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL Logo Aplikasi</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="https://example.com/logo.png" />
+                  </FormControl>
+                   <FormDescription>
+                    Pastikan URL gambar dapat diakses secara publik.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <Separator />
+
+            <div>
+                <h3 className="text-lg font-medium flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
+                 <p className="text-sm text-muted-foreground">
+                   Saat diaktifkan, hanya admin yang dapat mengakses aplikasi.
+                </p>
+            </div>
+             <FormField
+              control={form.control}
+              name="maintenanceMode"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Aktifkan Mode Pemeliharaan
+                    </FormLabel>
+                    <FormDescription>
+                      Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                     />
-                    <FormField
-                    control={form.control}
-                    name="newPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Kata Sandi Baru</FormLabel>
-                        <FormControl>
-                            <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="confirmNewPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                        <FormControl>
-                            <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Simpan Perubahan
-                    </Button>
-                </>
-            ) : (
-                <>
-                    <FormField
-                        control={form.control}
-                        name="currentPassword"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                            <FormControl>
-                                <Input type="password" {...field} readOnly value={'********'} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                        Anda baru bisa mengubah kata sandi lagi {lastPasswordChange ? formatDistanceToNow(addDays(lastPasswordChange, 7), { addSuffix: true, locale: id }) : 'dalam 7 hari'}.
-                    </p>
-                </>
-            )}
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <Button type="submit" disabled={isSubmitting || loading}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Perubahan
+            </Button>
           </form>
         </Form>
         
         <Separator />
 
         <div>
-            <h3 className="text-lg font-medium mb-2">Pengaturan Tampilan</h3>
+            <h3 className="text-lg font-medium mb-2">Tema Aplikasi</h3>
             <p className="text-sm text-muted-foreground mb-4">
-                Pilih tema tampilan untuk aplikasi.
+                Pilih antara mode terang atau gelap untuk dasbor Anda.
             </p>
             <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                    <h3 className="font-medium">Tema Aplikasi</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Pilih antara mode terang atau gelap.
-                    </p>
+                    <h3 className="font-medium">Tema Tampilan</h3>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
@@ -211,3 +214,5 @@ export default function AdminSettingsPage() {
     </Card>
   );
 }
+
+    
