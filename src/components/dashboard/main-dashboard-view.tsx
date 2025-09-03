@@ -18,7 +18,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2, ShieldAlert, Phone, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -68,6 +68,7 @@ export default function MainDashboardView() {
   const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
   const [suspensionInfo, setSuspensionInfo] = useState<SuspensionInfo | null>(null);
   const [countdown, setCountdown] = useState('');
+  const [appDownloadLink, setAppDownloadLink] = useState<string | null>(null);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -116,6 +117,15 @@ export default function MainDashboardView() {
       setPatrolLogs(logs);
       setLoadingPatrolLogs(false);
     });
+    
+    // Fetch app settings
+    const settingsRef = doc(db, 'app_settings', 'config');
+    getDoc(settingsRef).then(docSnap => {
+        if (docSnap.exists()) {
+            setAppDownloadLink(docSnap.data().appDownloadLink);
+        }
+    });
+
 
     return () => {
       clearInterval(timer);
@@ -474,12 +484,14 @@ export default function MainDashboardView() {
                     {currentDate} | {currentTime}
                 </p>
             </div>
-            <Button asChild>
-                <Link href="#">
-                    <Download className="mr-2 h-4 w-4" />
-                    Unduh Aplikasi
-                </Link>
-            </Button>
+            {appDownloadLink && (
+              <Button asChild variant="ghost" size="icon">
+                  <Link href={appDownloadLink} target="_blank" rel="noopener noreferrer">
+                      <Download />
+                      <span className="sr-only">Unduh Aplikasi</span>
+                  </Link>
+              </Button>
+            )}
           </div>
 
           <div className="space-y-6">

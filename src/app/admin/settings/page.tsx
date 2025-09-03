@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const settingsSchema = z.object({
   appName: z.string().min(1, "Nama aplikasi tidak boleh kosong."),
   appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")),
+  appDownloadLink: z.string().url("URL tidak valid.").optional().or(z.literal('')),
   maintenanceMode: z.boolean(),
 });
 
@@ -52,6 +53,7 @@ export default function AdminSettingsPage() {
     defaultValues: {
       appName: "Baronda",
       appLogoUrl: "https://iili.io/KJ4aGxp.png",
+      appDownloadLink: "",
       maintenanceMode: false,
     },
   });
@@ -97,6 +99,7 @@ export default function AdminSettingsPage() {
                 <Skeleton className="h-4 w-3/4" />
             </CardHeader>
             <CardContent className="space-y-8">
+                <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
@@ -146,6 +149,22 @@ export default function AdminSettingsPage() {
                   </FormControl>
                    <FormDescription>
                     Pastikan URL gambar dapat diakses secara publik.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="appDownloadLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link Unduh Aplikasi</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="https://example.com/download" />
+                  </FormControl>
+                   <FormDescription>
+                    Tombol unduh akan muncul di dasbor pengguna jika link ini diisi.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
