@@ -484,11 +484,11 @@ export default function MainDashboardView() {
                     {currentDate} | {currentTime}
                 </p>
             </div>
-            {appDownloadLink && (
-              <Button asChild variant="ghost" size="icon">
+            {appDownloadLink && user && (
+              <Button asChild>
                   <Link href={appDownloadLink} target="_blank" rel="noopener noreferrer">
-                      <Download />
-                      <span className="sr-only">Unduh Aplikasi</span>
+                      <Download className="mr-2 h-4 w-4"/>
+                      Unduh Aplikasi
                   </Link>
               </Button>
             )}
