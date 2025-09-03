@@ -57,7 +57,6 @@ export default function ReportHistory() {
                 const reportsQuery = query(
                     collection(db, 'reports'), 
                     where('visibility', '==', 'public'),
-                    orderBy('createdAt', 'desc'),
                     limit(50) // Limit to last 50 public reports to avoid large reads
                 );
                 
@@ -75,7 +74,7 @@ export default function ReportHistory() {
                      } as Report;
                 });
                 
-                // No need to sort on client, already ordered by Firestore
+                reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
                 setAllReports(reportsData);
 
             } catch (error) {

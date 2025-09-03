@@ -65,8 +65,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('userId', '==', user.uid),
-                orderBy('createdAt', 'desc')
+                where('userId', '==', user.uid)
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -82,8 +81,8 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      replies: repliesArray
                  } as Report;
             });
-
-            // No client-side sort needed as it's handled by orderBy
+            
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
             setAllReports(reportsData);
 
         } catch (error) {
