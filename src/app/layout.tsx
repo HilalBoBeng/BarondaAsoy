@@ -67,7 +67,7 @@ export default function RootLayout({
       pathname.startsWith('/petugas') || 
       pathname.startsWith('/auth/staff');
 
-  const isAccessingProtectedRoute = !isBypassRoute && pathname !== '/' && pathname !== '/maintenance';
+  const isAccessingProtectedRoute = !isBypassRoute && pathname !== '/' && !pathname.startsWith('/auth');
   
   if (maintenanceMode === null) {
       return (
@@ -79,14 +79,17 @@ export default function RootLayout({
       )
   }
   
-  if (maintenanceMode && isAccessingProtectedRoute && !isBypassRoute) {
+  // This logic specifically handles protected user routes like /profile, /settings, etc.
+  // The logic for the home page (/) is handled in src/app/page.tsx
+  if (maintenanceMode && isAccessingProtectedRoute) {
+      router.push('/maintenance'); // Redirect to maintenance page
       return (
-         <html lang="id" suppressHydrationWarning>
+          <html lang="id" suppressHydrationWarning>
             <body className={`${ptSans.className} antialiased bg-background`}>
-                <MaintenancePage />
+                <LoadingSkeleton />
             </body>
          </html>
-      )
+      );
   }
 
   return (

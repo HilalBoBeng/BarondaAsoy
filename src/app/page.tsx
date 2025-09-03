@@ -2,14 +2,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
-import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, getDocs } from 'firebase/firestore';
-import type { Notification, AppUser } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
+import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from "next/navigation";
 import MainDashboardView from "@/components/dashboard/main-dashboard-view";
 import MaintenancePage from "./maintenance/page";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+
+
+function LoadingSkeleton() {
+  return (
+    <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
+        <Image 
+            src="https://iili.io/KJ4aGxp.png" 
+            alt="Loading Logo" 
+            width={120} 
+            height={120} 
+            className="animate-logo-pulse"
+            priority
+        />
+    </div>
+  )
+}
+
 
 export default function HomePage() {
   const [maintenanceMode, setMaintenanceMode] = useState<boolean | null>(null);
@@ -31,10 +48,11 @@ export default function HomePage() {
     const fetchSettings = async () => {
       try {
         const settingsRef = doc(db, 'app_settings', 'config');
-        const docSnap = await getDocs(settingsRef);
-        if (docSnap.docs.length > 0) {
-            setMaintenanceMode(docSnap.docs[0].data().maintenanceMode);
+        const docSnap = await getDoc(settingsRef);
+        if (docSnap.exists()) {
+            setMaintenanceMode(docSnap.data().maintenanceMode);
         } else {
+            // If the settings doc doesn't exist, assume maintenance is off
             setMaintenanceMode(false);
         }
       } catch (error) {
@@ -48,7 +66,7 @@ export default function HomePage() {
   }, [router]);
 
   if (loading || maintenanceMode === null) {
-    return null; // Or a loading skeleton for the whole page
+    return <LoadingSkeleton />;
   }
 
   return (
