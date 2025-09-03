@@ -30,6 +30,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from "@/lib/firebase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const settingsSchema = z.object({
   appName: z.string().min(1, "Nama aplikasi tidak boleh kosong."),
@@ -214,5 +215,3 @@ export default function AdminSettingsPage() {
     </Card>
   );
 }
-
-    
