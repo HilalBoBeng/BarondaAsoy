@@ -27,7 +27,7 @@ import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, 
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from "@/lib/firebase/client";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Skeleton } from "@/components/ui/skeleton";
