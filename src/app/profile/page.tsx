@@ -10,7 +10,7 @@ import { doc, getDoc, updateDoc, collection, query, where, Timestamp, orderBy, s
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -24,10 +24,11 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogDescription as DialogDescriptionComponent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialogFooter } from '@/components/ui/alert-dialog';
 
 
 const profileSchema = z.object({
@@ -68,7 +69,7 @@ export default function ProfilePage() {
   const canEditField = useCallback((field: FieldName) => {
     const lastUpdateDate = lastUpdated[field];
     if (!lastUpdateDate) return true;
-    const cooldownDays = field === 'photoURL' ? 14 : 7;
+    const cooldownDays = field === 'photoURL' ? 1 : 7;
     return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
   }, [lastUpdated]);
 
@@ -108,10 +109,12 @@ export default function ProfilePage() {
             }
             
             if (userData.isBlocked) {
-                 toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Akun Anda telah diblokir oleh admin.' });
-                 auth.signOut();
-                 router.push('/auth/login');
-                 return;
+                const dialog = document.createElement('div');
+                document.body.appendChild(dialog);
+                alert(`Akun Diblokir. Alasan: Anda tidak dapat mengakses aplikasi.`);
+                auth.signOut();
+                router.push('/auth/login');
+                return;
             }
              if (userData.isSuspended) {
                 const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
@@ -171,9 +174,8 @@ export default function ProfilePage() {
   }, [auth, router, toast]);
 
   const handleEditClick = (field: FieldName) => {
-    if (!canEditField(field)) {
-        const cooldownDays = field === 'photoURL' ? 14 : 7;
-        toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah ${cooldownDays} hari dari pembaruan terakhir.` });
+    if (field !== 'photoURL' && !canEditField(field)) {
+        toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.` });
         return;
     }
     setEditingField(field);
@@ -227,15 +229,24 @@ export default function ProfilePage() {
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!canEditField('photoURL')) {
+            toast({ variant: 'destructive', title: 'Foto Profil Dikunci', description: `Anda baru bisa mengubah foto profil lagi setelah 24 jam.` });
+            return;
+        }
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             if (file.size > 256 * 1024) { 
                 toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 256 KB." });
                 return;
             }
-            const compressedDataUrl = await compressImage(file, 64);
-            form.setValue('photoURL', compressedDataUrl);
-            setIsEditDialogOpen(true); // Open dialog after file is selected and processed
+            try {
+                const compressedDataUrl = await compressImage(file, 64);
+                form.setValue('photoURL', compressedDataUrl);
+                setEditingField('photoURL');
+                setIsEditDialogOpen(true);
+            } catch(err) {
+                 toast({ variant: "destructive", title: "Gagal Memproses Gambar", description: "Terjadi kesalahan saat memproses gambar Anda." });
+            }
         }
     };
 
@@ -276,12 +287,10 @@ export default function ProfilePage() {
             const userDocRef = doc(db, 'users', user.uid);
             await updateDoc(userDocRef, { 
                 photoURL: null,
-                lastUpdated_photoURL: serverTimestamp(),
             });
             toast({ title: 'Berhasil', description: 'Foto profil telah dihapus.' });
             const updatedUser = { ...user, photoURL: null };
             setUser(updatedUser as AppUser);
-            setLastUpdated(prev => ({ ...prev, photoURL: new Date() }));
             setIsEditDialogOpen(false);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus foto profil.' });
@@ -324,7 +333,7 @@ export default function ProfilePage() {
   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
     const Icon = fieldIcons[field];
     const canEdit = canEditField(field);
-    const cooldownDays = field === 'photoURL' ? 14 : 7;
+    const cooldownDays = field === 'photoURL' ? 1 : 7;
     const lastUpdateDate = lastUpdated[field];
 
     return (
@@ -379,14 +388,14 @@ export default function ProfilePage() {
                <Card className="overflow-hidden">
                     <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                         <div className="flex items-center gap-4">
-                            <div className="relative">
+                             <div className="relative">
                                 <Avatar className="h-20 w-20 border-4 border-background/50">
                                     <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
                                     <AvatarFallback className="text-3xl bg-background text-primary">
                                         {user?.displayName?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
-                                <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")} disabled={!canEditField("photoURL")}>
+                                <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
                                    {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
                                 </Button>
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
@@ -473,6 +482,11 @@ export default function ProfilePage() {
             <DialogContent className="rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
+                     {editingField === 'photoURL' && (
+                        <CardDescription>
+                            Setelah disimpan, Anda baru bisa mengganti foto lagi setelah 24 jam.
+                        </CardDescription>
+                     )}
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
@@ -506,23 +520,6 @@ export default function ProfilePage() {
                                                     <Loader2 className="animate-spin" />
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button type="button" variant="destructive" size="sm">
-                                                        <Trash className="h-4 w-4 mr-2" /> Hapus Foto Saat Ini
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Tindakan ini akan menghapus foto profil Anda secara permanen. Anda dapat mengunggah yang baru nanti.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={handleDeletePhoto}>Ya, Hapus</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
                                        </div>
                                     )}
                                     <FormMessage />
@@ -530,12 +527,33 @@ export default function ProfilePage() {
                                 )}
                             />
                         )}
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => {setIsEditDialogOpen(false); setEditingField(null)}}>Batal</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Simpan
-                            </Button>
+                         <DialogFooter className="sm:justify-between gap-2 pt-4">
+                           {editingField === 'photoURL' && user?.photoURL ? (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button type="button" variant="destructive">
+                                            <Trash className="h-4 w-4 mr-2" /> Hapus Foto
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
+                                            <AlertDialogDescription>Tindakan ini akan menghapus foto profil Anda secara permanen. Anda dapat mengunggah yang baru nanti.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeletePhoto}>Ya, Hapus</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                           ) : <div></div>}
+                           <div className="flex gap-2 justify-end">
+                                <Button type="button" variant="secondary" onClick={() => {setIsEditDialogOpen(false); setEditingField(null)}}>Batal</Button>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Simpan
+                                </Button>
+                           </div>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -545,3 +563,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
