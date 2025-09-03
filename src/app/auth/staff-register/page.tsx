@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -162,8 +162,8 @@ export default function StaffRegisterPage() {
                             <SelectTrigger><SelectValue placeholder="Pilih jenis alamat" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="kilongan">Warga Kel. Kilongan</SelectItem>
-                            <SelectItem value="luar_kilongan">Warga Luar Kilongan</SelectItem>
+                            <SelectItem value="kilongan">Kilongan</SelectItem>
+                            <SelectItem value="luar_kilongan">Luar Kilongan</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -198,9 +198,8 @@ export default function StaffRegisterPage() {
                   Sudah punya akun petugas?{" "}
                   <Link
                       href="/auth/staff-login"
-                      className="inline-flex items-center gap-1 underline text-primary"
+                      className="underline text-primary"
                   >
-                      <LogIn className="h-4 w-4" />
                       Masuk di sini
                   </Link>
               </div>

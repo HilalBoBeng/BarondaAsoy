@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const profileSchema = z.object({
   displayName: z.string().optional(),
   phone: z.string().optional(),
-  address: z.string().optional(),
+  addressDetail: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -87,7 +87,8 @@ export default function ProfilePage() {
                     lastUpdated_phone: null,
                     lastUpdated_address: null,
                     phone: '',
-                    address: '',
+                    addressType: 'kilongan',
+                    addressDetail: '',
                     isBlocked: false,
                 };
                 await setDoc(userDocRef, newUserPayload);
@@ -107,14 +108,14 @@ export default function ProfilePage() {
             form.reset({
                 displayName: userData.displayName || '',
                 phone: userData.phone || '',
-                address: userData.address || '',
+                addressDetail: userData.addressDetail || '',
             });
 
             // Set last updated dates for each field
             const lastUpdatedDates: { [key in FieldName]?: Date | null } = {};
             if (userData.lastUpdated_displayName) lastUpdatedDates.displayName = (userData.lastUpdated_displayName as Timestamp).toDate();
             if (userData.lastUpdated_phone) lastUpdatedDates.phone = (userData.lastUpdated_phone as Timestamp).toDate();
-            if (userData.lastUpdated_address) lastUpdatedDates.address = (userData.lastUpdated_address as Timestamp).toDate();
+            if (userData.lastUpdated_address) lastUpdatedDates.addressDetail = (userData.lastUpdated_address as Timestamp).toDate();
             setLastUpdated(lastUpdatedDates);
 
 
@@ -165,6 +166,10 @@ export default function ProfilePage() {
           const updateData: { [key: string]: any } = {};
           updateData[editingField] = valueToUpdate;
           updateData[`lastUpdated_${editingField}`] = serverTimestamp();
+          
+          if(editingField === 'addressDetail'){
+              updateData.address = valueToUpdate;
+          }
 
           await updateDoc(userDocRef, updateData);
           
@@ -192,14 +197,15 @@ export default function ProfilePage() {
   const fieldLabels: Record<FieldName, string> = {
     displayName: "Nama Lengkap",
     phone: "Nomor HP / WhatsApp",
-    address: "Alamat (RT/RW)"
+    addressDetail: "Alamat"
   };
 
-  const fieldIcons: Record<keyof ProfileFormValues | 'email', React.ElementType> = {
+  const fieldIcons: Record<keyof ProfileFormValues | 'email' | 'address', React.ElementType> = {
     displayName: User,
     email: Mail,
     phone: Phone,
     address: MapPin,
+    addressDetail: MapPin,
   };
 
   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
@@ -289,7 +295,7 @@ export default function ProfilePage() {
                     <CardContent className="p-0">
                         <div className="divide-y">
                             {renderDataRow("phone", user?.phone)}
-                            {renderDataRow("address", user?.address)}
+                            {renderDataRow("addressDetail", user?.addressType === 'kilongan' ? 'Kilongan' : user?.addressDetail)}
                         </div>
                          
                     </CardContent>

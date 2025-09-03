@@ -33,6 +33,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { sendOtp } from "@/ai/flows/send-otp";
 
 const verifyOtpSchema = z.object({
   otp: z.string().min(6, "Kode OTP harus 6 digit."),
@@ -119,13 +120,8 @@ export default function VerifyOtpPage() {
     if (!contextData) return;
     setIsResending(true);
     try {
-      const response = await fetch('/api/send-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: contextData.email, context: contextData.flow }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      const result = await sendOtp({ email: contextData.email, context: contextData.flow });
+      if (!result.success) throw new Error(result.message);
 
       toast({ title: "Berhasil", description: "Kode OTP baru telah dikirim." });
 
@@ -155,13 +151,8 @@ export default function VerifyOtpPage() {
     setIsSubmitting(true);
     try {
       const result = await verifyOtp({ 
+        ...contextData,
         otp: data.otp,
-        email: contextData.email,
-        name: contextData.name,
-        password: contextData.password,
-        phone: contextData.phone,
-        address: contextData.address,
-        flow: contextData.flow,
       });
 
       if (result.success) {
@@ -169,15 +160,25 @@ export default function VerifyOtpPage() {
           title: "Verifikasi Berhasil",
           description: result.message,
         });
-        localStorage.removeItem('registrationData');
-        localStorage.removeItem('verificationContext');
+        
+        // Clean up local storage
+        if (contextData.flow === 'userRegistration') {
+            localStorage.removeItem('registrationData');
+        } else {
+            localStorage.removeItem('verificationContext');
+        }
+
         if (contextData?.email) localStorage.removeItem(getCooldownKey(contextData.email));
         
-        if (contextData.flow === 'userRegistration') {
+        // Navigate to the next step
+        if (contextData.flow === 'userPasswordReset') {
+            router.push('/auth/reset-password');
+        } else if (contextData.flow === 'userRegistration') {
             router.push('/auth/login');
         } else {
             router.push('/auth/staff-login');
         }
+
       } else {
         throw new Error(result.message);
       }

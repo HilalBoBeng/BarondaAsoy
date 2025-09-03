@@ -13,10 +13,11 @@ import nodemailer from 'nodemailer';
 const VerifyOtpInputSchema = z.object({
   email: z.string().email().describe('The email address being verified.'),
   otp: z.string().length(6, 'OTP must be 6 digits.').describe('The 6-digit OTP.'),
-  name: z.string().optional().describe('The user\'s full name (for registration).'),
-  password: z.string().optional().describe('The user\'s password (for registration).'),
-  phone: z.string().optional().describe('The user\'s phone number (for registration).'),
-  address: z.string().optional().describe('The user\'s address (for registration).'),
+  name: z.string().optional().describe("The user's full name (for registration)."),
+  password: z.string().optional().describe("The user's password (for registration)."),
+  phone: z.string().optional().describe("The user's phone number (for registration)."),
+  addressType: z.enum(['kilongan', 'luar_kilongan']).optional().describe('The type of address.'),
+  addressDetail: z.string().optional().describe('The detailed address if outside Kilongan.'),
   flow: z.enum(['userRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
@@ -76,12 +77,15 @@ const verifyOtpFlow = ai.defineFlow(
     inputSchema: VerifyOtpInputSchema,
     outputSchema: VerifyOtpOutputSchema,
   },
-  async ({ email, otp, name, password, phone, address, flow }) => {
+  async ({ email, otp, name, password, phone, addressType, addressDetail, flow }) => {
     try {
+      // For userPasswordReset, the OTP context is userRegistration
+      const contextToCheck = flow === 'userPasswordReset' ? 'userRegistration' : flow;
+      
       const q = adminDb.collection('otps')
         .where('email', '==', email)
         .where('otp', '==', otp)
-        .where('context', '==', flow === 'userPasswordReset' ? 'userRegistration' : flow);
+        .where('context', '==', contextToCheck);
       
       const otpSnapshot = await q.get();
 
@@ -121,7 +125,8 @@ const verifyOtpFlow = ai.defineFlow(
             createdAt: FieldValue.serverTimestamp(),
             photoURL: null,
             phone: phone || null,
-            address: address || null,
+            addressType: addressType || null,
+            addressDetail: addressType === 'luar_kilongan' ? addressDetail : null,
             isBlocked: false,
         });
 
@@ -155,11 +160,11 @@ const verifyOtpFlow = ai.defineFlow(
           await batch.commit();
           return { success: true, message: 'Verifikasi berhasil. Kode akses Anda telah dikirim ke email.' };
       }
-
+      
       if (flow === 'userPasswordReset') {
-          // Password reset logic will be added here. For now, just confirm OTP.
-           await batch.commit();
-          return { success: true, message: 'Verifikasi berhasil. Anda akan diarahkan untuk mengatur ulang kata sandi.' };
+         // Just verify the OTP, the password will be reset on the next screen
+         await batch.commit();
+         return { success: true, message: 'Verifikasi berhasil. Anda akan diarahkan untuk mengatur ulang kata sandi.' };
       }
 
 

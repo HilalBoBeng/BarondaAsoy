@@ -60,6 +60,8 @@ export interface AppUser {
   createdAt?: Timestamp | Date;
   phone?: string;
   address?: string;
+  addressType?: 'kilongan' | 'luar_kilongan';
+  addressDetail?: string;
   isBlocked?: boolean;
   lastUpdated_displayName?: Timestamp;
   lastUpdated_phone?: Timestamp;
@@ -131,3 +133,4 @@ export interface DuesPayment {
     recordedBy: string; // Staff name
     recordedById: string; // Staff ID
 }
+
