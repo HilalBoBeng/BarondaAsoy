@@ -36,6 +36,7 @@ function LoadingSkeleton() {
   )
 }
 
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -59,24 +60,18 @@ export default function RootLayout({
     fetchSettings();
   }, []);
   
-  const auth = getAuth();
+  useEffect(() => {
+    if (maintenanceMode === null) return;
+
+    const bypassRoutes = ['/auth/staff-login', '/admin', '/petugas'];
+    const isBypassRoute = bypassRoutes.some(route => pathname.startsWith(route));
+
+    if (maintenanceMode && !isBypassRoute && pathname !== '/') {
+        router.push('/');
+    }
+  }, [maintenanceMode, pathname, router]);
   
-  const bypassRoutes = ['/auth/staff-login', '/admin', '/petugas'];
-
-  const isBypassRoute = bypassRoutes.some(route => pathname.startsWith(route));
-
-  // This logic specifically handles protected user routes like /profile, /settings, etc.
-  if (maintenanceMode && !isBypassRoute && pathname !== '/') {
-      router.push('/');
-      return (
-          <html lang="id" suppressHydrationWarning>
-            <body className={`${ptSans.className} antialiased bg-background`}>
-                <LoadingSkeleton />
-            </body>
-         </html>
-      );
-  }
-
+  
   if (maintenanceMode === null) {
       return (
         <html lang="id" suppressHydrationWarning>
