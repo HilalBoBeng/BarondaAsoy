@@ -10,14 +10,14 @@ import type { ScheduleEntry } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Calendar, Clock, User, MapPin, Loader2, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Loader2, RefreshCw, QrCode } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { generateScheduleToken } from '@/ai/flows/generate-schedule-token';
 
-export default function ScheduleDetailPage({ params }: { params: { scheduleId: string } }) {
-  const { scheduleId } = params;
+export default function ScheduleDetailPage({ params }: { params: Promise<{ scheduleId: string }> }) {
+  const { scheduleId } = use(params);
   const [schedule, setSchedule] = useState<ScheduleEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
