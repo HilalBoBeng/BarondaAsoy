@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { adminDb } from "@/lib/firebase/admin";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { app } from "@/lib/firebase/client"; // auth needs the client app
+import { FieldValue } from 'firebase-admin/firestore';
 
 const VerifyOtpInputSchema = z.object({
   email: z.string().email().describe('The email address being verified.'),
