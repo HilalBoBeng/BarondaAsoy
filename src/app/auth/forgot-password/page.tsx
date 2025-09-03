@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { sendOtp } from "@/ai/flows/send-otp";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -39,7 +39,7 @@ const forgotPasswordSchema = z.object({
 
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
@@ -157,4 +157,13 @@ export default function ForgotPasswordPage() {
       </Card>
     </>
   );
+}
+
+
+export default function ForgotPasswordPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <ForgotPasswordForm />
+        </Suspense>
+    )
 }
