@@ -5,13 +5,13 @@ import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ArrowLeft, QrCode, Upload, Camera, CheckCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 
 function ScanPageContent() {
   const router = useRouter();
@@ -22,6 +22,7 @@ function ScanPageContent() {
   const [scanType, setScanType] = useState<'start' | 'end' | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const readerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const type = searchParams.get('type') as 'start' | 'end';
@@ -79,6 +80,9 @@ function ScanPageContent() {
               qrTokenEnd: null,
               qrTokenEndExpires: null
           }
+          
+          const staffRef = doc(db, 'staff', scheduleData.officerId);
+          await updateDoc(staffRef, { points: increment(10) });
       }
 
       await updateDoc(scheduleRef, updatePayload);
@@ -104,7 +108,7 @@ function ScanPageContent() {
 
     const config = {
       fps: 10,
-      qrbox: { width: 250, height: 250 },
+      qrbox: 250,
       rememberLastUsedCamera: true,
       supportedScanTypes: [0] // SCAN_TYPE_CAMERA
     };
@@ -120,18 +124,40 @@ function ScanPageContent() {
     });
   }, [processDecodedText]);
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        try {
+            const decodedText = await scannerRef.current?.scanFile(file, false);
+            if (decodedText) {
+                processDecodedText(decodedText);
+            }
+        } catch (err) {
+            setErrorMessage("Tidak dapat menemukan QR code pada gambar.");
+            setStatus('error');
+        }
+    }
+  };
+
+
   useEffect(() => {
     if (!scannerRef.current) {
-      scannerRef.current = new Html5Qrcode('qr-reader');
+      scannerRef.current = new Html5Qrcode('qr-reader', {
+         experimentalFeatures: {
+            useOffscreenCanvas: true,
+         },
+      });
     }
+    
+    const scanner = scannerRef.current;
     
     if (scanType && status === 'idle') {
         startScanner();
     }
 
     return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(console.error);
+      if (scanner?.isScanning) {
+          scanner.stop().catch(console.error);
       }
     };
   }, [scanType, status, startScanner]);
@@ -159,7 +185,25 @@ function ScanPageContent() {
           <CardTitle>Pindai Kode QR untuk {scanType === 'start' ? 'Memulai' : 'Mengakhiri'} Tugas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div id="qr-reader" ref={readerRef} className="w-full rounded-lg bg-muted overflow-hidden"></div>
+          <div id="qr-reader-container" className="relative w-full max-w-sm mx-auto aspect-square bg-muted rounded-lg overflow-hidden shadow-inner">
+            <div id="qr-reader" ref={readerRef} className="w-full h-full"></div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-2 right-2 z-10 bg-black/30 hover:bg-black/50 text-white rounded-full h-9 w-9"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Unggah gambar QR"
+            >
+              <Upload className="h-5 w-5" />
+            </Button>
+          </div>
 
           {status === 'processing' && (
              <div className="flex items-center justify-center p-4 rounded-md bg-muted">
