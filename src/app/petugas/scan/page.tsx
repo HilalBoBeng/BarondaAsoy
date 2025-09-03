@@ -40,7 +40,7 @@ function ScanPageContent() {
   const stopScanner = useCallback(() => {
     if (scannerRef.current && scannerRef.current.isScanning) {
       try {
-        scannerRef.current.stop();
+        scannerRef.current.stop().catch(err => console.error("Gagal menghentikan pemindai.", err));
       } catch (err) {
          console.error("Gagal menghentikan pemindai (mungkin sudah berhenti).", err);
       }
@@ -117,50 +117,48 @@ function ScanPageContent() {
 
 
    useEffect(() => {
-    if (status !== 'idle' || !scanType) return;
+    if (!scanType) return;
     
-    // Ensure the instance is created only once.
-    if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
-    }
-    
+    const qrScanner = new Html5Qrcode(scannerContainerId, { verbose: false });
+    scannerRef.current = qrScanner;
+
     const onScanSuccess = (decodedText: string, result: Html5QrcodeResult) => {
+        if (status !== 'scanning') return;
         processDecodedText(decodedText);
     };
 
     const onScanFailure = (error: Html5QrcodeError) => {
-        // Ignore "QR code not found" errors, as this is expected.
-        if (typeof error === 'string' && error.includes("No QR code found")) {
-            return;
-        }
-        console.warn(`QR error = ${JSON.stringify(error)}`);
+        // This is expected, do nothing.
     };
 
     const startCamera = async () => {
-        try {
-            await Html5Qrcode.getCameras(); // Check for camera availability and permissions
-            if (scannerRef.current) {
-                setStatus('scanning');
-                await scannerRef.current.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    onScanSuccess,
-                    onScanFailure
-                );
-            }
-        } catch (err) {
-            console.error("Camera start error:", err);
-            setStatus('permission_denied');
-            setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera di pengaturan browser Anda.");
-        }
+      setStatus('idle'); // Set status to idle while asking for permission
+      try {
+          await qrScanner.start(
+              { facingMode: "environment" },
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              onScanSuccess,
+              onScanFailure
+          );
+          setStatus('scanning');
+      } catch (err) {
+          console.error("Camera start error:", err);
+          setStatus('permission_denied');
+          const errMessage = (err as any).name === "NotAllowedError" 
+              ? "Izin akses kamera ditolak. Mohon aktifkan di pengaturan browser Anda."
+              : `Gagal memulai kamera: ${err}`;
+          setErrorMessage(errMessage);
+      }
     };
     
     startCamera();
     
     return () => {
-      stopScanner();
+      if (scannerRef.current && scannerRef.current.isScanning) {
+          scannerRef.current.stop().catch(err => console.log("Failed to stop scanner on cleanup.", err));
+      }
     };
-  }, [status, scanType, stopScanner, processDecodedText]);
+  }, [scanType, processDecodedText, status]);
 
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,7 +167,8 @@ function ScanPageContent() {
     e.target.value = ''; // Reset input to allow re-uploading the same file
 
     if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
+      // Inisialisasi jika belum ada
+      scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
     }
 
     setStatus('processing');
@@ -187,6 +186,8 @@ function ScanPageContent() {
    const handleTryAgain = () => {
     setErrorMessage(null);
     setStatus('idle');
+    // useEffect will handle restarting the camera
+    window.location.reload();
   };
 
 

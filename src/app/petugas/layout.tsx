@@ -43,6 +43,7 @@ export default function PetugasLayout({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
   const [isDetailPage, setIsDetailPage] = useState(false);
+  const [isScanPage, setIsScanPage] = useState(false);
 
   const navItems = [
     { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports + badgeCounts.myReports },
@@ -95,6 +96,8 @@ export default function PetugasLayout({
   }, [router]);
   
   useEffect(() => {
+    setIsScanPage(pathname === '/petugas/scan');
+
     const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
     const duesDetailMatch = pathname.match(duesDetailRegex);
     const isDuesRecord = pathname === '/petugas/dues/record';
@@ -186,6 +189,14 @@ export default function PetugasLayout({
       </div>
     </div>
   );
+  
+  if (isScanPage) {
+    return (
+        <main className="flex flex-1 flex-col bg-gray-100/40 dark:bg-muted/40 overflow-auto animate-fade-in">
+          {children}
+        </main>
+    )
+  }
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
