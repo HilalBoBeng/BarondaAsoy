@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, query, orderBy, Timestamp, getDocs, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { FileDown, Filter } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -38,15 +38,15 @@ export default function AttendancePage() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStaff, setSelectedStaff] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>(months[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const { toast } = useToast();
 
   useEffect(() => {
-    const staffQuery = query(collection(db, "staff"), where('status', '==', 'active'));
+    const staffQuery = query(collection(db, "staff"));
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
         const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
-        // Sort client-side to avoid composite index
         staffData.sort((a, b) => a.name.localeCompare(b.name));
         setStaff(staffData);
     });
@@ -73,9 +73,10 @@ export default function AttendancePage() {
         const staffMatch = selectedStaff === 'all' || schedule.officerId === selectedStaff;
         const monthMatch = months[scheduleDate.getMonth()] === selectedMonth;
         const yearMatch = scheduleDate.getFullYear().toString() === selectedYear;
-        return staffMatch && monthMatch && yearMatch;
+        const statusMatch = selectedStatus === 'all' || schedule.status === selectedStatus;
+        return staffMatch && monthMatch && yearMatch && statusMatch;
     });
-  }, [schedules, selectedStaff, selectedMonth, selectedYear]);
+  }, [schedules, selectedStaff, selectedMonth, selectedYear, selectedStatus]);
 
   const handleExport = (type: 'csv' | 'pdf') => {
     toast({
@@ -91,8 +92,8 @@ export default function AttendancePage() {
         <CardDescription>Lacak dan ekspor catatan kehadiran petugas patroli.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 border rounded-lg bg-muted/50">
-            <div className="flex-1 space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg bg-muted/50 items-end">
+            <div className="space-y-2">
                  <label className="text-sm font-medium">Filter Petugas</label>
                  <Select value={selectedStaff} onValueChange={setSelectedStaff}>
                     <SelectTrigger>
@@ -104,7 +105,7 @@ export default function AttendancePage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="space-y-2">
                  <label className="text-sm font-medium">Filter Periode</label>
                  <div className="flex gap-2">
                     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -125,18 +126,35 @@ export default function AttendancePage() {
                     </Select>
                  </div>
             </div>
-            <div className="flex-1 space-y-2">
-                <label className="text-sm font-medium">Opsi Ekspor</label>
-                 <div className="flex gap-2">
-                    <Button onClick={() => handleExport('csv')} className="w-full">
-                        <FileDown className="mr-2" /> CSV
-                    </Button>
-                    <Button onClick={() => handleExport('pdf')} className="w-full">
-                        <FileDown className="mr-2" /> PDF
-                    </Button>
-                 </div>
+             <div className="space-y-2">
+                 <label className="text-sm font-medium">Filter Status</label>
+                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Pilih status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Semua Status</SelectItem>
+                        <SelectItem value="Completed">Hadir</SelectItem>
+                        <SelectItem value="In Progress">Berlangsung</SelectItem>
+                        <SelectItem value="Izin">Izin</SelectItem>
+                        <SelectItem value="Sakit">Sakit</SelectItem>
+                        <SelectItem value="Pending">Belum Absen</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
         </div>
+
+        <div className="flex justify-end mb-4">
+             <div className="flex gap-2">
+                <Button onClick={() => handleExport('csv')} variant="outline">
+                    <FileDown className="mr-2" /> Ekspor CSV
+                </Button>
+                <Button onClick={() => handleExport('pdf')} variant="outline">
+                    <FileDown className="mr-2" /> Ekspor PDF
+                </Button>
+             </div>
+        </div>
+
 
         <div className="rounded-lg border">
           <Table>

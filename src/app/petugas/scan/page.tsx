@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, QrCode, ArrowLeft, Video } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 
@@ -21,6 +21,7 @@ function ScanPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('Arahkan kamera ke QR code absensi...');
 
@@ -28,8 +29,9 @@ function ScanPageContent() {
     const getCameraPermission = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: { exact: "environment" } } 
+            video: { facingMode: "environment" } 
         });
+        streamRef.current = stream;
         setHasCameraPermission(true);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -38,6 +40,7 @@ function ScanPageContent() {
         console.error('Error accessing rear camera, trying front camera:', error);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            streamRef.current = stream;
             setHasCameraPermission(true);
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
@@ -53,15 +56,22 @@ function ScanPageContent() {
         }
       }
     };
+
     getCameraPermission();
+
+    // Cleanup function to stop the camera stream when the component unmounts
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [toast]);
 
   useEffect(() => {
     const processScan = async () => {
         if (!token) {
-            // No token in URL, so we are in "waiting to scan" state.
-            // Do not show an error immediately.
             setMessage('Arahkan kamera ke QR code absensi...');
+            setError(null);
             setIsProcessing(false);
             return;
         }
@@ -97,7 +107,7 @@ function ScanPageContent() {
             
             await updateDoc(scheduleRef, {
                 status: 'In Progress',
-                qrToken: null, // Consume the token
+                qrToken: null, 
                 qrTokenExpires: null,
             });
             
@@ -107,12 +117,11 @@ function ScanPageContent() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
             setError(errorMessage);
-            toast({ variant: 'destructive', title: 'Gagal', description: errorMessage });
+            // Do not show a toast here, let the alert component handle the error display
             setIsProcessing(false);
         }
     };
     
-    // Only process if we have camera permission.
     if (hasCameraPermission) {
         processScan();
     }
@@ -142,7 +151,7 @@ function ScanPageContent() {
                 </Alert>
             )}
           </div>
-          {isProcessing && (
+          {isProcessing && !error && (
              <div className="flex items-center justify-center p-4 rounded-md bg-muted">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 <p className="text-muted-foreground">{message}</p>
