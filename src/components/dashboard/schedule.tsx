@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -19,15 +19,21 @@ const statusMap: Record<ScheduleEntry['status'], string> = {
   Completed: 'Selesai',
   Pending: 'Tertunda',
   'In Progress': 'Berlangsung',
+  Izin: 'Izin',
+  Sakit: 'Sakit',
+  'Pending Review': 'Review',
 };
 
 const statusVariant: Record<
   ScheduleEntry['status'],
-  'default' | 'secondary' | 'outline'
+  'default' | 'secondary' | 'outline' | 'destructive'
 > = {
   Completed: 'secondary',
   Pending: 'outline',
   'In Progress': 'default',
+  Izin: 'destructive',
+  Sakit: 'destructive',
+  'Pending Review': 'default',
 };
 
 export default function Schedule() {
@@ -35,7 +41,18 @@ export default function Schedule() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'schedules'), orderBy('date', 'asc'));
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    const q = query(
+      collection(db, 'schedules'),
+      where('date', '>=', Timestamp.fromDate(todayStart)),
+      where('date', '<=', Timestamp.fromDate(todayEnd)),
+      orderBy('date', 'asc')
+    );
+      
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const scheduleData: ScheduleEntry[] = [];
       querySnapshot.forEach((doc) => {
@@ -58,7 +75,6 @@ export default function Schedule() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Tanggal</TableHead>
             <TableHead>Waktu</TableHead>
             <TableHead>Petugas</TableHead>
             <TableHead>Area</TableHead>
@@ -67,20 +83,18 @@ export default function Schedule() {
         </TableHeader>
         <TableBody>
           {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
+            Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
                 </TableRow>
             ))
-          ) : (
+          ) : schedule.length > 0 ? (
             schedule.map((entry) => (
                 <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.date as string}</TableCell>
-                <TableCell>{entry.time}</TableCell>
+                <TableCell className="font-medium">{entry.time}</TableCell>
                 <TableCell>{entry.officer}</TableCell>
                 <TableCell>{entry.area}</TableCell>
                 <TableCell className="text-right">
@@ -90,6 +104,12 @@ export default function Schedule() {
                 </TableCell>
                 </TableRow>
             ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} className="h-24 text-center">
+                Tidak ada jadwal patroli untuk hari ini.
+              </TableCell>
+            </TableRow>
           )}
         </TableBody>
       </Table>

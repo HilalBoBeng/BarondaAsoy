@@ -10,7 +10,7 @@ import type { ScheduleEntry } from '@/lib/types';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Clock, MapPin, Check, FileText, Info } from 'lucide-react';
+import { Calendar, User, Clock, MapPin, Check, FileText, Info, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -85,6 +85,14 @@ export default function PetugasSchedulePage() {
     }
   }, []);
 
+  const handleStartPatrol = () => {
+    toast({
+      variant: 'destructive',
+      title: 'Fitur Dalam Pengembangan',
+      description: 'Pemindaian QR Code untuk memulai patroli akan segera tersedia.'
+    });
+  }
+
   const handleUpdateStatus = async (schedule: ScheduleEntry, status: ScheduleEntry['status'], reason?: string) => {
     if (!schedule) return;
     setIsSubmitting(true);
@@ -150,7 +158,7 @@ export default function PetugasSchedulePage() {
          <CardFooter className="flex-col sm:flex-row gap-2">
             {schedule.status === 'Pending' && (
                 <>
-                    <Button className="w-full sm:w-auto" onClick={() => handleUpdateStatus(schedule, 'In Progress')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Konfirmasi Hadir</Button>
+                    <Button className="w-full sm:w-auto" onClick={handleStartPatrol} disabled={isSubmitting}><Camera className="mr-2 h-4 w-4" /> Mulai Bertugas</Button>
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Izin')} disabled={isSubmitting}><FileText className="mr-2 h-4 w-4" /> Ajukan Izin</Button>
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')} disabled={isSubmitting}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                 </>

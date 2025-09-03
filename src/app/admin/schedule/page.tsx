@@ -27,16 +27,18 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
 
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 const scheduleSchema = z.object({
   officerId: z.string().min(1, "Petugas harus dipilih."),
   area: z.string().min(1, "Area tidak boleh kosong."),
   date: z.date({ required_error: "Tanggal patroli harus diisi." }),
-  startTime: z.string().min(1, "Jam mulai harus dipilih."),
-  endTime: z.string().min(1, "Jam selesai harus dipilih."),
+  startTime: z.string().regex(timeRegex, "Format jam mulai tidak valid (HH:MM)."),
+  endTime: z.string().regex(timeRegex, "Format jam selesai tidak valid (HH:MM)."),
 }).refine(data => {
-    const [startHour] = data.startTime.split(':').map(Number);
-    const [endHour] = data.endTime.split(':').map(Number);
-    return endHour > startHour;
+    const [startHour, startMinute] = data.startTime.split(':').map(Number);
+    const [endHour, endMinute] = data.endTime.split(':').map(Number);
+    return endHour > startHour || (endHour === startHour && endMinute > startMinute);
 }, {
     message: "Jam selesai harus setelah jam mulai.",
     path: ["endTime"],
@@ -45,11 +47,6 @@ const scheduleSchema = z.object({
 type ScheduleFormValues = z.infer<typeof scheduleSchema>;
 
 const daysOfWeek = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
-const timeOptions = Array.from({ length: 24 }, (_, i) => {
-    const hour = i.toString().padStart(2, '0');
-    return `${hour}:00`;
-});
-
 
 export default function ScheduleAdminPage() {
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
@@ -66,6 +63,8 @@ export default function ScheduleAdminPage() {
     defaultValues: {
       officerId: '',
       area: '',
+      startTime: '',
+      endTime: '',
     },
   });
   
@@ -106,7 +105,7 @@ export default function ScheduleAdminPage() {
         };
         form.reset(defaultValues as any);
       } else {
-        form.reset({ officerId: '', area: '', startTime: undefined, endTime: undefined, date: undefined });
+        form.reset({ officerId: '', area: '', startTime: '', endTime: '', date: undefined });
       }
     }
   }, [isDialogOpen, currentSchedule, form]);
@@ -383,24 +382,18 @@ export default function ScheduleAdminPage() {
                     <FormField control={form.control} name="startTime" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Jam Mulai</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {timeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <Input type="time" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="endTime" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Jam Selesai</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {timeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <FormControl>
+                                <Input type="time" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
