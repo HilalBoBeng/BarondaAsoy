@@ -1,13 +1,14 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for sending a one-time password (OTP) via email using Resend.
+ * @fileOverview A Genkit flow for sending a one-time password (OTP) via email using Nodemailer with Gmail.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
+import { TopLevelError } from '@/lib/exceptions/top-level-error';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -33,8 +34,6 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context }) => {
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      
       // 1. Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
@@ -55,10 +54,18 @@ const sendOtpFlow = ai.defineFlow(
         expiresAt,
       });
 
-      // 4. Send Email via Resend
-      const { data, error } = await resend.emails.send({
-        from: 'Baronda <onboarding@resend.dev>',
-        to: [email],
+      // 4. Send Email via Nodemailer
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: 'bobeng.icu@gmail.com',
+          pass: 'hrll wccf slpw shmt',
+        },
+      });
+
+      const mailOptions = {
+        from: '"Baronda" <bobeng.icu@gmail.com>',
+        to: email,
         subject: 'Kode Verifikasi Anda',
         html: `
             <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
@@ -70,16 +77,20 @@ const sendOtpFlow = ai.defineFlow(
                 <p style="font-size: 12px; color: #888;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
             </div>
         `,
-      });
+      };
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      await transporter.sendMail(mailOptions);
       
       return { success: true, message: 'OTP sent successfully.' };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in sendOtpFlow:', error);
+      
+      // Check for specific SMTP authentication error
+      if (error.code === 'EAUTH' || (error.responseCode && error.responseCode === 535)) {
+          throw new TopLevelError('Unauthorized');
+      }
+
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return { success: false, message: `Failed to send OTP: ${errorMessage}` };
     }
