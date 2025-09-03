@@ -209,39 +209,37 @@ export default function PetugasLayout({
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-            {isDetailPage ? (
-               <Button variant="outline" size="icon" className="shrink-0" onClick={() => router.back()}>
-                <ArrowLeft className="h-5 w-5" />
-                <span className="sr-only">Kembali</span>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
               </Button>
-            ) : (
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 md:hidden"
-                  >
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Toggle navigation menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col p-0">
-                    <SheetHeader className="p-0 border-b">
-                      <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                      <NavHeader />
-                    </SheetHeader>
-                  <div className="flex-1 overflow-auto py-2">
-                      <NavContent />
-                  </div>
-                </SheetContent>
-              </Sheet>
-            )}
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col p-0">
+                <SheetHeader className="p-0 border-b">
+                  <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
+                  <NavHeader />
+                </SheetHeader>
+              <div className="flex-1 overflow-auto py-2">
+                  <NavContent />
+              </div>
+            </SheetContent>
+          </Sheet>
 
            <div className="w-full flex-1">
-             <h1 className="text-lg font-semibold md:text-2xl truncate">
-              {pageTitle}
-            </h1>
+             {isDetailPage ? (
+                 <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
+                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                 </Button>
+             ) : (
+                <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+             )}
           </div>
             <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
