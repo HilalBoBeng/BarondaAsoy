@@ -112,7 +112,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
 
     const goToPrevPage = () => {
         if (currentPage > 1) {
-            setCurrentPage(prev => prev - 1);
+            setCurrentPage(prev => prev + 1);
         }
     };
 
@@ -193,7 +193,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                                         {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
                                     </p>
                                 </div>
-                                <div className="flex flex-col gap-2 items-end flex-shrink-0">
+                                <div className="flex flex-col gap-2 items-end flex-shrink-0 mt-8">
                                     <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
