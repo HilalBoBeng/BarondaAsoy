@@ -9,7 +9,6 @@ import {
   Calendar,
   Menu,
   FileText,
-  Settings,
   Landmark,
   Phone,
   ArrowLeft,
@@ -54,7 +53,6 @@ export default function PetugasLayout({
     { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-    { href: "/petugas/settings", icon: Settings, label: "Pengaturan" },
   ];
 
   useEffect(() => {

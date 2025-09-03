@@ -19,7 +19,6 @@ import {
   QrCode,
   Banknote,
   ClipboardList,
-  Paintbrush
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -61,7 +60,6 @@ export default function AdminLayout({
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
-        { href: "/admin/settings", icon: Paintbrush, label: "Atur Tampilan" },
     ];
 
   useEffect(() => {
@@ -261,5 +259,3 @@ export default function AdminLayout({
     </div>
   );
 }
-
-    
