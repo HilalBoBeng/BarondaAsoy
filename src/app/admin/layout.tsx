@@ -60,6 +60,7 @@ export default function AdminLayout({
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
+        { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
     ];
 
   useEffect(() => {
@@ -114,7 +115,8 @@ export default function AdminLayout({
       const activeItem = navItems.find(item => pathname.startsWith(item.href));
       setPageTitle(activeItem?.label || 'Dasbor Admin');
     }
-  }, [pathname, navItems]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
