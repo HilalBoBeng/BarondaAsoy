@@ -25,10 +25,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { app, db } from "@/lib/firebase/client";
 
 
 const registerSchema = z
@@ -51,6 +53,8 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const auth = getAuth(app);
+
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
@@ -59,23 +63,36 @@ export default function RegisterPage() {
  const onSubmit = async (data: RegisterFormValues) => {
     setIsSubmitting(true);
     try {
-      const result = await sendOtp({ email: data.email });
-      if (result.success) {
-        toast({
-          title: "Berhasil",
-          description: "Kode OTP telah dikirim ke email Anda. Silakan periksa.",
-        });
-        // Store registration data temporarily and redirect to OTP verification page.
-        localStorage.setItem('verificationContext', JSON.stringify({ ...data, flow: 'register' }));
-        router.push('/auth/verify-otp');
-      } else {
-        throw new Error(result.message);
+      // Create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        displayName: data.name,
+        email: user.email,
+        createdAt: serverTimestamp(),
+        photoURL: null,
+        phone: '',
+        address: '',
+        isBlocked: false,
+      });
+
+      toast({
+        title: "Pendaftaran Berhasil",
+        description: "Akun Anda telah berhasil dibuat. Silakan masuk.",
+      });
+      router.push('/auth/login');
+    } catch (error: any) {
+      let errorMessage = "Terjadi kesalahan saat pendaftaran.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "Email ini sudah terdaftar. Silakan gunakan email lain.";
       }
-    } catch (error) {
       toast({
         variant: "destructive",
-        title: "Gagal Mengirim OTP",
-        description: error instanceof Error ? error.message : "Terjadi kesalahan.",
+        title: "Pendaftaran Gagal",
+        description: errorMessage,
       });
     } finally {
       setIsSubmitting(false);

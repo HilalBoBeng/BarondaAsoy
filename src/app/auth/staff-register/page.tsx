@@ -25,12 +25,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
 const staffRegisterSchema = z
   .object({
@@ -67,22 +68,22 @@ export default function StaffRegisterPage() {
  const onSubmit = async (data: StaffRegisterFormValues) => {
     setIsSubmitting(true);
     try {
-       const dataToStore = {
+      const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const staffData = {
         ...data,
         addressDetail: data.addressType === 'kilongan' ? 'KILONGAN' : data.addressDetail,
+        status: 'pending' as 'pending' | 'active' | 'rejected',
+        accessCode: accessCode,
       };
 
-      const result = await sendOtp({ email: data.email, context: 'staffRegister' });
-      if (result.success) {
-        toast({
-          title: "Berhasil",
-          description: "Kode OTP telah dikirim ke email Anda untuk verifikasi.",
-        });
-        localStorage.setItem('verificationContext', JSON.stringify({ ...dataToStore, flow: 'staffRegister' }));
-        router.push('/auth/verify-otp');
-      } else {
-        throw new Error(result.message);
-      }
+      await addDoc(collection(db, 'staff'), staffData);
+      
+      toast({
+        title: "Pendaftaran Terkirim",
+        description: "Pendaftaran Anda telah berhasil dikirim dan menunggu persetujuan admin.",
+      });
+      router.push('/auth/staff-login');
+
     } catch (error) {
       toast({
         variant: "destructive",
@@ -105,7 +106,7 @@ export default function StaffRegisterPage() {
         <CardHeader>
           <CardTitle>Daftar Akun Petugas</CardTitle>
           <CardDescription>
-            Isi formulir di bawah ini untuk mendaftar. Setelah verifikasi OTP, kode akses unik akan dikirim ke email Anda.
+            Isi formulir di bawah ini untuk mendaftar. Pendaftaran Anda akan ditinjau oleh Admin.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
