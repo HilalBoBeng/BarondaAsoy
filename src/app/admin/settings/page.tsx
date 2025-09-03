@@ -33,6 +33,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 const appNameSchema = z.object({ appName: z.string().min(1, "Nama aplikasi tidak boleh kosong.") });
 const appLogoSchema = z.object({ appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")) });
