@@ -486,8 +486,7 @@ export default function MainDashboardView() {
             </div>
             {appDownloadLink && user && (
               <Button asChild>
-                  <Link href={appDownloadLink} target="_blank" rel="noopener noreferrer">
-                      <Download className="mr-2 h-4 w-4"/>
+                  <Link href="/download">
                       Unduh Aplikasi
                   </Link>
               </Button>

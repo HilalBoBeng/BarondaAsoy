@@ -22,15 +22,16 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from "@/lib/firebase/client";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const settingsSchema = z.object({
@@ -47,6 +48,8 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -88,6 +91,38 @@ export default function AdminSettingsPage() {
         });
     } finally {
         setIsSubmitting(false);
+    }
+  };
+
+  const handleApkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    if (!file.name.endsWith('.apk')) {
+        toast({ variant: 'destructive', title: 'File Tidak Valid', description: 'Silakan unggah file dengan format .apk' });
+        return;
+    }
+
+    setIsUploading(true);
+    try {
+        const storage = getStorage();
+        const storageRef = ref(storage, `release/${file.name}`);
+        
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+
+        const settingsRef = doc(db, 'app_settings', 'config');
+        await updateDoc(settingsRef, { appDownloadLink: downloadURL });
+        
+        form.setValue('appDownloadLink', downloadURL);
+
+        toast({ title: 'Unggah Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
+    } catch (error) {
+        console.error("Upload error:", error);
+        toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: 'Terjadi kesalahan saat mengunggah file APK.' });
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -154,22 +189,31 @@ export default function AdminSettingsPage() {
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="appDownloadLink"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link Unduh Aplikasi</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="https://example.com/download" />
-                  </FormControl>
-                   <FormDescription>
-                    Tombol unduh akan muncul di dasbor pengguna jika link ini diisi.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <FormItem>
+                <FormLabel>File APK Aplikasi</FormLabel>
+                <div className="flex items-center gap-4">
+                    <Input 
+                        value={form.watch('appDownloadLink') || ''}
+                        readOnly
+                        placeholder="Tidak ada file APK yang diunggah"
+                    />
+                    <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        Unggah
+                    </Button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept=".apk"
+                        onChange={handleApkUpload}
+                    />
+                </div>
+                <FormDescription>
+                    Unggah file APK untuk disebarkan melalui halaman unduhan.
+                </FormDescription>
+             </FormItem>
+
              <Separator />
 
             <div>
@@ -201,8 +245,8 @@ export default function AdminSettingsPage() {
               )}
             />
             
-            <Button type="submit" disabled={isSubmitting || loading}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isSubmitting || loading || isUploading}>
+                {(isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan Perubahan
             </Button>
           </form>
