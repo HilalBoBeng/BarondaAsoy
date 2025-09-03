@@ -15,6 +15,8 @@ const VerifyOtpInputSchema = z.object({
   otp: z.string().length(6, 'OTP must be 6 digits.').describe('The 6-digit OTP.'),
   name: z.string().optional().describe('The user\'s full name (for registration).'),
   password: z.string().optional().describe('The user\'s password (for registration).'),
+  phone: z.string().optional().describe('The user\'s phone number (for registration).'),
+  address: z.string().optional().describe('The user\'s address (for registration).'),
   flow: z.enum(['userRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
@@ -74,7 +76,7 @@ const verifyOtpFlow = ai.defineFlow(
     inputSchema: VerifyOtpInputSchema,
     outputSchema: VerifyOtpOutputSchema,
   },
-  async ({ email, otp, name, password, flow }) => {
+  async ({ email, otp, name, password, phone, address, flow }) => {
     try {
       const q = adminDb.collection('otps')
         .where('email', '==', email)
@@ -108,6 +110,7 @@ const verifyOtpFlow = ai.defineFlow(
             email: email,
             password: password,
             displayName: name,
+            // photoURL will be null by default
         });
         
         const userDocRef = adminDb.collection('users').doc(userRecord.uid);
@@ -117,8 +120,8 @@ const verifyOtpFlow = ai.defineFlow(
             email: email,
             createdAt: FieldValue.serverTimestamp(),
             photoURL: null,
-            phone: '',
-            address: '',
+            phone: phone || '',
+            address: address || '',
             isBlocked: false,
         });
 

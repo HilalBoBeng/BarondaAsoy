@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, KeyRound, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
@@ -108,8 +108,9 @@ export default function LoginPage() {
                       <FormLabel>Kata Sandi</FormLabel>
                       <Link
                         href="/auth/forgot-password"
-                        className="ml-auto inline-block text-xs underline"
+                        className="ml-auto inline-flex items-center gap-1 text-xs underline"
                       >
+                        <KeyRound className="h-3 w-3"/>
                         Lupa kata sandi?
                       </Link>
                     </div>
@@ -130,8 +131,9 @@ export default function LoginPage() {
                   Belum punya akun?{" "}
                   <Link
                       href="/auth/register"
-                      className="underline text-primary"
+                      className="inline-flex items-center gap-1 underline text-primary"
                   >
+                      <UserPlus className="h-4 w-4"/>
                       Daftar di sini
                   </Link>
               </div>

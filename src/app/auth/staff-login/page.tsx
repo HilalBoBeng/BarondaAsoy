@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserPlus, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -137,9 +137,15 @@ export default function StaffLoginPage() {
                         Masuk
                     </Button>
                     <div className="text-center text-sm text-muted-foreground w-full flex flex-col sm:flex-row justify-center items-center gap-2">
-                        <Link href="/auth/staff-register" className="underline text-primary">Daftar sebagai Petugas</Link>
+                        <Link href="/auth/staff-register" className="inline-flex items-center gap-1 underline text-primary">
+                            <UserPlus className="h-4 w-4" />
+                            Daftar sebagai Petugas
+                        </Link>
                         <span className="hidden sm:inline text-gray-400">•</span>
-                        <Link href="/auth/staff-forgot-password" className="underline text-primary">Lupa Kode Akses?</Link>
+                        <Link href="/auth/staff-forgot-password" className="inline-flex items-center gap-1 underline text-primary">
+                            <KeyRound className="h-3 w-3" />
+                            Lupa Kode Akses?
+                        </Link>
                     </div>
                 </CardFooter>
             </form>
