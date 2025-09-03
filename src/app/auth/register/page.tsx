@@ -34,8 +34,15 @@ import { sendOtp } from "@/ai/flows/send-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+const toTitleCase = (str: string) => {
+  return str.replace(
+    /\w\S*/g,
+    (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+  );
+};
+
 const registerSchema = z.object({
-    name: z.string().min(1, "Nama tidak boleh kosong."),
+    name: z.string().min(1, "Nama tidak boleh kosong.").max(50, "Nama tidak boleh lebih dari 50 karakter."),
     email: z.string().email("Format email tidak valid."),
     phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
     addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
@@ -100,8 +107,9 @@ export default function RegisterPage() {
       
       const registrationData = { 
         ...data, 
+        name: toTitleCase(data.name),
         flow: 'userRegistration',
-        addressDetail: data.addressType === 'kilongan' ? 'KILONGAN' : data.addressDetail,
+        addressDetail: data.addressType === 'kilongan' ? 'Kilongan' : data.addressDetail,
       };
 
       // Store form data to be used after OTP verification

@@ -18,7 +18,7 @@ const VerifyOtpInputSchema = z.object({
   phone: z.string().optional().describe("The user's phone number (for registration)."),
   addressType: z.enum(['kilongan', 'luar_kilongan']).optional().describe('The type of address.'),
   addressDetail: z.string().optional().describe('The detailed address if outside Kilongan.'),
-  flow: z.enum(['userRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
+  flow: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
 
@@ -79,8 +79,12 @@ const verifyOtpFlow = ai.defineFlow(
   },
   async ({ email, otp, name, password, phone, addressType, addressDetail, flow }) => {
     try {
-      // For userPasswordReset, the OTP context is userRegistration
-      const contextToCheck = flow === 'userPasswordReset' ? 'userRegistration' : flow;
+      let contextToCheck: string = flow;
+      if (flow === 'userPasswordReset') {
+        contextToCheck = 'userRegistration';
+      } else if (flow === 'staffRegistration') {
+        contextToCheck = 'staffRegistration';
+      }
       
       const q = adminDb.collection('otps')
         .where('email', '==', email)
@@ -114,7 +118,6 @@ const verifyOtpFlow = ai.defineFlow(
             email: email,
             password: password,
             displayName: name,
-            // photoURL will be null by default
         });
         
         const userDocRef = adminDb.collection('users').doc(userRecord.uid);
@@ -130,7 +133,6 @@ const verifyOtpFlow = ai.defineFlow(
             isBlocked: false,
         });
 
-        // Welcome notification
         const welcomeNotifRef = adminDb.collection('notifications').doc();
         batch.set(welcomeNotifRef, {
              userId: userRecord.uid,
@@ -143,6 +145,26 @@ const verifyOtpFlow = ai.defineFlow(
         
         await batch.commit();
         return { success: true, message: 'Registrasi berhasil!', userId: userRecord.uid };
+      }
+      
+      if (flow === 'staffRegistration') {
+         if (!name || !phone || !addressDetail) {
+            return { success: false, message: 'Informasi pendaftaran staf tidak lengkap.' };
+         }
+         const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+         const staffDocRef = adminDb.collection('staff').doc();
+         batch.set(staffDocRef, {
+            name: name,
+            email: email,
+            phone: phone,
+            addressType: addressType,
+            addressDetail: addressDetail,
+            status: 'pending',
+            accessCode: accessCode,
+            createdAt: FieldValue.serverTimestamp(),
+         });
+         await batch.commit();
+         return { success: true, message: 'Verifikasi berhasil! Pendaftaran Anda akan ditinjau oleh Admin.' };
       }
       
       if (flow === 'staffResetPassword') {
@@ -162,13 +184,11 @@ const verifyOtpFlow = ai.defineFlow(
       }
       
       if (flow === 'userPasswordReset') {
-         // Just verify the OTP, the password will be reset on the next screen
          await batch.commit();
          return { success: true, message: 'Verifikasi berhasil. Anda akan diarahkan untuk mengatur ulang kata sandi.' };
       }
 
-
-      await batch.commit(); // commit batch for otp deletion if no other flow matched
+      await batch.commit();
       return { success: false, message: 'Alur verifikasi tidak valid.' };
 
     } catch (error: any) {

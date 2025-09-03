@@ -120,8 +120,7 @@ export default function VerifyOtpPage() {
     if (!contextData) return;
     setIsResending(true);
     try {
-      // Fix: Determine the correct context for the sendOtp flow
-      const contextToSend = contextData.flow === 'userPasswordReset' ? 'userRegistration' : contextData.flow;
+      const contextToSend = contextData.flow === 'userPasswordReset' ? 'userRegistration' : (contextData.flow === 'staffRegistration' ? 'staffRegistration' : 'userRegistration');
       
       const result = await sendOtp({ email: contextData.email, context: contextToSend });
       if (!result.success) throw new Error(result.message);
@@ -164,22 +163,21 @@ export default function VerifyOtpPage() {
           description: result.message,
         });
         
-        // Clean up local storage
-        if (contextData.flow === 'userRegistration') {
-            localStorage.removeItem('registrationData');
-            localStorage.setItem('registrationSuccess', 'true'); // Set flag for login page
-        } else {
-            localStorage.removeItem('verificationContext');
-        }
+        localStorage.removeItem('registrationData');
+        localStorage.removeItem('verificationContext');
 
         if (contextData?.email) localStorage.removeItem(getCooldownKey(contextData.email));
         
-        // Navigate to the next step
         if (contextData.flow === 'userPasswordReset') {
+            localStorage.setItem('verificationContext', JSON.stringify({ email: contextData.email, flow: 'userPasswordReset' }));
             router.push('/auth/reset-password');
         } else if (contextData.flow === 'userRegistration') {
+            localStorage.setItem('registrationSuccess', 'true');
             router.push('/auth/login');
-        } else {
+        } else if (contextData.flow === 'staffRegistration') {
+            router.push('/auth/staff-registration-success');
+        }
+         else {
             router.push('/auth/staff-login');
         }
 
@@ -262,9 +260,9 @@ export default function VerifyOtpPage() {
                     </Link>
                   </div>
                )}
-                {(contextData?.flow === 'staffResetPassword') && (
+                {(contextData?.flow === 'staffResetPassword' || contextData?.flow === 'staffRegistration') && (
                     <div className="text-center text-sm">
-                        <Link href="/auth/staff-forgot-password" className="text-primary hover:text-primary/80">
+                        <Link href={contextData.flow === 'staffRegistration' ? "/auth/staff-register" : "/auth/staff-forgot-password"} className="text-primary hover:text-primary/80">
                         Kembali untuk mengubah email
                         </Link>
                     </div>

@@ -21,7 +21,7 @@ import type { Announcement } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const announcementSchema = z.object({
-  title: z.string().min(1, "Judul tidak boleh kosong."),
+  title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   content: z.string().min(1, "Isi pengumuman tidak boleh kosong.").max(1200, "Isi pengumuman tidak boleh lebih dari 1200 karakter."),
 });
 
@@ -280,7 +280,7 @@ export default function AnnouncementsAdminPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Judul</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormControl><Input {...field} maxLength={50} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

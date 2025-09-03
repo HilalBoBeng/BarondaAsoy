@@ -459,8 +459,8 @@ export default function Home() {
       <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
         {selectedNotification && (
           <>
-            <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
-              <DialogTitle>Pemberitahuan</DialogTitle>
+            <DialogHeader className="p-4 rounded-t-lg">
+              <DialogTitle className="sr-only">{selectedNotification.title}</DialogTitle>
             </DialogHeader>
             <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
               <p className="font-bold mb-2">{selectedNotification.title}</p>
@@ -478,5 +478,3 @@ export default function Home() {
     </>
   );
 }
-
-    

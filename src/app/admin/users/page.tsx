@@ -15,7 +15,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
+import { Dialog, DialogBody, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
+
+const rejectionSchema = z.object({
+    rejectionReason: z.string().min(10, 'Alasan penolakan minimal 10 karakter.'),
+});
+type RejectionFormValues = z.infer<typeof rejectionSchema>;
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -26,6 +38,12 @@ export default function UsersAdminPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visibleAccessCodes, setVisibleAccessCodes] = useState<Record<string, boolean>>({});
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [selectedStaffForRejection, setSelectedStaffForRejection] = useState<Staff | null>(null);
+
+  const rejectionForm = useForm<RejectionFormValues>({
+    resolver: zodResolver(rejectionSchema),
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -68,26 +86,41 @@ export default function UsersAdminPage() {
   }
 
 
-  const handleStaffApproval = async (staffMember: Staff, approved: boolean) => {
+  const handleStaffApproval = async (staffMember: Staff, approved: boolean, reason?: string) => {
     setIsSubmitting(true);
-    const staffRef = doc(db, 'staff', staffMember.id);
     try {
-        if (approved) {
-            await updateDoc(staffRef, { status: 'active', points: 0 });
-            // Email sending logic removed
-            toast({ title: "Berhasil", description: `${staffMember.name} telah disetujui.` });
+        const result = await approveOrRejectStaff({
+            staffId: staffMember.id,
+            approved,
+            rejectionReason: reason
+        });
+
+        if (result.success) {
+            toast({ title: "Berhasil", description: result.message });
         } else {
-            // Reject: just delete the document
-            await deleteDoc(staffRef);
-            toast({ title: "Berhasil", description: `Pendaftaran ${staffMember.name} telah ditolak.` });
+            throw new Error(result.message);
         }
     } catch (error) {
         const action = approved ? "menyetujui" : "menolak";
-        toast({ variant: "destructive", title: "Gagal", description: `Gagal ${action} pendaftaran.`});
+        toast({ variant: "destructive", title: "Gagal", description: `Gagal ${action} pendaftaran. ${error instanceof Error ? error.message : ''}`});
     } finally {
         setIsSubmitting(false);
+        setIsRejectionDialogOpen(false);
+        setSelectedStaffForRejection(null);
     }
-  }
+  };
+
+  const openRejectionDialog = (staffMember: Staff) => {
+    setSelectedStaffForRejection(staffMember);
+    rejectionForm.reset();
+    setIsRejectionDialogOpen(true);
+  };
+
+  const onRejectionSubmit = (values: RejectionFormValues) => {
+    if (selectedStaffForRejection) {
+      handleStaffApproval(selectedStaffForRejection, false, values.rejectionReason);
+    }
+  };
 
 
   const handleDeleteStaff = async (id: string) => {
@@ -320,7 +353,7 @@ export default function UsersAdminPage() {
                                             <Button size="sm" onClick={() => handleStaffApproval(s, true)} disabled={isSubmitting}>
                                                 <Check className="h-4 w-4 mr-2" /> Setujui
                                             </Button>
-                                            <Button size="sm" variant="destructive" onClick={() => handleStaffApproval(s, false)} disabled={isSubmitting}>
+                                            <Button size="sm" variant="destructive" onClick={() => openRejectionDialog(s)} disabled={isSubmitting}>
                                                 <X className="h-4 w-4 mr-2" /> Tolak
                                             </Button>
                                         </div>
@@ -340,6 +373,45 @@ export default function UsersAdminPage() {
         </Tabs>
       </CardContent>
     </Card>
+
+    <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Tolak Pendaftaran Staf</DialogTitle>
+                <DialogDescription>
+                    Tulis alasan penolakan. Pesan ini akan dikirimkan ke email pendaftar.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...rejectionForm}>
+                <form onSubmit={rejectionForm.handleSubmit(onRejectionSubmit)} className="space-y-4">
+                    <DialogBody>
+                        <FormField
+                            control={rejectionForm.control}
+                            name="rejectionReason"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Alasan Penolakan</FormLabel>
+                                    <FormControl>
+                                        <Textarea {...field} rows={4} placeholder="Contoh: Maaf, saat ini kami belum membuka lowongan untuk area Anda." />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </DialogBody>
+                    <AlertDialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Batal</Button>
+                        </DialogClose>
+                        <Button type="submit" variant="destructive" disabled={isSubmitting}>
+                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Kirim Penolakan
+                        </Button>
+                    </AlertDialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
     </>
   );
 }

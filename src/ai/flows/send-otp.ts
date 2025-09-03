@@ -12,7 +12,7 @@ import { TopLevelError } from '@/lib/exceptions/top-level-error';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
-  context: z.enum(['userRegistration', 'staffResetPassword']).describe('The context for which the OTP is being sent.'),
+  context: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword']).describe('The context for which the OTP is being sent.'),
 });
 export type SendOtpInput = z.infer<typeof SendOtpInputSchema>;
 
@@ -69,6 +69,27 @@ const emailTemplates = {
       </div>
     `,
   }),
+  staffRegistration: (otp: string) => ({
+    subject: 'Kode Verifikasi Pendaftaran Petugas Baronda',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #FF7426; color: white; padding: 20px; text-align: center;">
+          <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
+          <h1 style="margin: 0; font-size: 24px;">Verifikasi Pendaftaran Petugas</h1>
+        </div>
+        <div style="padding: 30px; text-align: center; color: #333;">
+          <p style="font-size: 16px;">Gunakan kode berikut untuk memverifikasi pendaftaran Anda sebagai petugas. Kode ini berlaku selama 5 menit.</p>
+          <div style="background-color: #f2f2f2; border-radius: 5px; margin: 20px 0; padding: 15px;">
+            <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">${otp}</p>
+          </div>
+          <p style="font-size: 14px; color: #666;">Jika Anda tidak merasa mendaftar, mohon abaikan email ini.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #888;">
+          <p style="margin: 0;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
+        </div>
+      </div>
+    `,
+  }),
 };
 
 
@@ -80,18 +101,15 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context }) => {
     try {
-      // 1. Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
-      // 2. Clear any previous OTPs for this email and context
       const otpQuery = query(collection(db, 'otps'), where('email', '==', email), where('context', '==', context));
       const oldOtps = await getDocs(otpQuery);
       const batch = writeBatch(db);
       oldOtps.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
 
-      // 3. Store new OTP in Firestore
       await addDoc(collection(db, 'otps'), {
         email,
         otp,
@@ -100,7 +118,6 @@ const sendOtpFlow = ai.defineFlow(
         expiresAt,
       });
 
-      // 4. Send Email via Nodemailer
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -124,7 +141,6 @@ const sendOtpFlow = ai.defineFlow(
     } catch (error: any) {
       console.error('Error in sendOtpFlow:', error);
       
-      // Check for specific SMTP authentication error
       if (error.code === 'EAUTH' || (error.responseCode && error.responseCode === 535)) {
           throw new TopLevelError('Unauthorized');
       }
@@ -134,4 +150,3 @@ const sendOtpFlow = ai.defineFlow(
     }
   }
 );
-

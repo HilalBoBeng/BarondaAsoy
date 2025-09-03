@@ -59,7 +59,6 @@ export interface AppUser {
   photoURL?: string | null;
   createdAt?: Timestamp | Date;
   phone?: string;
-  address?: string;
   addressType?: 'kilongan' | 'luar_kilongan';
   addressDetail?: string;
   isBlocked?: boolean;
@@ -134,5 +133,3 @@ export interface DuesPayment {
     recordedBy: string; // Staff name
     recordedById: string; // Staff ID
 }
-
-    

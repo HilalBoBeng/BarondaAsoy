@@ -20,6 +20,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { sendReportReplyEmail } from '@/ai/flows/send-report-reply-email';
 
 const replySchema = z.object({
   replyMessage: z.string().min(1, "Balasan tidak boleh kosong."),
@@ -131,33 +132,40 @@ export default function PetugasReportsPage() {
   };
 
   const onReplySubmit = async (values: ReplyFormValues) => {
-    if (!currentReport || !staffInfo) return;
+    if (!currentReport || !staffInfo || !currentReport.reporterEmail) return;
     setIsSubmitting(true);
     
     try {
+        const batch = writeBatch(db);
         const reportRef = doc(db, 'reports', currentReport.id);
 
-        // Create the new reply object
         const newReply: Reply = {
             message: values.replyMessage,
             replierRole: 'Petugas',
-            timestamp: serverTimestamp() as Timestamp, // Firestore will convert this
+            timestamp: Timestamp.now(),
         };
         
-        // Add the new reply to the existing replies map
         const newReplyId = Date.now().toString();
         const updatedReplies = {
             ...currentReport.replies,
             [newReplyId]: newReply
         };
         
-        // Update the report document
-        await updateDoc(reportRef, {
+        batch.update(reportRef, {
             status: 'resolved',
             replies: updatedReplies,
         });
+
+        // Send email notification
+        await sendReportReplyEmail({
+            recipientEmail: currentReport.reporterEmail,
+            reportText: currentReport.reportText,
+            replyMessage: values.replyMessage,
+            officerName: staffInfo.name,
+        });
         
-        toast({ title: 'Berhasil', description: 'Laporan telah diselesaikan dan balasan telah disimpan.' });
+        await batch.commit();
+        toast({ title: 'Berhasil', description: 'Laporan telah diselesaikan dan balasan telah dikirim.' });
         setIsReplyDialogOpen(false);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan.';
