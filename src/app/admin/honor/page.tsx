@@ -210,7 +210,7 @@ export default function HonorariumAdminPage() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="rounded-lg border">
+        <div className="rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

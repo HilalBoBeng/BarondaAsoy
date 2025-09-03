@@ -296,7 +296,7 @@ function LoginForm() {
                 {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
                      <div className="text-center">
                         <h4 className="font-semibold">Penangguhan Berakhir dalam:</h4>
-                        <p className="text-primary font-mono font-semibold text-base">{countdown || 'Menghitung...'}</p>
+                        <p className="text-primary font-semibold text-base">{countdown || 'Menghitung...'}</p>
                     </div>
                 )}
                  <p className="text-xs text-muted-foreground pt-4">

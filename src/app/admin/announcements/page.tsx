@@ -218,7 +218,7 @@ export default function AnnouncementsAdminPage() {
         </div>
 
         {/* Desktop View */}
-        <div className="hidden sm:block rounded-lg border">
+        <div className="hidden sm:block rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

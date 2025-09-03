@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Trash, CheckCircle, AlertTriangle, User, Calendar as CalendarIcon, UserCheck, X } from 'lucide-react';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter, DialogBody, DialogDescription } from '@/components/ui/dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -208,7 +208,7 @@ export default function ReportsAdminPage() {
           )}
         </div>
       
-        <div className="hidden sm:block rounded-lg border">
+        <div className="hidden sm:block rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

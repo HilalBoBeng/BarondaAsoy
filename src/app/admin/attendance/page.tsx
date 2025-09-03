@@ -235,7 +235,7 @@ export default function AttendancePage() {
         </div>
 
 
-        <div className="rounded-lg border">
+        <div className="rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
