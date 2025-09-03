@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp } from 'firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ScheduleEntry } from '@/lib/types';
@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-export default function ScheduleDetailPage({ params: { scheduleId } }: { params: { scheduleId: string } }) {
+export default function ScheduleDetailPage({ params }: { params: { scheduleId: string } }) {
+  const { scheduleId } = params;
   const [schedule, setSchedule] = useState<ScheduleEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
