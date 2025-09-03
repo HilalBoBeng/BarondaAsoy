@@ -29,7 +29,6 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { verifyOtp } from "@/ai/flows/verify-otp";
-import { sendOtp } from "@/ai/flows/send-otp";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
@@ -92,7 +91,7 @@ export default function VerifyOtpPage() {
         setCooldown(remaining);
         setResendAttempts(savedCooldown.attempts);
       } else {
-        localStorage.removeItem(getCooldownKey(registrationData.email));
+        if (registrationData?.email) localStorage.removeItem(getCooldownKey(registrationData.email));
       }
     }
   }, [registrationData, getCooldownData]);
@@ -117,8 +116,13 @@ export default function VerifyOtpPage() {
     if (!registrationData) return;
     setIsResending(true);
     try {
-      const result = await sendOtp({ email: registrationData.email, context: 'userRegistration' });
-      if (!result.success) throw new Error(result.message);
+      const response = await fetch('/api/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: registrationData.email }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
 
       toast({ title: "Berhasil", description: "Kode OTP baru telah dikirim." });
 
@@ -160,7 +164,7 @@ export default function VerifyOtpPage() {
           description: "Akun Anda telah berhasil dibuat. Silakan masuk.",
         });
         localStorage.removeItem('registrationData');
-        localStorage.removeItem(getCooldownKey(registrationData.email));
+        if (registrationData?.email) localStorage.removeItem(getCooldownKey(registrationData.email));
         router.push('/auth/login');
       } else {
         throw new Error(result.message);

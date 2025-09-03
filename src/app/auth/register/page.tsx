@@ -25,14 +25,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { app, db } from "@/lib/firebase/client";
-
 
 const registerSchema = z
   .object({
@@ -60,16 +55,19 @@ export default function RegisterPage() {
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
 
- const onSubmit = async (data: RegisterFormValues) => {
+  const onSubmit = async (data: RegisterFormValues) => {
     setIsSubmitting(true);
     try {
-      const result = await sendOtp({
-        email: data.email,
-        context: 'userRegistration',
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
       });
-      
-      if (!result.success) {
-        throw new Error(result.message);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Gagal mengirim OTP.');
       }
       
       toast({
