@@ -13,6 +13,9 @@ const ptSans = PT_Sans({
 export const metadata: Metadata = {
   title: "Baronda - Siskamling Digital",
   description: "Aplikasi siskamling untuk keamanan lingkungan Anda.",
+  icons: {
+    icon: 'https://iili.io/KJ4aGxp.png',
+  }
 };
 
 export default function RootLayout({
@@ -26,7 +29,7 @@ export default function RootLayout({
       <body className={`${ptSans.className} antialiased bg-background`}>
         <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="light"
             enableSystem
             disableTransitionOnChange
         >

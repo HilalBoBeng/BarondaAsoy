@@ -31,6 +31,7 @@ import type { Notification, AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const NOTIFICATIONS_PER_PAGE = 5;
 
@@ -38,6 +39,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [userInfo, setUserInfo] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
   const [paginatedNotifications, setPaginatedNotifications] = useState<Notification[]>([]);
   const [notificationPage, setNotificationPage] = useState(1);
@@ -155,21 +157,17 @@ export default function Home() {
   }, [notificationPage, allNotifications]);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await signOut(auth);
-      toast({
-        title: "Berhasil Keluar",
-        description: "Anda telah berhasil keluar dari akun Anda.",
-      });
-      setUserInfo(null);
-      setUser(null);
-      router.push('/');
+      // Let onAuthStateChanged handle state updates
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Gagal Keluar",
         description: "Terjadi kesalahan saat mencoba keluar.",
       });
+      setIsLoggingOut(false);
     }
   };
 
@@ -229,9 +227,9 @@ export default function Home() {
     return doc.body.textContent || "";
   }
 
-  if (loading) {
+  if (loading || isLoggingOut) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+      <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
         <Image 
             src="https://iili.io/KJ4aGxp.png" 
             alt="Loading Logo" 
@@ -240,6 +238,7 @@ export default function Home() {
             className="animate-logo-pulse"
             priority
         />
+        {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground">Anda telah keluar...</p>}
       </div>
     );
   }
@@ -294,7 +293,7 @@ export default function Home() {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleAllNotificationsDelete}>Ya, Hapus</AlertDialogAction>
+                                    <AlertDialogAction onClick={handleAllNotificationsDelete}>Ya, Hapus Semua</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
@@ -506,7 +505,7 @@ export default function Home() {
             </DialogHeader>
             <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
               <p className="font-bold mb-2">{selectedNotification.title}</p>
-              <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\n/g, '<br />') }}></p>
+              <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\\n/g, '<br />') }}></p>
             </div>
             <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">
                 <div className="flex gap-2">

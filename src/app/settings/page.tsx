@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft } from "lucide-react"
+import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -20,9 +20,12 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { useState, useEffect } from 'react'
 import { useToast } from "@/hooks/use-toast"
-import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword, signOut } from "firebase/auth"
+import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword, signOut, deleteUser } from "firebase/auth"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { db } from "@/lib/firebase/client"
+import { doc, deleteDoc } from "firebase/firestore"
 
 // Schemas
 const passwordSchema = z.object({
@@ -36,16 +39,23 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Kata sandi diperlukan untuk konfirmasi."),
+});
+type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
+
 
 export default function SettingsPage() {
   const { setTheme, theme } = useTheme();
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const auth = getAuth();
   const router = useRouter();
   const user = auth.currentUser;
 
   const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema) });
+  const deleteAccountForm = useForm<DeleteAccountFormValues>({ resolver: zodResolver(deleteAccountSchema) });
 
   const onPasswordSubmit = async (data: PasswordFormValues) => {
     if (!user || !user.email) return;
@@ -64,10 +74,31 @@ export default function SettingsPage() {
     }
   };
 
-  
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
+  const onDeleteAccount = async (data: DeleteAccountFormValues) => {
+    if (!user || !user.email) return;
+    setIsDeleting(true);
+
+    try {
+      const credential = EmailAuthProvider.credential(user.email, data.password);
+      await reauthenticateWithCredential(user, credential);
+      
+      const userId = user.uid;
+
+      // Delete user from Auth
+      await deleteUser(user);
+
+      // Delete user data from Firestore
+      const userDocRef = doc(db, 'users', userId);
+      await deleteDoc(userDocRef);
+
+      toast({ title: "Akun Dihapus", description: "Akun Anda telah berhasil dihapus secara permanen." });
+      router.push('/');
+
+    } catch (error) {
+        toast({ variant: 'destructive', title: "Gagal", description: "Kata sandi salah atau terjadi kesalahan." });
+    } finally {
+        setIsDeleting(false);
+    }
   };
 
   return (
@@ -189,6 +220,56 @@ export default function SettingsPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                 {user && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-destructive">Zona Berbahaya</CardTitle>
+                             <CardDescription>Tindakan ini tidak dapat dibatalkan.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Hapus Akun Saya
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus secara permanen.
+                                            Masukkan kata sandi Anda untuk konfirmasi.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <Form {...deleteAccountForm}>
+                                        <form onSubmit={deleteAccountForm.handleSubmit(onDeleteAccount)} className="space-y-4">
+                                            <FormField
+                                                control={deleteAccountForm.control}
+                                                name="password"
+                                                render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Kata Sandi</FormLabel>
+                                                    <FormControl><Input type="password" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                                )}
+                                            />
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                <Button type="submit" variant="destructive" disabled={isDeleting}>
+                                                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Ya, Hapus Akun Saya
+                                                </Button>
+                                            </AlertDialogFooter>
+                                        </form>
+                                    </Form>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </CardContent>
+                    </Card>
+                 )}
             </div>
         </main>
         <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
