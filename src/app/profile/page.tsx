@@ -213,32 +213,22 @@ export default function ProfilePage() {
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 400;
-                    const MAX_HEIGHT = 400;
-                    let width = img.width;
-                    let height = img.height;
+                    let { width, height } = img;
+                    
+                    // Center crop to 1:1 square
+                    const size = Math.min(width, height);
+                    const x = (width - size) / 2;
+                    const y = (height - size) / 2;
 
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = size;
+                    canvas.height = size;
                     const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, 0, 0, width, height);
+                    ctx?.drawImage(img, x, y, size, size, 0, 0, size, size);
 
                     let quality = 0.9;
                     let dataUrl = canvas.toDataURL('image/jpeg', quality);
-
                     const getKB = (str: string) => new Blob([str]).size / 1024;
-
+                    
                     while (getKB(dataUrl) > maxSizeKB && quality > 0.1) {
                         quality -= 0.1;
                         dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -258,22 +248,8 @@ export default function ProfilePage() {
                 toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 256 KB." });
                 return;
             }
-
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = document.createElement('img');
-                img.src = event.target?.result as string;
-                img.onload = async () => {
-                    if (img.width !== img.height) {
-                        toast({ variant: "destructive", title: "Rasio Aspek Salah", description: "Foto harus memiliki rasio 1:1 (persegi)." });
-                        return;
-                    }
-                    
-                    const compressedDataUrl = await compressImage(file, 64);
-                    form.setValue('photoURL', compressedDataUrl);
-                };
-            };
+            const compressedDataUrl = await compressImage(file, 64);
+            form.setValue('photoURL', compressedDataUrl);
         }
     };
 
@@ -536,10 +512,15 @@ export default function ProfilePage() {
                                     <FormControl>
                                         <Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} />
                                     </FormControl>
-                                    <FormDescription>Rasio 1:1, maks 256 KB.</FormDescription>
+                                    <FormDescription>Rasio bebas, maks 256 KB. Akan dipotong persegi.</FormDescription>
                                     {field.value && (
                                        <div className="flex flex-col items-center gap-4">
-                                            <Image src={field.value} alt="Preview" width={120} height={120} className="mt-2 rounded-full mx-auto" />
+                                            <Avatar className="h-32 w-32 mt-2">
+                                                <AvatarImage src={field.value} alt="Preview" />
+                                                <AvatarFallback>
+                                                    <Loader2 className="animate-spin" />
+                                                </AvatarFallback>
+                                            </Avatar>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button type="button" variant="destructive" size="sm">
