@@ -86,7 +86,7 @@ export default function PetugasLayout({
           unsubSchedules();
         }
     }
-  }, [router, toast]);
+  }, [router]);
   
   useEffect(() => {
     const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
@@ -108,7 +108,6 @@ export default function PetugasLayout({
 
   const handleLogout = () => {
     setIsLoggingOut(true);
-    toast({ title: "Berhasil Keluar", description: "Anda sedang dialihkan..." });
 
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');

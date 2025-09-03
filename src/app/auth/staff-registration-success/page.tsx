@@ -1,34 +1,32 @@
 
 "use client";
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import Image from "next/image";
-import { CheckCircle } from "lucide-react";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { CheckCircle, Loader2 } from 'lucide-react';
 
 export default function StaffRegistrationSuccessPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push('/');
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, [router]);
+
   return (
-    <>
-      <div className="flex flex-col items-center justify-center mb-6 text-center">
-        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
-        <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
-        <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
-      </div>
-      <Card>
-        <CardHeader className="items-center text-center">
-          <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-          <CardTitle>Pendaftaran Terkirim!</CardTitle>
-          <CardDescription>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background text-center px-4">
+        <CheckCircle className="h-16 w-16 text-green-500 mb-6" />
+        <h1 className="text-2xl font-bold text-foreground">Pendaftaran Terkirim!</h1>
+        <p className="mt-2 max-w-md text-muted-foreground">
             Pendaftaran Anda telah berhasil dikirim dan menunggu persetujuan dari Admin. Silakan periksa email Anda secara berkala untuk pembaruan status dan kode akses Anda.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button asChild className="w-full">
-            <Link href="/auth/staff-login">Kembali ke Halaman Masuk</Link>
-          </Button>
-        </CardFooter>
-      </Card>
-    </>
+        </p>
+        <div className="mt-8 flex items-center justify-center text-sm text-muted-foreground">
+             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+             Anda akan dialihkan secara otomatis...
+        </div>
+    </div>
   );
 }

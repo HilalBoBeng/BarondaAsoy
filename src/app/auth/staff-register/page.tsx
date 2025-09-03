@@ -205,7 +205,7 @@ export default function StaffRegisterPage() {
                 {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Lanjutkan ke Verifikasi OTP
+                Lanjutkan
               </Button>
               <div className="text-center text-sm text-muted-foreground">
                   Sudah punya akun petugas?{" "}

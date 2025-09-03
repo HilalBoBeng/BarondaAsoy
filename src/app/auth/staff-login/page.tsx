@@ -137,11 +137,11 @@ export default function StaffLoginPage() {
                         Masuk
                     </Button>
                     <div className="text-center text-sm text-muted-foreground w-full flex flex-col sm:flex-row justify-center items-center gap-2">
-                        <Link href="/auth/staff-register" className="text-primary hover:underline">
+                        <Link href="/auth/staff-register" className="text-primary hover:text-primary/80">
                             Daftar sebagai Petugas
                         </Link>
                         <span className="hidden sm:inline text-gray-400">•</span>
-                        <Link href="/auth/staff-forgot-password" className="text-primary hover:underline">
+                        <Link href="/auth/staff-forgot-password" className="text-primary hover:text-primary/80">
                             Lupa Kode Akses?
                         </Link>
                     </div>

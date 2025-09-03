@@ -85,7 +85,7 @@ export default function AdminLayout({
           unsubStaff();
         }
     }
-  }, [router, toast]);
+  }, [router]);
   
   useEffect(() => {
     const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
@@ -103,8 +103,6 @@ export default function AdminLayout({
 
   const handleLogout = () => {
     setIsLoggingOut(true);
-    toast({ title: "Berhasil Keluar", description: "Anda sedang dialihkan..." });
-    
     // Clear local storage first
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
