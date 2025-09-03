@@ -20,7 +20,7 @@ body {
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 84% 5%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* Darker for better contrast */
     --accent: 210 40% 96.1%;
     --accent-foreground: 222 84% 5%;
     --destructive: 0 84.2% 60.2%;
@@ -31,7 +31,7 @@ body {
     --radius: 0.5rem;
   }
   .dark {
-    --background: 0 0% 3%; /* Near Black */
+    --background: 0 0% 0%; /* Black */
     --foreground: 0 0% 98%; /* White */
     --card: 0 0% 5%;
     --card-foreground: 0 0% 98%;
