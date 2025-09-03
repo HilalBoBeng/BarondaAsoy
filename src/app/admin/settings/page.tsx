@@ -4,12 +4,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, app } from '@/lib/firebase/client';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Copy, Check, FileCheck } from "lucide-react";
+import { Loader2, Upload, Copy, Check } from "lucide-react";
 import { Progress } from '@/components/ui/progress';
 
 export default function AdminSettingsPage() {
@@ -50,17 +50,19 @@ export default function AdminSettingsPage() {
       } else {
         toast({ variant: 'destructive', title: 'File Tidak Valid', description: 'Silakan pilih file dengan format .apk' });
         setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     }
   };
   
-  const handleApkUpload = async () => {
+  const handleApkUpload = () => {
     if (!selectedFile) {
         toast({ variant: 'destructive', title: 'Tidak Ada File', description: 'Pilih file APK terlebih dahulu.' });
         return;
     }
     setIsUploading(true);
     setUploadProgress(0);
+    
     const storage = getStorage(app);
     const storageRef = ref(storage, `apk/baronda-app.apk`);
     const uploadTask = uploadBytesResumable(storageRef, selectedFile);
@@ -78,17 +80,12 @@ export default function AdminSettingsPage() {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             const settingsRef = doc(db, 'app_settings', 'config');
             try {
-                await updateDoc(settingsRef, { appDownloadLink: downloadURL });
+                await setDoc(settingsRef, { appDownloadLink: downloadURL }, { merge: true });
+                setAppDownloadLink(downloadURL);
+                toast({ title: 'Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
             } catch (error) {
-                 if ((error as any).code === 'not-found') {
-                    // This case shouldn't happen if we fetch on load, but as a fallback
-                    await doc(settingsRef).set({ appDownloadLink: downloadURL });
-                 } else {
-                    toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Gagal menyimpan tautan unduhan.' });
-                 }
+                 toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Gagal menyimpan tautan unduhan ke database.' });
             } finally {
-                 setAppDownloadLink(downloadURL);
-                 toast({ title: 'Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
                  setIsUploading(false);
                  setSelectedFile(null);
                  if(fileInputRef.current) fileInputRef.current.value = "";
@@ -98,6 +95,7 @@ export default function AdminSettingsPage() {
   }
   
   const handleCopy = () => {
+    if (!appDownloadLink) return;
     navigator.clipboard.writeText(appDownloadLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -113,7 +111,7 @@ export default function AdminSettingsPage() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-            <label className="text-sm font-medium">Tautan Unduh APK</label>
+            <label className="text-sm font-medium">Tautan Unduh APK Saat Ini</label>
             <div className="flex items-center gap-2">
                 <Input
                     readOnly
