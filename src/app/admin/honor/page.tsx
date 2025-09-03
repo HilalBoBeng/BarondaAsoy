@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash, Loader2, Banknote } from 'lucide-react';
 import type { Honorarium, Staff } from '@/lib/types';
@@ -93,11 +93,14 @@ export default function HonorariumAdminPage() {
 
     const honorQuery = query(collection(db, 'honorariums'), orderBy('issueDate', 'desc'));
     const unsubHonor = onSnapshot(honorQuery, (snapshot) => {
-      setHonorariums(snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        issueDate: (doc.data().issueDate as Timestamp).toDate(),
-      } as Honorarium)));
+      setHonorariums(snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            issueDate: data.issueDate ? (data.issueDate as Timestamp).toDate() : new Date(),
+          } as Honorarium;
+      }));
       setLoading(false);
     });
 
