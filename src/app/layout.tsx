@@ -60,15 +60,23 @@ export default function RootLayout({
   }, []);
   
   const auth = getAuth();
-  const isUserLoggedIn = !!auth.currentUser;
   
-  const isBypassRoute = 
-      pathname.startsWith('/admin') || 
-      pathname.startsWith('/petugas') || 
-      pathname.startsWith('/auth/staff');
+  const bypassRoutes = ['/auth/staff-login', '/admin', '/petugas'];
 
-  const isAccessingProtectedRoute = !isBypassRoute && pathname !== '/' && !pathname.startsWith('/auth');
-  
+  const isBypassRoute = bypassRoutes.some(route => pathname.startsWith(route));
+
+  // This logic specifically handles protected user routes like /profile, /settings, etc.
+  if (maintenanceMode && !isBypassRoute && pathname !== '/') {
+      router.push('/');
+      return (
+          <html lang="id" suppressHydrationWarning>
+            <body className={`${ptSans.className} antialiased bg-background`}>
+                <LoadingSkeleton />
+            </body>
+         </html>
+      );
+  }
+
   if (maintenanceMode === null) {
       return (
         <html lang="id" suppressHydrationWarning>
@@ -77,19 +85,6 @@ export default function RootLayout({
            </body>
         </html>
       )
-  }
-  
-  // This logic specifically handles protected user routes like /profile, /settings, etc.
-  // The logic for the home page (/) is handled in src/app/page.tsx
-  if (maintenanceMode && isAccessingProtectedRoute) {
-      router.push('/maintenance'); // Redirect to maintenance page
-      return (
-          <html lang="id" suppressHydrationWarning>
-            <body className={`${ptSans.className} antialiased bg-background`}>
-                <LoadingSkeleton />
-            </body>
-         </html>
-      );
   }
 
   return (
