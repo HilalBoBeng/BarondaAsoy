@@ -3,20 +3,25 @@
 
 import { useState, useEffect, use } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ScheduleEntry } from '@/lib/types';
 import { notFound } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Calendar, Clock, User, MapPin } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Loader2, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { generateScheduleToken } from '@/ai/flows/generate-schedule-token';
 
 export default function ScheduleDetailPage({ params }: { params: { scheduleId: string } }) {
   const { scheduleId } = params;
   const [schedule, setSchedule] = useState<ScheduleEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!scheduleId) {
@@ -24,21 +29,36 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
       return;
     }
 
-    const fetchSchedule = async () => {
-      setLoading(true);
-      const docRef = doc(db, 'schedules', scheduleId);
-      const docSnap = await getDoc(docRef);
+    const docRef = doc(db, 'schedules', scheduleId);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setSchedule({ id: docSnap.id, ...docSnap.data() } as ScheduleEntry);
+        } else {
+            notFound();
+        }
+        setLoading(false);
+    });
 
-      if (docSnap.exists()) {
-        setSchedule({ id: docSnap.id, ...docSnap.data() } as ScheduleEntry);
-      } else {
-        notFound();
-      }
-      setLoading(false);
-    };
-
-    fetchSchedule();
+    return () => unsubscribe();
   }, [scheduleId]);
+  
+  const handleGenerateToken = async () => {
+    setIsGenerating(true);
+    try {
+        const result = await generateScheduleToken({ scheduleId });
+        if (result.success) {
+            toast({ title: "Berhasil", description: "Kode QR absensi baru telah dibuat." });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan";
+        toast({ variant: 'destructive', title: "Gagal", description: `Tidak dapat membuat token: ${errorMessage}` });
+    } finally {
+        setIsGenerating(false);
+    }
+  }
+
 
   if (loading) {
     return (
@@ -59,13 +79,14 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
   }
 
   const scheduleDate = (schedule.date as Timestamp).toDate();
+  const tokenExpires = schedule.qrTokenExpires ? (schedule.qrTokenExpires as Timestamp).toDate() : null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Detail Jadwal & QR Absensi</CardTitle>
+        <CardTitle>Detail Jadwal & Kode Absensi</CardTitle>
         <CardDescription>
-            Petugas akan memindai QR code ini untuk memulai patroli.
+            Buat kode untuk memulai sesi patroli. Kode hanya berlaku selama 24 jam setelah dibuat.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center text-center space-y-6">
@@ -88,17 +109,39 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
             </div>
         </div>
 
-        <div className="p-4 border rounded-lg bg-white">
-             <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${schedule.id}`}
-                alt={`QR Code untuk jadwal ${schedule.id}`}
-                width={200}
-                height={200}
-                priority
-            />
-        </div>
-        <p className="text-xs text-muted-foreground max-w-xs">
-            Tunjukkan kode ini kepada petugas yang bersangkutan. Kode ini unik untuk setiap jadwal.
+        {schedule.qrToken ? (
+            <div className="flex flex-col items-center gap-4">
+                <div className="p-4 border rounded-lg bg-white">
+                    <Image
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${schedule.qrToken}`}
+                        alt={`QR Code untuk jadwal ${schedule.id}`}
+                        width={200}
+                        height={200}
+                        priority
+                    />
+                </div>
+                {tokenExpires && (
+                    <p className="text-xs text-muted-foreground">
+                        Berlaku hingga: {format(tokenExpires, "d MMM yyyy, HH:mm", { locale: id })} ({formatDistanceToNow(tokenExpires, { addSuffix: true, locale: id })})
+                    </p>
+                )}
+                 <Button onClick={handleGenerateToken} disabled={isGenerating}>
+                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    Buat Ulang Kode
+                </Button>
+            </div>
+        ) : (
+            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg">
+                 <p className="text-muted-foreground mb-4">Belum ada kode absensi untuk jadwal ini.</p>
+                 <Button onClick={handleGenerateToken} disabled={isGenerating}>
+                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                    Buat Kode Absensi
+                </Button>
+            </div>
+        )}
+       
+        <p className="text-xs text-muted-foreground max-w-xs pt-4">
+            Petugas akan memindai kode ini untuk memulai patroli. Kode ini unik dan memiliki batas waktu.
         </p>
       </CardContent>
     </Card>

@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, QrCode, ArrowLeft } from 'lucide-react';
@@ -15,7 +15,7 @@ import Link from 'next/link';
 function ScanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const scheduleId = searchParams.get('scheduleId');
+  const token = searchParams.get('token');
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,26 +44,43 @@ function ScanPageContent() {
   }, [toast]);
 
   const handleScan = async () => {
-    if (!scheduleId) {
-      toast({ variant: 'destructive', title: 'Error', description: 'ID Jadwal tidak ditemukan.' });
+    if (!token) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Token absensi tidak ditemukan.' });
       return;
     }
     
     setIsSubmitting(true);
     
     try {
-      const scheduleRef = doc(db, 'schedules', scheduleId);
-      const scheduleSnap = await getDoc(scheduleRef);
+      // Simulate a successful scan by using the token from the URL
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const schedulesRef = collection(db, 'schedules');
+      const q = query(schedulesRef, where("qrToken", "==", token));
+      const querySnapshot = await getDocs(q);
 
-      if (!scheduleSnap.exists() || scheduleSnap.data().status !== 'Pending') {
+      if (querySnapshot.empty) {
+        throw new Error("Token absensi tidak valid atau tidak ditemukan.");
+      }
+      
+      const scheduleDoc = querySnapshot.docs[0];
+      const scheduleData = scheduleDoc.data();
+      const scheduleRef = scheduleDoc.ref;
+
+      const expires = (scheduleData.qrTokenExpires as Timestamp)?.toDate();
+
+      if (!expires || new Date() > expires) {
+        throw new Error('Token absensi sudah kedaluwarsa. Mohon minta token baru dari admin.');
+      }
+
+      if (scheduleData.status !== 'Pending') {
          throw new Error('Jadwal ini tidak valid atau sudah dimulai.');
       }
       
-      // Simulate a successful scan
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       await updateDoc(scheduleRef, {
-        status: 'In Progress'
+        status: 'In Progress',
+        qrToken: null, // Consume the token
+        qrTokenExpires: null,
       });
       
       toast({ title: 'Absen Berhasil', description: 'Status patroli Anda telah diperbarui.' });
@@ -100,10 +117,19 @@ function ScanPageContent() {
                 </Alert>
             )}
           </div>
-          <Button onClick={handleScan} className="w-full" disabled={isSubmitting || !hasCameraPermission}>
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-            {isSubmitting ? 'Memindai...' : 'Mulai Patroli'}
-          </Button>
+          {token ? (
+            <Button onClick={handleScan} className="w-full" disabled={isSubmitting || !hasCameraPermission}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                {isSubmitting ? 'Memvalidasi...' : `Konfirmasi Absen`}
+            </Button>
+          ) : (
+             <Alert>
+                <AlertTitle>Pindai Kode QR</AlertTitle>
+                <AlertDescription>
+                    Pindai kode QR dari admin untuk mendapatkan token dan tombol konfirmasi akan muncul di sini.
+                </AlertDescription>
+            </Alert>
+          )}
            <Button variant="outline" className="w-full" asChild>
                 <Link href="/petugas/schedule">
                     <ArrowLeft className="mr-2 h-4 w-4" />

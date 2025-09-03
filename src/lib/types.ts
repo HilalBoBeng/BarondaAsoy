@@ -1,5 +1,4 @@
 
-
 import { Timestamp } from "firebase/firestore";
 import type { TriageReportOutput } from "@/ai/flows/triage-report";
 
@@ -20,6 +19,8 @@ export interface ScheduleEntry {
   area: string;
   status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit' | 'Pending Review';
   reason?: string; // For Izin or Sakit
+  qrToken?: string;
+  qrTokenExpires?: Timestamp;
 }
 
 export interface EmergencyContact {
