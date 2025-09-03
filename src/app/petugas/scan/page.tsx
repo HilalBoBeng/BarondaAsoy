@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, ArrowLeft, QrCode, Upload } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
-import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode';
+import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult, Html5QrcodeScanType } from 'html5-qrcode';
 
 function ScanPageContent() {
   const router = useRouter();
@@ -19,10 +19,13 @@ function ScanPageContent() {
   const [message, setMessage] = useState('Arahkan kamera ke QR code absensi...');
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const qrReaderId = "qr-reader-container";
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   const processDecodedText = async (decodedText: string) => {
+      if (isProcessing) return;
       setIsProcessing(true);
       setMessage('Memvalidasi token...');
       setError(null);
@@ -64,49 +67,55 @@ function ScanPageContent() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
         setError(errorMessage);
-        setIsProcessing(false);
         setMessage('Gagal. Silakan coba lagi.');
+      } finally {
+         setIsProcessing(false);
       }
   };
   
-   useEffect(() => {
-    const html5QrCode = new Html5Qrcode(qrReaderId);
+  useEffect(() => {
     let isMounted = true;
+    html5QrCodeRef.current = new Html5Qrcode(qrReaderId);
 
-    const startScanner = () => {
-      Html5Qrcode.getCameras()
-        .then(cameras => {
-          if (cameras && cameras.length && isMounted) {
-            html5QrCode.start(
-              { facingMode: 'environment' },
-              { fps: 10, qrbox: { width: 250, height: 250 } },
-              (decodedText, decodedResult) => {
-                if (!isProcessing) {
-                  processDecodedText(decodedText);
-                  html5QrCode.stop();
-                }
-              },
-              (errorMessage) => {
-                // Ignore.
-              }
-            ).catch(err => {
-                 if (isMounted) setError("Gagal memulai kamera. Mohon berikan izin dan segarkan halaman.");
-            });
-          } else {
-             if (isMounted) setError("Tidak ada kamera yang ditemukan.");
+    const startScanner = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (!isMounted) return;
+        setHasCameraPermission(true);
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
+            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+        };
+
+        html5QrCodeRef.current.start(
+          { facingMode: 'environment' },
+          config,
+          (decodedText, decodedResult) => {
+            if (!isProcessing) {
+              processDecodedText(decodedText);
+            }
+          },
+          (errorMessage) => {
+            // Ignore.
           }
-        })
-        .catch(err => {
-           if (isMounted) setError("Gagal mendapatkan akses kamera. Mohon periksa izin pada browser Anda.");
+        ).catch(err => {
+          if (isMounted) setError("Gagal memulai pemindai kamera.");
         });
-    };
 
+      } catch (permissionError) {
+        if(isMounted) setHasCameraPermission(false);
+      }
+    };
+    
     startScanner();
 
     return () => {
       isMounted = false;
-      if (html5QrCode && html5QrCode.isScanning) {
-          html5QrCode.stop().catch(e => console.error("Gagal menghentikan scanner", e));
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+          html5QrCodeRef.current.stop().catch(e => console.error("Gagal menghentikan scanner", e));
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,12 +126,15 @@ function ScanPageContent() {
     if (file) {
       if (isProcessing) return;
       
-      const html5QrCode = new Html5Qrcode(qrReaderId, true);
+      const html5QrCode = new Html5Qrcode(qrReaderId, false);
        try {
         const decodedText = await html5QrCode.scanFile(file, false);
         processDecodedText(decodedText);
       } catch (err) {
         setError("Gagal memindai gambar. Pastikan gambar jelas dan merupakan QR code yang valid.");
+      } finally {
+        // Reset file input value to allow scanning the same file again
+        if(fileInputRef.current) fileInputRef.current.value = '';
       }
     }
   };
@@ -142,8 +154,19 @@ function ScanPageContent() {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div id={qrReaderId} className="w-full aspect-square rounded-lg flex items-center justify-center overflow-hidden border bg-muted">
-          </div>
+          {hasCameraPermission === null ? (
+             <div className="w-full aspect-square rounded-lg flex items-center justify-center overflow-hidden border bg-muted">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             </div>
+          ) : hasCameraPermission === false ? (
+              <Alert variant="destructive">
+                  <AlertTitle>Akses Kamera Dibutuhkan</AlertTitle>
+                  <AlertDescription>Mohon berikan izin akses kamera pada browser Anda untuk menggunakan fitur pemindaian.</AlertDescription>
+              </Alert>
+          ) : (
+             <div id={qrReaderId} className="w-full aspect-square rounded-lg flex items-center justify-center overflow-hidden border bg-muted">
+             </div>
+          )}
 
            <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isProcessing}>
              <Upload className="mr-2 h-4 w-4" /> Unggah Gambar QR
@@ -164,7 +187,7 @@ function ScanPageContent() {
             </Alert>
           )}
            <Button variant="secondary" className="w-full" asChild>
-                <Link href="/petugas/schedule">
+                <Link href="/petugas">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Batal & Kembali
                 </Link>
