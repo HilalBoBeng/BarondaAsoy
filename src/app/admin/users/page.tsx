@@ -14,7 +14,6 @@ import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
-import { sendStaffAccessCode } from '@/ai/flows/send-staff-access-code';
 import { Badge } from '@/components/ui/badge';
 
 
@@ -75,12 +74,8 @@ export default function UsersAdminPage() {
     try {
         if (approved) {
             await updateDoc(staffRef, { status: 'active', points: 0 });
-            await sendStaffAccessCode({
-                email: staffMember.email,
-                name: staffMember.name,
-                accessCode: staffMember.accessCode
-            });
-            toast({ title: "Berhasil", description: `${staffMember.name} telah disetujui dan kode akses telah dikirim.` });
+            // Email sending logic removed
+            toast({ title: "Berhasil", description: `${staffMember.name} telah disetujui.` });
         } else {
             // Reject: just delete the document
             await deleteDoc(staffRef);

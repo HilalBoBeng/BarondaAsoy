@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, query, orderBy, where, getDocs, increment, limit, startAfter, endBefore, limitToLast, type QueryDocumentSnapshot, type DocumentData, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, orderBy, where, getDocs, increment, limit, startAfter, endBefore, limitToLast, type QueryDocumentSnapshot, type DocumentData, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { sendReply } from '@/ai/flows/send-reply';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -132,27 +131,33 @@ export default function PetugasReportsPage() {
   };
 
   const onReplySubmit = async (values: ReplyFormValues) => {
-    if (!currentReport || !currentReport.reporterEmail) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'Email pelapor tidak ditemukan.' });
-        return;
-    }
+    if (!currentReport || !staffInfo) return;
     setIsSubmitting(true);
+    
     try {
-        const result = await sendReply({
-            reportId: currentReport.id,
-            recipientEmail: currentReport.reporterEmail,
-            replyMessage: values.replyMessage,
-            originalReport: currentReport.reportText,
+        const reportRef = doc(db, 'reports', currentReport.id);
+
+        // Create the new reply object
+        const newReply: Reply = {
+            message: values.replyMessage,
             replierRole: 'Petugas',
-            userId: currentReport.userId,
+            timestamp: serverTimestamp() as Timestamp, // Firestore will convert this
+        };
+        
+        // Add the new reply to the existing replies map
+        const newReplyId = Date.now().toString();
+        const updatedReplies = {
+            ...currentReport.replies,
+            [newReplyId]: newReply
+        };
+        
+        // Update the report document
+        await updateDoc(reportRef, {
+            status: 'resolved',
+            replies: updatedReplies,
         });
         
-        if (!result.success) throw new Error(result.message);
-
-        const reportRef = doc(db, 'reports', currentReport.id);
-        await updateDoc(reportRef, { status: 'resolved' });
-
-        toast({ title: 'Berhasil', description: 'Laporan telah diselesaikan dan balasan telah dikirim.' });
+        toast({ title: 'Berhasil', description: 'Laporan telah diselesaikan dan balasan telah disimpan.' });
         setIsReplyDialogOpen(false);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan.';
@@ -161,6 +166,7 @@ export default function PetugasReportsPage() {
         setIsSubmitting(false);
     }
   };
+
 
   const ThreatLevelBadge = ({ level }: { level: 'low' | 'medium' | 'high' | undefined }) => {
     if (!level) return <Badge variant="secondary">N/A</Badge>;
