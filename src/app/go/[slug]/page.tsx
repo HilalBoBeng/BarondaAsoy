@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,16 +22,20 @@ export default function GoPage({ params }: { params: { slug: string } }) {
     if (params.slug) {
       const fetchLink = async () => {
         try {
-          const docRef = doc(db, 'shortlinks', params.slug);
-          const docSnap = await getDoc(docRef);
+          const q = query(
+              collection(db, 'shortlinks'), 
+              where('slug', '==', params.slug),
+              limit(1)
+          );
+          const querySnapshot = await getDocs(q);
 
-          if (docSnap.exists()) {
+          if (!querySnapshot.empty) {
+            const docSnap = querySnapshot.docs[0];
             const data = docSnap.data() as LinkData;
             setDestinationUrl(data.longUrl);
             setStatus('success');
             setMessage(`Anda akan diarahkan ke: ${data.longUrl}`);
             
-            // Redirect after 3 seconds
             setTimeout(() => {
               window.location.href = data.longUrl;
             }, 3000);

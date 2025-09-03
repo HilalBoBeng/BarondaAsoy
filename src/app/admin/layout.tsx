@@ -19,6 +19,7 @@ import {
   QrCode,
   Banknote,
   ClipboardList,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -58,9 +59,9 @@ export default function AdminLayout({
         { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
         { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
+        { href: "/admin/settings", icon: LinkIcon, label: "Short Link" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
-        { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
     ];
 
   useEffect(() => {

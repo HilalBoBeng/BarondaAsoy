@@ -123,14 +123,13 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0">
+            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg">
                 {selectedAnnouncement && (
                     <>
                         <DialogHeader>
-                          <DialogTitle className="text-left text-lg">Pengumuman</DialogTitle>
+                          <DialogTitle className="text-left text-lg pr-8">{selectedAnnouncement.title}</DialogTitle>
                         </DialogHeader>
                         <DialogBody>
-                            <p className="font-semibold text-lg mb-2">{selectedAnnouncement.title}</p>
                             <p className="text-foreground whitespace-pre-wrap break-words">{selectedAnnouncement.content}</p>
                         </DialogBody>
                         <DialogFooter>

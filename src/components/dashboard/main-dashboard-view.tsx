@@ -564,11 +564,11 @@ export default function MainDashboardView() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-      <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0">
+      <DialogContent className="w-[90%] sm:max-w-lg rounded-lg">
         {selectedNotification && (
           <>
              <DialogHeader>
-                <DialogTitle className="text-left text-lg">Pemberitahuan</DialogTitle>
+                <DialogTitle className="text-left text-lg pr-8">{selectedNotification.title}</DialogTitle>
              </DialogHeader>
              <DialogBody>
                 <p className="text-foreground whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\\n/g, '<br />') }}></p>
