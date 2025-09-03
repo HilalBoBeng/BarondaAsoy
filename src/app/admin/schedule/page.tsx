@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -22,7 +22,7 @@ import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, Use
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -69,10 +69,27 @@ export default function ScheduleAdminPage() {
       endTime: '',
     },
   });
+
+  const watchedDate = form.watch('date');
+
+  const availableStaff = useMemo(() => {
+    if (!watchedDate) {
+      return staff;
+    }
+    const scheduledStaffIds = schedule
+      .filter(s => s.date && format(s.date as Date, 'yyyy-MM-dd') === format(watchedDate, 'yyyy-MM-dd'))
+      .map(s => s.officerId);
+
+    return staff.filter(s => 
+      !scheduledStaffIds.includes(s.id) ||
+      (currentSchedule && s.id === currentSchedule.officerId)
+    );
+  }, [staff, schedule, watchedDate, currentSchedule]);
+
   
   useEffect(() => {
     const fetchStaff = async () => {
-      const staffQuery = query(collection(db, "staff"), orderBy("name"));
+      const staffQuery = query(collection(db, "staff"), where('status', '==', 'active'), orderBy("name"));
       const staffSnapshot = await getDocs(staffQuery);
       const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
       setStaff(staffData);
@@ -287,7 +304,7 @@ export default function ScheduleAdminPage() {
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-28" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-[124px] ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredSchedule.length > 0 ? (
@@ -343,32 +360,7 @@ export default function ScheduleAdminPage() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="officerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nama Petugas</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih petugas" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {staff.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField control={form.control} name="area" render={({ field }) => (
-                  <FormItem><FormLabel>Area Patroli</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="date" render={({ field }) => (
+                 <FormField control={form.control} name="date" render={({ field }) => (
                   <FormItem className="flex flex-col"><FormLabel>Tanggal</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -380,11 +372,36 @@ export default function ScheduleAdminPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date("1900-01-01")} initialFocus locale={id} />
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < startOfDay(new Date())} initialFocus locale={id} />
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
                   </FormItem>
+                )} />
+                <FormField
+                  control={form.control}
+                  name="officerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Petugas</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger disabled={!watchedDate}>
+                            <SelectValue placeholder={!watchedDate ? "Pilih tanggal dulu" : "Pilih petugas"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {availableStaff.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField control={form.control} name="area" render={({ field }) => (
+                  <FormItem><FormLabel>Area Patroli</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="startTime" render={({ field }) => (

@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -54,6 +54,22 @@ export default function HonorariumAdminPage() {
   const form = useForm<HonorariumFormValues>({
     resolver: zodResolver(honorariumSchema),
   });
+  
+  const watchedPeriod = form.watch('period');
+
+  const availableStaff = useMemo(() => {
+    if (!watchedPeriod) {
+        return staff;
+    }
+    const paidStaffIds = honorariums
+        .filter(h => h.period === watchedPeriod)
+        .map(h => h.staffId);
+    
+    return staff.filter(s => 
+        !paidStaffIds.includes(s.id) || 
+        (currentHonorarium && s.id === currentHonorarium.staffId)
+    );
+  }, [staff, honorariums, watchedPeriod, currentHonorarium]);
 
   useEffect(() => {
     const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'), orderBy('name'));
@@ -211,22 +227,22 @@ export default function HonorariumAdminPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <FormField control={form.control} name="staffId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Petugas</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih petugas" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
               <FormField control={form.control} name="period" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Periode</FormLabel>
                   <FormControl><Input {...field} placeholder="Contoh: Juli 2024" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="staffId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nama Petugas</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <FormControl><SelectTrigger disabled={!watchedPeriod}><SelectValue placeholder={!watchedPeriod ? "Isi periode dulu" : "Pilih petugas"} /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {availableStaff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />
