@@ -130,8 +130,8 @@ export default function StaffSettingsPage() {
       <CardContent className="space-y-8">
         {/* Change Access Code Form */}
         <Form {...accessCodeForm}>
-          <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="max-w-md space-y-4">
-            <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" /> Ubah Kode Akses</h3>
+          <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="space-y-4">
+             <h3 className="text-lg font-medium flex items-center gap-2"><KeyRound className="h-5 w-5" /> Ubah Kode Akses</h3>
             
             {canChangeCode ? (
               <>
@@ -205,29 +205,23 @@ export default function StaffSettingsPage() {
         <Separator />
         
         {/* Display Settings */}
-        <div>
-          <h3 className="text-lg font-medium mb-2">Pengaturan Tampilan</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-              Pilih tema tampilan untuk aplikasi.
-          </p>
-          <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                  <h3 className="font-medium">Tema Aplikasi</h3>
-                  <p className="text-sm text-muted-foreground">
-                      Pilih antara mode terang atau gelap.
-                  </p>
-              </div>
-              <div className="flex items-center gap-2">
-                  <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
-                      <Sun className="h-5 w-5" />
-                      <span className="sr-only">Light</span>
-                  </Button>
-                  <Button variant={theme === 'dark' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("dark")}>
-                      <Moon className="h-5 w-5" />
-                      <span className="sr-only">Dark</span>
-                  </Button>
-              </div>
-          </div>
+        <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+                <h3 className="font-medium">Tema Aplikasi</h3>
+                <p className="text-sm text-muted-foreground">
+                    Pilih antara mode terang atau gelap.
+                </p>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
+                    <Sun className="h-5 w-5" />
+                    <span className="sr-only">Light</span>
+                </Button>
+                <Button variant={theme === 'dark' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("dark")}>
+                    <Moon className="h-5 w-5" />
+                    <span className="sr-only">Dark</span>
+                </Button>
+            </div>
         </div>
       </CardContent>
     </Card>

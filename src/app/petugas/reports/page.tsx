@@ -186,7 +186,7 @@ export default function PetugasReportsPage() {
     <Card className="mt-2 bg-muted/50">
         <CardContent className="p-3">
             <div className="flex justify-between items-start">
-                 <p className="text-xs text-foreground/80 break-words flex-grow pr-2">
+                 <p className="text-sm text-foreground/80 break-words flex-grow pr-2">
                     {reply.message}
                 </p>
                 <div className="flex-shrink-0">
@@ -239,7 +239,7 @@ export default function PetugasReportsPage() {
             paginatedReports.map((report) => (
                 <Card key={report.id} className="rounded-lg">
                     <CardHeader>
-                        <CardTitle className="text-base break-word">{report.reportText}</CardTitle>
+                        <CardTitle className="text-base break-words">{report.reportText}</CardTitle>
                         <CardDescription className="flex flex-col gap-2 pt-2">
                             <span className="flex items-center gap-2"><User className="h-4 w-4" />{report.reporterName}</span>
                             <span className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(report.createdAt as Date).toLocaleString('id-ID')}</span>

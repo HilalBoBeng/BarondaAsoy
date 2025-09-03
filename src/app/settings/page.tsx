@@ -128,8 +128,8 @@ export default function SettingsPage() {
              <div className="mx-auto max-w-2xl space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pengaturan Akun</CardTitle>
-                        <CardDescription>Ubah kata sandi atau email Anda.</CardDescription>
+                        <CardTitle>Pengaturan</CardTitle>
+                        <CardDescription>Kelola akun Anda, tampilan, dan lainnya.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
                       {user ? (
@@ -177,6 +177,72 @@ export default function SettingsPage() {
                                   </Button>
                               </form>
                           </Form>
+                          <Separator />
+
+                          {/* Display Settings */}
+                          <div className="flex items-center justify-between rounded-lg">
+                              <div className="space-y-0.5">
+                                  <h3 className="font-medium">Tema Aplikasi</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                      Pilih antara mode terang atau gelap.
+                                  </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <Button variant={theme === 'light' ? 'secondary' : 'ghost'} size="icon" onClick={() => setTheme("light")}>
+                                      <Sun className="h-5 w-5" />
+                                      <span className="sr-only">Light</span>
+                                  </Button>
+                                  <Button variant={theme === 'dark' ? 'secondary' : 'ghost'} size="icon" onClick={() => setTheme("dark")}>
+                                      <Moon className="h-5 w-5" />
+                                      <span className="sr-only">Dark</span>
+                                  </Button>
+                              </div>
+                          </div>
+                          
+                          <Separator />
+
+                          {/* Delete Account */}
+                           <div>
+                            <h3 className="font-semibold text-destructive flex items-center gap-2 mb-2"><Trash2 className="h-5 w-5" />Hapus Akun</h3>
+                             <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="destructive">
+                                          Hapus Akun Saya Secara Permanen
+                                      </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                          <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                              Tindakan ini tidak dapat dibatalkan. Semua data Anda, termasuk riwayat laporan, akan dihapus secara permanen.
+                                              Masukkan kata sandi Anda untuk konfirmasi.
+                                          </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <Form {...deleteAccountForm}>
+                                          <form onSubmit={deleteAccountForm.handleSubmit(onDeleteAccount)} className="space-y-4">
+                                              <FormField
+                                                  control={deleteAccountForm.control}
+                                                  name="password"
+                                                  render={({ field }) => (
+                                                  <FormItem>
+                                                      <FormLabel>Kata Sandi</FormLabel>
+                                                      <FormControl><Input type="password" {...field} /></FormControl>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                                  )}
+                                              />
+                                              <AlertDialogFooter>
+                                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                  <Button type="submit" variant="destructive" disabled={isDeleting}>
+                                                      {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                      Ya, Hapus Akun Saya
+                                                  </Button>
+                                              </AlertDialogFooter>
+                                          </form>
+                                      </Form>
+                                  </AlertDialogContent>
+                              </AlertDialog>
+                           </div>
                         </>
                       ) : (
                         <div className="text-center p-8 border-2 border-dashed rounded-lg">
@@ -191,96 +257,11 @@ export default function SettingsPage() {
                       )}
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Pengaturan Tampilan</CardTitle>
-                    <CardDescription>
-                        Pilih tema tampilan untuk aplikasi.
-                    </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                                <h3 className="font-medium">Tema Aplikasi</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Pilih antara mode terang atau gelap.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
-                                    <Sun className="h-5 w-5" />
-                                    <span className="sr-only">Light</span>
-                                </Button>
-                                <Button variant={theme === 'dark' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("dark")}>
-                                    <Moon className="h-5 w-5" />
-                                    <span className="sr-only">Dark</span>
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                 {user && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-destructive">Zona Berbahaya</CardTitle>
-                             <CardDescription>Tindakan ini tidak dapat dibatalkan.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Hapus Akun Saya
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus secara permanen.
-                                            Masukkan kata sandi Anda untuk konfirmasi.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <Form {...deleteAccountForm}>
-                                        <form onSubmit={deleteAccountForm.handleSubmit(onDeleteAccount)} className="space-y-4">
-                                            <FormField
-                                                control={deleteAccountForm.control}
-                                                name="password"
-                                                render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Kata Sandi</FormLabel>
-                                                    <FormControl><Input type="password" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                                )}
-                                            />
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                <Button type="submit" variant="destructive" disabled={isDeleting}>
-                                                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Ya, Hapus Akun Saya
-                                                </Button>
-                                            </AlertDialogFooter>
-                                        </form>
-                                    </Form>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </CardContent>
-                    </Card>
-                 )}
             </div>
         </main>
         <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
             <div className="space-y-2">
                 <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
-                <div className="flex justify-center">
-                    <a href="mailto:admin@bobeng.icu" className="inline-flex items-center gap-2 text-primary hover:underline">
-                        <Mail className="h-4 w-4" />
-                        <span>Hubungi Admin</span>
-                    </a>
-                </div>
             </div>
         </footer>
     </div>

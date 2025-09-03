@@ -487,11 +487,6 @@ export default function Home() {
       <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
         <div className="space-y-2">
             <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
-            <div className="flex justify-center">
-                 <a href="mailto:admin@bobeng.icu" className="inline-flex items-center gap-2 text-primary hover:underline">
-                    <span>Hubungi Admin</span>
-                </a>
-            </div>
         </div>
       </footer>
     </div>
