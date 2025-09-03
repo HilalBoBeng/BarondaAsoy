@@ -112,10 +112,12 @@ export default function Home() {
                 return;
             }
              if (userData.isSuspended) {
-                toast({ variant: 'destructive', title: 'Akun Ditangguhkan', description: 'Akun Anda telah ditangguhkan. Anda tidak dapat mengakses aplikasi saat ini.' });
-                auth.signOut();
-                router.push('/auth/login');
-                return;
+                 const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
+                 const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
+                 toast({ variant: 'destructive', title: 'Akun Ditangguhkan', description: `Akun Anda ditangguhkan hingga ${endDateString}.` });
+                 auth.signOut();
+                 router.push('/auth/login');
+                 return;
              }
             setUserInfo(userData);
           } else {
@@ -487,11 +489,11 @@ export default function Home() {
       <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
         {selectedNotification && (
           <>
-            <DialogHeader className="p-6 pb-0 rounded-t-lg bg-primary text-primary-foreground">
-              <DialogTitle>{selectedNotification.title}</DialogTitle>
-            </DialogHeader>
-            <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
-              <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\\n/g, '<br />') }}></p>
+             <DialogHeader className="p-6 pb-4">
+                <DialogTitle className="text-left text-lg">Pemberitahuan</DialogTitle>
+             </DialogHeader>
+             <div className="p-6 pt-0 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
+                <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\\n/g, '<br />') }}></p>
             </div>
             <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
               <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>
@@ -505,5 +507,3 @@ export default function Home() {
     </>
   );
 }
-
-    

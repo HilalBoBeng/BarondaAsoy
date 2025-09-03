@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, query, where, Timestamp, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, limit, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { MessageSquare, Trash, Info } from 'lucide-react';
+import { MessageSquare, Trash, Info, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
@@ -143,23 +143,49 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             </div>
         )
     }
+    
+    if (!loading && paginatedReports.length === 0) {
+        return (
+             <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                    Anda belum memiliki riwayat laporan.
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <div className="space-y-4">
             
-            {paginatedReports.length === 0 ? (
-                 <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
-                        Anda belum memiliki riwayat laporan.
-                    </CardContent>
-                </Card>
-            ) : (
+            {paginatedReports.length > 0 ? (
                 <>
                 {paginatedReports.map((report) => (
-                    <Card key={report.id}>
+                    <Card key={report.id} className="relative">
+                         {report.userId === user?.uid && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive">
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-lg">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+
                         <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2 gap-2">
-                                <div className="flex-grow">
+                                <div className="flex-grow pr-8">
                                     <p className="text-sm text-foreground/90 break-word">
                                         {report.reportText}
                                     </p>
@@ -187,31 +213,6 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                                     ))}
                                 </div>
                             )}
-
-                            {report.userId === user?.uid && (
-                                <div className="w-full flex justify-end mt-2">
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" size="sm">
-                                                <Trash className="h-4 w-4 mr-2" />
-                                                Hapus
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            )}
                         </CardFooter>
                     </Card>
                 ))}
@@ -235,6 +236,12 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                     </Button>
                 </div>
                 </>
+            ) : (
+                <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                        Anda belum memiliki riwayat laporan.
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
