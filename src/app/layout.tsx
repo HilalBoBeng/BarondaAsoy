@@ -6,24 +6,33 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PT_Sans } from 'next/font/google';
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import MaintenancePage from "./maintenance/page";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
   weight: ['400', '700']
 });
 
-// export const metadata: Metadata = {
-//   title: "Baronda - Siskamling Digital",
-//   description: "Aplikasi siskamling untuk keamanan lingkungan Anda.",
-//   icons: {
-//     icon: 'https://iili.io/KJ4aGxp.png',
-//   }
-// };
+function LoadingSkeleton() {
+  return (
+    <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
+        <Image 
+            src="https://iili.io/KJ4aGxp.png" 
+            alt="Loading Logo" 
+            width={120} 
+            height={120} 
+            className="animate-logo-pulse"
+            priority
+        />
+    </div>
+  )
+}
 
 function App({ children }: { children: ReactNode }) {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -33,7 +42,6 @@ function App({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      setLoading(true);
       try {
         const settingsRef = doc(db, 'app_settings', 'config');
         const docSnap = await getDoc(settingsRef);
@@ -54,8 +62,7 @@ function App({ children }: { children: ReactNode }) {
   const isBypassRoute = 
     pathname.startsWith('/admin') || 
     pathname.startsWith('/petugas') || 
-    pathname.startsWith('/auth/staff') ||
-    pathname === '/maintenance';
+    pathname.startsWith('/auth/staff');
 
   useEffect(() => {
     if (!loading && maintenanceMode && !isBypassRoute) {
@@ -65,7 +72,7 @@ function App({ children }: { children: ReactNode }) {
 
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+    return <LoadingSkeleton />;
   }
   
   if (maintenanceMode && !isBypassRoute) {
@@ -95,10 +102,12 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
+          <Suspense fallback={<LoadingSkeleton />}>
             <App>
               {children}
             </App>
-            <Toaster />
+          </Suspense>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
