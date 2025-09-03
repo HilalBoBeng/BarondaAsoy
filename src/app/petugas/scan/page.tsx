@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firestore';
+import { doc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ArrowLeft, QrCode, Upload } from 'lucide-react';
@@ -75,7 +75,7 @@ function ScanPageContent() {
   
   useEffect(() => {
     let isMounted = true;
-    html5QrCodeRef.current = new Html5Qrcode(qrReaderId);
+    html5QrCodeRef.current = new Html5Qrcode(qrReaderId, false);
 
     const startScanner = async () => {
       try {
@@ -95,6 +95,7 @@ function ScanPageContent() {
           config,
           (decodedText, decodedResult) => {
             if (!isProcessing) {
+              html5QrCodeRef.current?.stop();
               processDecodedText(decodedText);
             }
           },
