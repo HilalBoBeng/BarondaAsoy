@@ -165,10 +165,6 @@ function toast({ ...props }: Toast) {
     },
   });
 
-  setTimeout(() => {
-    dismiss();
-  }, props.duration || TOAST_REMOVE_DELAY);
-
   return {
     id: id,
     dismiss,
