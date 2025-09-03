@@ -19,8 +19,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-export default function ScheduleDetailPage({ params }: { params: { scheduleId: string } }) {
-  const { scheduleId } = params;
+export default function ScheduleDetailPage({ params: { scheduleId } }: { params: { scheduleId: string } }) {
   const [schedule, setSchedule] = useState<ScheduleEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
