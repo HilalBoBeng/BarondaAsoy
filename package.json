@@ -48,6 +48,7 @@
     "firebase": "^10.12.2",
     "firebase-admin": "^12.2.0",
     "genkit": "^1.14.1",
+    "html5-qrcode": "^2.3.8",
     "input-otp": "^1.2.5",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.475.0",
