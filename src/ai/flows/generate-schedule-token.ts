@@ -11,6 +11,7 @@ import { randomBytes } from 'crypto';
 
 const GenerateTokenInputSchema = z.object({
   scheduleId: z.string().describe('The ID of the schedule to generate a token for.'),
+  type: z.enum(['start', 'end']).describe('The type of token to generate.'),
 });
 export type GenerateTokenInput = z.infer<typeof GenerateTokenInputSchema>;
 
@@ -32,7 +33,7 @@ const generateScheduleTokenFlow = ai.defineFlow(
     inputSchema: GenerateTokenInputSchema,
     outputSchema: GenerateTokenOutputSchema,
   },
-  async ({ scheduleId }) => {
+  async ({ scheduleId, type }) => {
     try {
       const scheduleRef = adminDb.collection('schedules').doc(scheduleId);
       const scheduleDoc = await scheduleRef.get();
@@ -43,10 +44,13 @@ const generateScheduleTokenFlow = ai.defineFlow(
 
       const token = randomBytes(16).toString('hex');
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+      
+      const tokenField = type === 'start' ? 'qrTokenStart' : 'qrTokenEnd';
+      const expiresField = type === 'start' ? 'qrTokenStartExpires' : 'qrTokenEndExpires';
 
       await scheduleRef.update({
-        qrToken: token,
-        qrTokenExpires: Timestamp.fromDate(expires),
+        [tokenField]: token,
+        [expiresField]: Timestamp.fromDate(expires),
       });
 
       return { 

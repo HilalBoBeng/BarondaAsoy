@@ -2,43 +2,49 @@
 "use client";
 
 import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client';
-import { doc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, QrCode, Upload, Camera } from 'lucide-react';
+import { Loader2, ArrowLeft, QrCode, Upload, Camera, CheckCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Html5Qrcode } from 'html5-qrcode';
 
 function ScanPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const [status, setStatus] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scanType, setScanType] = useState<'start' | 'end' | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const readerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    html5QrCodeRef.current = new Html5Qrcode('qr-reader-container', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-  }, []);
+    const type = searchParams.get('type') as 'start' | 'end';
+    if (type) {
+      setScanType(type);
+    } else {
+      setErrorMessage("Tipe pemindaian tidak valid.");
+      setStatus('error');
+    }
+  }, [searchParams]);
 
   const processDecodedText = useCallback(async (decodedText: string) => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    setError(null);
+    if (status === 'processing' || status === 'success') return;
+    setStatus('processing');
+    setErrorMessage(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!scanType) throw new Error("Tipe pemindaian tidak valid.");
+
+      const tokenField = scanType === 'start' ? "qrTokenStart" : "qrTokenEnd";
       
       const schedulesRef = collection(db, 'schedules');
-      const q = query(schedulesRef, where("qrToken", "==", decodedText));
+      const q = query(schedulesRef, where(tokenField, "==", decodedText));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -49,101 +55,98 @@ function ScanPageContent() {
       const scheduleData = scheduleDoc.data();
       const scheduleRef = scheduleDoc.ref;
 
-      const expires = (scheduleData.qrTokenExpires as Timestamp)?.toDate();
+      const expiresField = scanType === 'start' ? 'qrTokenStartExpires' : 'qrTokenEndExpires';
+      const expires = (scheduleData[expiresField] as Timestamp)?.toDate();
 
       if (!expires || new Date() > expires) {
         throw new Error('Token absensi sudah kedaluwarsa. Mohon minta token baru dari admin.');
       }
-
-      if (scheduleData.status !== 'Pending') {
-        throw new Error('Jadwal ini tidak valid atau sudah dimulai.');
+      
+      let updatePayload: any = {};
+      if(scanType === 'start') {
+          if (scheduleData.status !== 'Pending') throw new Error('Jadwal ini tidak valid atau sudah dimulai.');
+          updatePayload = {
+              status: 'In Progress',
+              patrolStartTime: serverTimestamp(),
+              qrTokenStart: null,
+              qrTokenStartExpires: null,
+          }
+      } else { // 'end'
+          if (scheduleData.status !== 'In Progress') throw new Error('Patroli belum dimulai, tidak bisa diakhiri.');
+          updatePayload = {
+              status: 'Completed',
+              patrolEndTime: serverTimestamp(),
+              qrTokenEnd: null,
+              qrTokenEndExpires: null
+          }
       }
+
+      await updateDoc(scheduleRef, updatePayload);
       
-      await updateDoc(scheduleRef, {
-        status: 'In Progress',
-        qrToken: null, 
-        qrTokenExpires: null,
-      });
-      
-      toast({ title: 'Absen Berhasil', description: 'Status patroli Anda telah diperbarui.' });
-      router.push('/petugas');
+      setStatus('success');
+      toast({ title: 'Absen Berhasil', description: `Status patroli telah diperbarui.` });
+
+      setTimeout(() => {
+          router.push('/petugas/schedule');
+      }, 2000);
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
-      setError(errorMessage);
-      setIsProcessing(false);
+      const msg = err instanceof Error ? err.message : 'Gagal memproses QR code.';
+      setErrorMessage(msg);
+      setStatus('error');
     }
-  }, [isProcessing, router, toast]);
+  }, [status, router, toast, scanType]);
+
+  const startScanner = useCallback(() => {
+    if (!readerRef.current || !scannerRef.current) return;
+    setStatus('scanning');
+    setErrorMessage(null);
+
+    const config = {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+      rememberLastUsedCamera: true,
+      supportedScanTypes: [0] // SCAN_TYPE_CAMERA
+    };
+    
+    scannerRef.current.start(
+      { facingMode: "environment" },
+      config,
+      processDecodedText,
+      (error) => { /* ignore */ }
+    ).catch(err => {
+      setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera.");
+      setStatus('error');
+    });
+  }, [processDecodedText]);
 
   useEffect(() => {
-    const getCameraPermission = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        setHasCameraPermission(true);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
-      }
-    };
-
-    getCameraPermission();
+    if (!scannerRef.current) {
+      scannerRef.current = new Html5Qrcode('qr-reader');
+    }
+    
+    if (scanType && status === 'idle') {
+        startScanner();
+    }
 
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+      if (scannerRef.current && scannerRef.current.isScanning) {
+          scannerRef.current.stop().catch(console.error);
       }
     };
-  }, []);
+  }, [scanType, status, startScanner]);
 
-  const handleCaptureAndProcess = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    if (context) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-      
-      const imageDataUrl = canvas.toDataURL('image/png');
-      
-      if (html5QrCodeRef.current) {
-         html5QrCodeRef.current.scanFile(dataURLtoFile(imageDataUrl, 'capture.png'), false)
-           .then(decodedText => {
-             processDecodedText(decodedText);
-           })
-           .catch(err => {
-             setError("Tidak ada QR code yang terdeteksi pada gambar. Coba lagi.");
-           });
-      }
-    }
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && html5QrCodeRef.current) {
-      try {
-        const decodedText = await html5QrCodeRef.current.scanFile(file, false);
-        processDecodedText(decodedText);
-      } catch (err) {
-        setError("Gagal memindai gambar. Pastikan gambar jelas dan merupakan QR code yang valid.");
-      }
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-  
-  function dataURLtoFile(dataurl: string, filename: string) {
-    let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)?.[1],
-        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, {type:mime});
+  if (status === 'success') {
+    return (
+        <Card className="w-full max-w-md">
+            <CardContent className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                 <CheckCircle className="h-16 w-16 text-green-500 animate-in fade-in zoom-in-50" />
+                 <p className="text-lg font-semibold">Absen Berhasil!</p>
+                 <p className="text-muted-foreground">Anda akan dialihkan kembali ke halaman jadwal...</p>
+                 <Loader2 className="h-5 w-5 animate-spin" />
+            </CardContent>
+        </Card>
+    )
   }
 
   return (
@@ -153,52 +156,28 @@ function ScanPageContent() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
               <QrCode className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle>Pindai Kode QR Absensi</CardTitle>
-          <CardDescription>
-            Arahkan kamera ke kode QR, lalu tekan tombol Ambil Gambar.
-          </CardDescription>
+          <CardTitle>Pindai Kode QR untuk {scanType === 'start' ? 'Memulai' : 'Mengakhiri'} Tugas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div id="qr-reader-container" style={{ display: 'none' }}></div>
-          <video
-            ref={videoRef}
-            className="w-full aspect-square rounded-lg bg-muted object-cover"
-            autoPlay
-            playsInline
-            muted
-          />
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
+          <div id="qr-reader" ref={readerRef} className="w-full rounded-lg bg-muted overflow-hidden"></div>
 
-           {hasCameraPermission === false && (
-              <Alert variant="destructive">
-                  <AlertTitle>Akses Kamera Dibutuhkan</AlertTitle>
-                  <AlertDescription>Mohon berikan izin akses kamera pada browser Anda untuk menggunakan fitur ini.</AlertDescription>
-              </Alert>
-          )}
-
-          <Button className="w-full" onClick={handleCaptureAndProcess} disabled={isProcessing || !hasCameraPermission}>
-            <Camera className="mr-2 h-4 w-4" />
-            Ambil Gambar & Proses
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isProcessing}>
-            <Upload className="mr-2 h-4 w-4" /> Unggah Gambar QR
-          </Button>
-          <input type="file" accept="image/png, image/jpeg" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-
-          {isProcessing && (
+          {status === 'processing' && (
              <div className="flex items-center justify-center p-4 rounded-md bg-muted">
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 <p className="text-muted-foreground">Memvalidasi token...</p>
              </div>
           )}
-          {error && !isProcessing && (
+
+          {status === 'error' && errorMessage && (
              <Alert variant="destructive">
                 <AlertTitle>Gagal</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{errorMessage}</AlertDescription>
+                {errorMessage.includes("kamera") && <Button onClick={startScanner} className="mt-2">Coba Lagi</Button>}
             </Alert>
           )}
+
            <Button variant="secondary" className="w-full" asChild>
-                <Link href="/petugas">
+                <Link href="/petugas/schedule">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Batal & Kembali
                 </Link>
@@ -216,5 +195,3 @@ export default function ScanPage() {
         </Suspense>
     )
 }
-
-    

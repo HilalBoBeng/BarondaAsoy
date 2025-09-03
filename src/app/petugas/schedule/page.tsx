@@ -7,10 +7,10 @@ import { collection, onSnapshot, query, where, Timestamp, doc, updateDoc, increm
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ScheduleEntry } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Clock, MapPin, Check, FileText, Info, Camera, QrCode } from 'lucide-react';
+import { Calendar, User, Clock, MapPin, Check, FileText, Info, Camera, QrCode, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -88,8 +88,8 @@ export default function PetugasSchedulePage() {
     }
   }, []);
 
-  const handleStartPatrol = (scheduleId: string) => {
-    router.push(`/petugas/scan?scheduleId=${scheduleId}`);
+  const handleScan = (type: 'start' | 'end') => {
+    router.push(`/petugas/scan?type=${type}`);
   };
 
   const handleUpdateStatus = async (schedule: ScheduleEntry, status: ScheduleEntry['status'], reason?: string) => {
@@ -134,8 +134,9 @@ export default function PetugasSchedulePage() {
   }
   
   const ScheduleCard = ({ schedule }: { schedule: ScheduleEntry }) => {
-    const { status, area, time, date } = schedule;
+    const { status, area, time, date, patrolStartTime } = schedule;
     const config = statusConfig[status] || {className: 'bg-gray-200', label: status};
+    const startTime = patrolStartTime ? (patrolStartTime as Timestamp).toDate() : null;
 
     return (
       <Card>
@@ -153,16 +154,19 @@ export default function PetugasSchedulePage() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
            <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> {time}</p>
+           {startTime && (
+               <p className="flex items-center gap-2 text-blue-600"><Hourglass className="h-4 w-4" /> Mulai patroli: {format(startTime, "HH:mm", { locale: id })}</p>
+           )}
         </CardContent>
          <CardFooter className="flex-col sm:flex-row gap-2">
             {schedule.status === 'Pending' && (
                 <>
-                    <Button className="w-full sm:w-auto" onClick={() => handleStartPatrol(schedule.id)} disabled={isSubmitting}><QrCode className="mr-2 h-4 w-4" /> Mulai Bertugas</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => handleScan('start')} disabled={isSubmitting}><QrCode className="mr-2 h-4 w-4" /> Mulai Bertugas</Button>
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Izin')} disabled={isSubmitting}><FileText className="mr-2 h-4 w-4" /> Ajukan Izin</Button>
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')} disabled={isSubmitting}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                 </>
             )}
-            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus(schedule, 'Completed')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Selesaikan Tugas</Button>}
+            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleScan('end')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Selesaikan Tugas</Button>}
             {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit' || schedule.status === 'Tanpa Keterangan') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
         </CardFooter>
       </Card>

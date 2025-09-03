@@ -19,8 +19,12 @@ export interface ScheduleEntry {
   area: string;
   status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit' | 'Pending Review' | 'Tanpa Keterangan';
   reason?: string; // For Izin or Sakit
-  qrToken?: string;
-  qrTokenExpires?: Timestamp;
+  qrTokenStart?: string;
+  qrTokenStartExpires?: Timestamp;
+  qrTokenEnd?: string;
+  qrTokenEndExpires?: Timestamp;
+  patrolStartTime?: Timestamp;
+  patrolEndTime?: Timestamp;
 }
 
 export interface EmergencyContact {
