@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, ExternalLink } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,6 +37,7 @@ export default function ShortLinkAdminPage() {
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [history, setHistory] = useState<ShortLinkData[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [visibleUrls, setVisibleUrls] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   const form = useForm<ShortLinkFormValues>({
@@ -97,6 +98,19 @@ export default function ShortLinkAdminPage() {
       }
   }
 
+  const toggleUrlVisibility = (id: string) => {
+    setVisibleUrls(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const maskUrl = (url: string) => {
+    try {
+        const urlObj = new URL(url);
+        return `${urlObj.protocol}//********.com`;
+    } catch {
+        return 'URL tidak valid';
+    }
+  };
+
   return (
     <div className="grid lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-1">
@@ -153,7 +167,7 @@ export default function ShortLinkAdminPage() {
                     <CardTitle>Riwayat Tautan</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-lg border">
+                    <div className="rounded-lg border overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -182,10 +196,13 @@ export default function ShortLinkAdminPage() {
                                                     /go/{link.slug} <ExternalLink className="h-3 w-3"/>
                                                 </a>
                                             </TableCell>
-                                            <TableCell className="max-w-xs truncate">
-                                                <a href={link.longUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                                    {link.longUrl}
-                                                </a>
+                                            <TableCell className="max-w-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="truncate">{visibleUrls[link.id] ? link.longUrl : maskUrl(link.longUrl)}</span>
+                                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleUrlVisibility(link.id)}>
+                                                        {visibleUrls[link.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <AlertDialog>
