@@ -24,7 +24,6 @@ function ScanPageContent() {
   const [status, setStatus] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error' | 'permission_denied'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<'start' | 'end' | null>(null);
-  const [hasPermission, setHasPermission] = useState(false);
 
   useEffect(() => {
     const type = searchParams.get('type') as 'start' | 'end';
@@ -37,13 +36,15 @@ function ScanPageContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    scannerRef.current = new Html5Qrcode("qr-reader-container");
-    
+    // Only initialize the scanner once
+    if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode("qr-reader-container");
+    }
+
     const startCamera = async () => {
       setStatus('idle');
       try {
         await Html5Qrcode.getCameras();
-        setHasPermission(true);
         setStatus('scanning');
         scannerRef.current.start(
           { facingMode: "environment" },
@@ -65,13 +66,12 @@ function ScanPageContent() {
             setStatus('permission_denied');
         });
       } catch (err) {
-        setHasPermission(false);
         setErrorMessage("Tidak dapat menemukan kamera atau izin ditolak.");
         setStatus('permission_denied');
       }
     };
     
-    if (scanType) {
+    if (scanType && scannerRef.current && !scannerRef.current.isScanning) {
         startCamera();
     }
 
