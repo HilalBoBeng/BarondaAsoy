@@ -33,11 +33,14 @@ function App({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const fetchSettings = async () => {
+      setLoading(true);
       try {
         const settingsRef = doc(db, 'app_settings', 'config');
         const docSnap = await getDoc(settingsRef);
         if (docSnap.exists() && docSnap.data().maintenanceMode) {
           setMaintenanceMode(true);
+        } else {
+          setMaintenanceMode(false);
         }
       } catch (error) {
         console.error("Error fetching maintenance status:", error);
@@ -48,7 +51,18 @@ function App({ children }: { children: ReactNode }) {
     fetchSettings();
   }, []);
   
-  const isBypassRoute = pathname.startsWith('/admin') || pathname.startsWith('/petugas') || pathname === '/auth/staff-login' || pathname === '/maintenance';
+  const isBypassRoute = 
+    pathname.startsWith('/admin') || 
+    pathname.startsWith('/petugas') || 
+    pathname.startsWith('/auth/staff') ||
+    pathname === '/maintenance';
+
+  useEffect(() => {
+    if (!loading && maintenanceMode && !isBypassRoute) {
+      router.push('/maintenance');
+    }
+  }, [loading, maintenanceMode, isBypassRoute, pathname, router]);
+
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
