@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil, Download, Save } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil, Save, Download } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -267,42 +267,42 @@ export default function AdminSettingsPage() {
 
         <Separator />
 
-        <div>
+        <div className="space-y-2">
             <h3 className="text-lg font-medium flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
             <p className="text-sm text-muted-foreground">
                 Saat diaktifkan, hanya admin yang dapat mengakses aplikasi.
             </p>
-        </div>
-        <Form {...maintenanceForm}>
-            <form onSubmit={maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))}>
-                <FormField
-                control={maintenanceForm.control}
-                name="maintenanceMode"
-                render={({ field }) => (
-                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="maintenance-mode-switch" className="text-base">
-                                Aktifkan Mode Pemeliharaan
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                            Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
-                            </p>
+            <Form {...maintenanceForm}>
+                <form onSubmit={maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))}>
+                    <FormField
+                    control={maintenanceForm.control}
+                    name="maintenanceMode"
+                    render={({ field }) => (
+                        <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="maintenance-mode-switch" className="text-base">
+                                    Aktifkan Mode Pemeliharaan
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
+                                Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
+                                </p>
+                            </div>
+                            <FormControl>
+                                <Switch
+                                id="maintenance-mode-switch"
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))();
+                                }}
+                                />
+                            </FormControl>
                         </div>
-                        <FormControl>
-                            <Switch
-                            id="maintenance-mode-switch"
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                                field.onChange(checked);
-                                maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))();
-                            }}
-                            />
-                        </FormControl>
-                    </div>
-                )}
-                />
-            </form>
-        </Form>
+                    )}
+                    />
+                </form>
+            </Form>
+        </div>
         
         <Separator />
 
