@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2, ShieldAlert, Phone } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2, ShieldAlert, Phone, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -465,13 +465,21 @@ export default function MainDashboardView() {
       </header>
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
         <div className="mx-auto max-w-screen-2xl space-y-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
-                {greeting}, {user?.displayName || 'Warga'}!
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base mt-2">
-                {currentDate} | {currentTime}
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
+                    {greeting}, {user?.displayName || 'Warga'}!
+                </h1>
+                <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                    {currentDate} | {currentTime}
+                </p>
+            </div>
+            <Button asChild>
+                <Link href="#">
+                    <Download className="mr-2 h-4 w-4" />
+                    Unduh Aplikasi
+                </Link>
+            </Button>
           </div>
 
           <div className="space-y-6">
