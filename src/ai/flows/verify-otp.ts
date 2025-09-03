@@ -120,8 +120,8 @@ const verifyOtpFlow = ai.defineFlow(
             email: email,
             createdAt: FieldValue.serverTimestamp(),
             photoURL: null,
-            phone: phone || '',
-            address: address || '',
+            phone: phone || null,
+            address: address || null,
             isBlocked: false,
         });
 

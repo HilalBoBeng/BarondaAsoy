@@ -159,6 +159,8 @@ export default function VerifyOtpPage() {
         email: contextData.email,
         name: contextData.name,
         password: contextData.password,
+        phone: contextData.phone,
+        address: contextData.address,
         flow: contextData.flow,
       });
 
