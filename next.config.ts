@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
         hostname: 'iili.io',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.qrserver.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
