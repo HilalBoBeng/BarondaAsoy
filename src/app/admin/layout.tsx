@@ -17,7 +17,8 @@ import {
   Landmark,
   ArrowLeft,
   QrCode,
-  Banknote
+  Banknote,
+  ClipboardList
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -54,6 +55,7 @@ export default function AdminLayout({
         { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
         { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
         { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
+        { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
         { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
