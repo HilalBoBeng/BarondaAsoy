@@ -218,46 +218,48 @@ export default function AnnouncementsAdminPage() {
         </div>
 
         {/* Desktop View */}
-        <div className="hidden sm:block rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Judul</TableHead>
-                <TableHead>Isi</TableHead>
-                <TableHead className="text-right w-[100px]">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : announcements.length > 0 ? (
-                announcements.map((ann) => (
-                  <TableRow key={ann.id}>
-                    <TableCell>{ann.date instanceof Date ? ann.date.toLocaleDateString('id-ID') : 'N/A'}</TableCell>
-                    <TableCell className="font-medium">{ann.title}</TableCell>
-                    <TableCell className="max-w-md truncate">{ann.content}</TableCell>
-                    <TableCell className="text-right">
-                      {renderActions(ann)}
+        <div className="hidden sm:block">
+          <div className="rounded-lg border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Judul</TableHead>
+                  <TableHead>Isi</TableHead>
+                  <TableHead className="text-right w-[100px]">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-[88px] ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : announcements.length > 0 ? (
+                  announcements.map((ann) => (
+                    <TableRow key={ann.id}>
+                      <TableCell>{ann.date instanceof Date ? ann.date.toLocaleDateString('id-ID') : 'N/A'}</TableCell>
+                      <TableCell className="font-medium">{ann.title}</TableCell>
+                      <TableCell className="max-w-md truncate">{ann.content}</TableCell>
+                      <TableCell className="text-right">
+                        {renderActions(ann)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center h-24">
+                      Belum ada pengumuman.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center h-24">
-                    Belum ada pengumuman.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

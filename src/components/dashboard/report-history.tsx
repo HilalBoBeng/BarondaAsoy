@@ -52,6 +52,7 @@ export default function ReportHistory() {
                 const reportsQuery = query(
                     collection(db, 'reports'), 
                     where('visibility', '==', 'public'),
+                    orderBy('createdAt', 'desc'),
                     limit(50) // Limit to last 50 public reports to avoid large reads
                 );
                 
@@ -69,7 +70,6 @@ export default function ReportHistory() {
                      } as Report;
                 });
                 
-                reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
                 setAllReports(reportsData);
 
             } catch (error) {
@@ -135,14 +135,14 @@ export default function ReportHistory() {
                         <div className="flex justify-between items-start mb-2 gap-2">
                             <div className="flex-grow">
                                 <p className="text-xs font-bold">{report.reporterName}</p>
-                                <p className="text-sm text-foreground/90 break-word">
+                                <p className="text-sm text-foreground/90 break-word pr-4">
                                     {report.reportText}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-2">
                                     {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
                                 </p>
                             </div>
-                            <div className="flex flex-col gap-2 items-end flex-shrink-0">
+                            <div className="flex-shrink-0">
                                 <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                     {statusDisplay[report.status]?.text || report.status}
                                 </Badge>

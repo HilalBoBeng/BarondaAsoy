@@ -156,19 +156,19 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             ) : paginatedReports.length > 0 ? (
                 <>
                 {paginatedReports.map((report) => (
-                    <Card key={report.id} className="relative">
+                    <Card key={report.id} className="relative overflow-hidden">
                         <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2 gap-2">
-                                <div className="flex-grow pr-8">
-                                    <p className="text-sm text-foreground/90 break-word">
+                            <div className="flex justify-between items-start mb-2 gap-4">
+                                <div className="flex-grow pr-16">
+                                    <p className="text-sm text-foreground/90 break-words">
                                         {report.reportText}
                                     </p>
-                                        <p className="text-xs text-muted-foreground mt-2">
+                                    <p className="text-xs text-muted-foreground mt-2">
                                         {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
                                     </p>
                                 </div>
-                                <div className="absolute top-2 right-2 flex items-center gap-2">
-                                     <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className, "mt-1")}>
+                                <div className="absolute top-4 right-4 flex items-center gap-2">
+                                     <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
                                     {report.userId === user?.uid && (
