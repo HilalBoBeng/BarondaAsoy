@@ -151,6 +151,7 @@ export default function VerifyOtpPage() {
         return;
     }
     setIsSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
     try {
       const result = await verifyOtp({ 
         ...contextData,

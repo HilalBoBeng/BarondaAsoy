@@ -59,6 +59,9 @@ export default function StaffLoginPage() {
   const onSubmit = async (data: StaffLoginFormValues) => {
     setIsSubmitting(true);
     
+    // Simulate network delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     // Admin login check
     if (data.accessCode === "Admin123") {
         localStorage.setItem('userRole', 'admin');
@@ -74,20 +77,17 @@ export default function StaffLoginPage() {
     try {
         const staffQuery = query(
             collection(db, "staff"), 
-            where("accessCode", "==", data.accessCode)
+            where("accessCode", "==", data.accessCode),
+            where("status", "==", "active")
         );
         const staffSnapshot = await getDocs(staffQuery);
 
         if (staffSnapshot.empty) {
-            throw new Error("Kode akses salah.");
+            throw new Error("Kode akses salah atau akun Anda tidak aktif.");
         }
 
         const staffDoc = staffSnapshot.docs[0];
         const staffData = staffDoc.data();
-
-        if (staffData.status !== 'active') {
-            throw new Error("Akun Anda belum disetujui oleh admin atau telah dinonaktifkan.");
-        }
 
         localStorage.setItem('userRole', 'petugas');
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email }));

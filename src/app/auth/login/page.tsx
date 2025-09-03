@@ -75,6 +75,7 @@ function LoginForm() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       setLoginAttempts(prev => ({...prev, [data.email]: 0})); // Reset counter on success
@@ -124,7 +125,6 @@ function LoginForm() {
       )}
        {showResetPasswordAlert && (
         <Alert variant="destructive" className="mb-4 animate-fade-in">
-            <CheckCircle className="h-4 w-4" />
             <AlertTitle>Terlalu Banyak Percobaan Login Gagal</AlertTitle>
             <AlertDescription>
               Demi keamanan, silakan atur ulang kata sandi Anda.

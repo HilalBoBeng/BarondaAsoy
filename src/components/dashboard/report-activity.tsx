@@ -75,6 +75,7 @@ export default function ReportActivity({ user, userInfo }: { user: User | null, 
   const onSubmit = async (data: ReportFormValues) => {
     setIsSubmitting(true);
     setTriageResult(null);
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
     try {
       const result = await triageReport(data);
       setTriageResult(result);
