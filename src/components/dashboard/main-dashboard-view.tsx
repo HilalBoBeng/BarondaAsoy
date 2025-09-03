@@ -68,7 +68,6 @@ export default function MainDashboardView() {
   const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
   const [suspensionInfo, setSuspensionInfo] = useState<SuspensionInfo | null>(null);
   const [countdown, setCountdown] = useState('');
-  const [appDownloadLink, setAppDownloadLink] = useState<string | null>(null);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -117,15 +116,6 @@ export default function MainDashboardView() {
       setPatrolLogs(logs);
       setLoadingPatrolLogs(false);
     });
-    
-    // Fetch app settings
-    const settingsRef = doc(db, 'app_settings', 'config');
-    getDoc(settingsRef).then(docSnap => {
-        if (docSnap.exists()) {
-            setAppDownloadLink(docSnap.data().appDownloadLink);
-        }
-    });
-
 
     return () => {
       clearInterval(timer);
@@ -484,7 +474,7 @@ export default function MainDashboardView() {
                     {currentDate} | {currentTime}
                 </p>
             </div>
-            {appDownloadLink && user && (
+            {user && (
               <Button asChild>
                   <Link href="/download">
                       Unduh Aplikasi

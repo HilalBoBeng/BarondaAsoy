@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, app } from '@/lib/firebase/client';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,10 @@ export default function AdminSettingsPage() {
       try {
         const settingsRef = doc(db, 'app_settings', 'config');
         const docSnap = await getDoc(settingsRef);
-        if (docSnap.exists()) {
-          setAppDownloadLink(docSnap.data().appDownloadLink || '');
+        if (docSnap.exists() && docSnap.data().appDownloadLink) {
+          setAppDownloadLink(docSnap.data().appDownloadLink);
         } else {
-          setAppDownloadLink(''); // Ensure it's empty if doc doesn't exist
+          setAppDownloadLink('');
         }
       } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memuat pengaturan.' });
@@ -78,11 +78,11 @@ export default function AdminSettingsPage() {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             const settingsRef = doc(db, 'app_settings', 'config');
             try {
-                // Try to update first, if it fails because it doesn't exist, set it.
                 await updateDoc(settingsRef, { appDownloadLink: downloadURL });
             } catch (error) {
                  if ((error as any).code === 'not-found') {
-                    await setDoc(settingsRef, { appDownloadLink: downloadURL });
+                    // This case shouldn't happen if we fetch on load, but as a fallback
+                    await doc(settingsRef).set({ appDownloadLink: downloadURL });
                  } else {
                     toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Gagal menyimpan tautan unduhan.' });
                  }
