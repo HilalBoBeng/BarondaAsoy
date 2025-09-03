@@ -387,7 +387,7 @@ export default function ScheduleAdminPage() {
                         <FormItem>
                             <FormLabel>Jam Mulai</FormLabel>
                             <FormControl>
-                              <Input type="time" {...field} />
+                              <Input type="text" {...field} placeholder="HH:MM" />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -396,7 +396,7 @@ export default function ScheduleAdminPage() {
                         <FormItem>
                             <FormLabel>Jam Selesai</FormLabel>
                             <FormControl>
-                                <Input type="time" {...field} />
+                                <Input type="text" {...field} placeholder="HH:MM"/>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -417,3 +417,4 @@ export default function ScheduleAdminPage() {
     </Card>
   );
 }
+
