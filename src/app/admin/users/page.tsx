@@ -47,7 +47,8 @@ export default function UsersAdminPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visibleAccessCodes, setVisibleAccessCodes] = useState<Record<string, boolean>>({});
-  
+  const [visibleEmails, setVisibleEmails] = useState<Record<string, boolean>>({});
+
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [selectedStaffForRejection, setSelectedStaffForRejection] = useState<Staff | null>(null);
 
@@ -207,11 +208,15 @@ export default function UsersAdminPage() {
     }
   }
   
-  const toggleAccessCodeVisibility = (staffId: string) => {
-    setVisibleAccessCodes(prev => ({
-        ...prev,
-        [staffId]: !prev[staffId]
-    }));
+  const toggleVisibility = (
+    id: string,
+    type: 'accessCode' | 'email'
+  ) => {
+    if (type === 'accessCode') {
+      setVisibleAccessCodes(prev => ({ ...prev, [id]: !prev[id] }));
+    } else {
+      setVisibleEmails(prev => ({ ...prev, [id]: !prev[id] }));
+    }
   };
 
   const handleToggleBlockUser = async (uid: string, isBlocked: boolean) => {
@@ -293,9 +298,8 @@ export default function UsersAdminPage() {
                                       Cabut Tangguhan
                                     </Button>
                                 ) : (
-                                    <Button variant="outline" size="sm" onClick={() => openSuspensionDialog(user, 'user')}>
-                                      <ShieldAlert className="h-4 w-4 mr-2" />
-                                      Tangguhkan
+                                    <Button variant="outline" size="icon" onClick={() => openSuspensionDialog(user, 'user')}>
+                                      <ShieldAlert className="h-4 w-4" />
                                     </Button>
                                 )}
                                 <Button variant="outline" size="sm" onClick={() => handleToggleBlockUser(user.uid, !!user.isBlocked)}>
@@ -360,7 +364,14 @@ export default function UsersAdminPage() {
                             staff.map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
-                                    <TableCell>*****</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            {visibleEmails[s.id] ? s.email : '*****'}
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleVisibility(s.id, 'email')}>
+                                                {visibleEmails[s.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                                            </Button>
+                                        </div>
+                                    </TableCell>
                                     <TableCell>
                                         <div className="flex items-center font-bold">
                                             <Star className="h-4 w-4 mr-1 text-yellow-500 fill-yellow-400" />
@@ -374,7 +385,7 @@ export default function UsersAdminPage() {
                                             ) : (
                                                 <span className="font-mono">*****</span>
                                             )}
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleAccessCodeVisibility(s.id)}>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleVisibility(s.id, 'accessCode')}>
                                                 {visibleAccessCodes[s.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                                             </Button>
                                         </div>
@@ -392,9 +403,8 @@ export default function UsersAdminPage() {
                                                 Cabut
                                               </Button>
                                           ) : (
-                                              <Button variant="outline" size="sm" onClick={() => openSuspensionDialog(s, 'staff')}>
-                                                <ShieldAlert className="h-4 w-4 mr-2" />
-                                                Tangguhkan
+                                              <Button variant="outline" size="icon" onClick={() => openSuspensionDialog(s, 'staff')}>
+                                                <ShieldAlert className="h-4 w-4" />
                                               </Button>
                                           )}
                                           <AlertDialog>

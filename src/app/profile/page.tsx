@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -27,6 +27,8 @@ import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const profileSchema = z.object({
   displayName: z.string().optional(),
@@ -46,7 +48,8 @@ export default function ProfilePage() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<FieldName | null>(null);
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -185,20 +188,90 @@ export default function ProfilePage() {
         return;
     }
     setEditingField(field);
-    form.setValue(field, user?.[field] || '');
+    form.reset({
+      displayName: user?.displayName || '',
+      phone: user?.phone || '',
+      addressDetail: user?.addressDetail || '',
+      photoURL: user?.photoURL || '',
+    });
     setIsEditDialogOpen(true);
   };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue('photoURL', reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+
+    const compressImage = (file: File, maxSizeKB: number): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 400;
+                    const MAX_HEIGHT = 400;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    let quality = 0.9;
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                    const getKB = (str: string) => new Blob([str]).size / 1024;
+
+                    while (getKB(dataUrl) > maxSizeKB && quality > 0.1) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    }
+                    resolve(dataUrl);
+                };
+                img.onerror = reject;
+            };
+            reader.onerror = reject;
+        });
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            // 1. Validate file size
+            if (file.size > 256 * 1024) { // 256 KB
+                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 256 KB." });
+                return;
+            }
+
+            // 2. Validate aspect ratio
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target?.result as string;
+                img.onload = async () => {
+                    if (img.width !== img.height) {
+                        toast({ variant: "destructive", title: "Rasio Aspek Salah", description: "Foto harus memiliki rasio 1:1 (persegi)." });
+                        return;
+                    }
+                    
+                    // 3. Compress and set preview
+                    const compressedDataUrl = await compressImage(file, 64);
+                    form.setValue('photoURL', compressedDataUrl);
+                };
+            };
+        }
+    };
 
   const onSubmit = async (data: ProfileFormValues) => {
       if (!user || !editingField) return;
@@ -229,6 +302,27 @@ export default function ProfilePage() {
           setIsSubmitting(false);
       }
   }
+
+    const handleDeletePhoto = async () => {
+        if (!user) return;
+        setIsSubmitting(true);
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, { 
+                photoURL: null,
+                lastUpdated_photoURL: serverTimestamp(),
+            });
+            toast({ title: 'Berhasil', description: 'Foto profil telah dihapus.' });
+            const updatedUser = { ...user, photoURL: null };
+            setUser(updatedUser as AppUser);
+            setLastUpdated(prev => ({ ...prev, photoURL: new Date() }));
+            setIsEditDialogOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus foto profil.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
   if (loading || isLoggingOut) {
      return (
@@ -409,7 +503,7 @@ export default function ProfilePage() {
         </main>
         
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent>
+            <DialogContent className="rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                 </DialogHeader>
@@ -436,9 +530,31 @@ export default function ProfilePage() {
                                 <FormItem>
                                     <FormLabel>Pilih Foto Baru</FormLabel>
                                     <FormControl>
-                                        <Input type="file" accept="image/*" onChange={handleFileChange} />
+                                        <Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} />
                                     </FormControl>
-                                    {field.value && <Image src={field.value} alt="Preview" width={100} height={100} className="mt-2 rounded-full mx-auto" />}
+                                    <FormDescription>Rasio 1:1, maks 256 KB.</FormDescription>
+                                    {field.value && (
+                                       <div className="flex flex-col items-center gap-4">
+                                            <Image src={field.value} alt="Preview" width={120} height={120} className="mt-2 rounded-full mx-auto" />
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button type="button" variant="destructive" size="sm">
+                                                        <Trash className="h-4 w-4 mr-2" /> Hapus Foto Saat Ini
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Tindakan ini akan menghapus foto profil Anda. Anda dapat mengunggah yang baru nanti.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={handleDeletePhoto}>Ya, Hapus</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                       </div>
+                                    )}
                                     <FormMessage />
                                 </FormItem>
                                 )}
