@@ -1,13 +1,13 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for sending a one-time password (OTP) via email.
+ * @fileOverview A Genkit flow for sending a one-time password (OTP) via email using Resend.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -33,6 +33,8 @@ const sendOtpFlow = ai.defineFlow(
   },
   async ({ email, context }) => {
     try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      
       // 1. Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
@@ -53,19 +55,10 @@ const sendOtpFlow = ai.defineFlow(
         expiresAt,
       });
 
-      // 4. Configure Nodemailer with hardcoded credentials
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: 'bobeng.icu@gmail.com',
-          pass: 'hrll wccf slpw shmt',
-        },
-      });
-
-      // 5. Send Email
-      const mailOptions = {
-        from: `"Baronda" <bobeng.icu@gmail.com>`,
-        to: email,
+      // 4. Send Email via Resend
+      const { data, error } = await resend.emails.send({
+        from: 'Baronda <onboarding@resend.dev>',
+        to: [email],
         subject: 'Kode Verifikasi Anda',
         html: `
             <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
@@ -77,9 +70,11 @@ const sendOtpFlow = ai.defineFlow(
                 <p style="font-size: 12px; color: #888;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
             </div>
         `,
-      };
+      });
 
-      await transporter.sendMail(mailOptions);
+      if (error) {
+        throw new Error(error.message);
+      }
       
       return { success: true, message: 'OTP sent successfully.' };
 
