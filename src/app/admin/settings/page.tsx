@@ -36,7 +36,6 @@ import { Progress } from "@/components/ui/progress";
 const appNameSchema = z.object({ appName: z.string().min(1, "Nama aplikasi tidak boleh kosong.") });
 const appLogoSchema = z.object({ appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")) });
 const maintenanceSchema = z.object({ maintenanceMode: z.boolean() });
-const appDownloadLinkSchema = z.object({ appDownloadLink: z.string().optional() });
 
 type AppNameValues = z.infer<typeof appNameSchema>;
 type AppLogoValues = z.infer<typeof appLogoSchema>;
