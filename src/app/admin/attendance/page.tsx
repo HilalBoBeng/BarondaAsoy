@@ -30,6 +30,7 @@ const statusConfig: Record<string, { className: string; label: string }> = {
     'Sakit': { className: 'bg-orange-100 text-orange-800', label: 'Sakit' },
     'Pending': { className: 'bg-gray-100 text-gray-800', label: 'Belum Absen' },
     'In Progress': { className: 'bg-blue-100 text-blue-800', label: 'Berlangsung' },
+    'Tanpa Keterangan': { className: 'bg-red-100 text-red-800', label: 'Tanpa Keterangan' },
 };
 
 
@@ -139,6 +140,7 @@ export default function AttendancePage() {
                         <SelectItem value="Izin">Izin</SelectItem>
                         <SelectItem value="Sakit">Sakit</SelectItem>
                         <SelectItem value="Pending">Belum Absen</SelectItem>
+                        <SelectItem value="Tanpa Keterangan">Tanpa Keterangan</SelectItem>
                     </SelectContent>
                 </Select>
             </div>

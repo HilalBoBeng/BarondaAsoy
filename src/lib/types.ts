@@ -17,7 +17,7 @@ export interface ScheduleEntry {
   officer: string;
   officerId: string;
   area: string;
-  status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit' | 'Pending Review';
+  status: 'Completed' | 'Pending' | 'In Progress' | 'Izin' | 'Sakit' | 'Pending Review' | 'Tanpa Keterangan';
   reason?: string; // For Izin or Sakit
   qrToken?: string;
   qrTokenExpires?: Timestamp;

@@ -34,11 +34,12 @@ const statusConfig: Record<string, {
     className: string;
     label: string;
 }> = {
-  'Pending': { className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400', label: 'Menunggu Konfirmasi' },
-  'In Progress': { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400', label: 'Sedang Bertugas' },
-  'Completed': { className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
-  'Izin': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Izin' },
-  'Sakit': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Sakit' },
+  'Pending': { className: 'bg-yellow-100 text-yellow-800', label: 'Menunggu Konfirmasi' },
+  'In Progress': { className: 'bg-blue-100 text-blue-800', label: 'Sedang Bertugas' },
+  'Completed': { className:'bg-green-100 text-green-800', label: 'Selesai' },
+  'Izin': { className: 'bg-gray-100 text-gray-800', label: 'Izin' },
+  'Sakit': { className: 'bg-orange-100 text-orange-800', label: 'Sakit' },
+  'Tanpa Keterangan': { className: 'bg-red-100 text-red-800', label: 'Tanpa Keterangan' }
 };
 
 
@@ -134,7 +135,7 @@ export default function PetugasSchedulePage() {
   
   const ScheduleCard = ({ schedule }: { schedule: ScheduleEntry }) => {
     const { status, area, time, date } = schedule;
-    const config = statusConfig[status] || statusConfig['Pending'];
+    const config = statusConfig[status] || {className: 'bg-gray-200', label: status};
 
     return (
       <Card>
@@ -162,7 +163,7 @@ export default function PetugasSchedulePage() {
                 </>
             )}
             {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleUpdateStatus(schedule, 'Completed')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Selesaikan Tugas</Button>}
-            {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
+            {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit' || schedule.status === 'Tanpa Keterangan') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
         </CardFooter>
       </Card>
     );

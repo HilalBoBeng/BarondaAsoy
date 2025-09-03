@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, use } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, getDocs, where, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -22,7 +22,7 @@ import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, Use
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -96,12 +96,37 @@ export default function ScheduleAdminPage() {
     });
 
     const q = query(collection(db, 'schedules'), orderBy('date', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const scheduleData: ScheduleEntry[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         date: doc.data().date?.toDate(),
       })) as ScheduleEntry[];
+
+       // Auto-update overdue schedules
+      const now = new Date();
+      const yesterday = subDays(now, 1);
+      const batch = writeBatch(db);
+      let updatesMade = false;
+
+      scheduleData.forEach(s => {
+        if (s.status === 'Pending' && s.date && (s.date as Date) < yesterday) {
+          const scheduleRef = doc(db, 'schedules', s.id);
+          batch.update(scheduleRef, { status: 'Tanpa Keterangan' });
+          updatesMade = true;
+          s.status = 'Tanpa Keterangan'; // Update local state immediately
+        }
+      });
+      
+      if (updatesMade) {
+        try {
+            await batch.commit();
+            toast({ title: 'Jadwal Diperbarui', description: 'Beberapa jadwal yang terlewat telah ditandai.' });
+        } catch (error) {
+            console.error("Gagal memperbarui jadwal yang terlewat:", error);
+        }
+      }
+
       setSchedule(scheduleData);
       setLoading(false);
     }, (error) => {
@@ -112,7 +137,7 @@ export default function ScheduleAdminPage() {
         unsubStaff();
         unsubscribe();
     }
-  }, []);
+  }, [toast]);
   
   useEffect(() => {
     if (isDialogOpen) {
@@ -185,14 +210,15 @@ export default function ScheduleAdminPage() {
 
   const StatusBadge = ({ status }: { status: ScheduleEntry['status'] }) => {
     const config = {
-        'Pending': { className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400', label: 'Menunggu' },
-        'In Progress': { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400', label: 'Bertugas' },
-        'Completed': { className:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400', label: 'Selesai' },
-        'Izin': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Izin' },
-        'Sakit': { className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-400', label: 'Sakit' },
+        'Pending': { className: 'bg-yellow-100 text-yellow-800', label: 'Menunggu' },
+        'In Progress': { className: 'bg-blue-100 text-blue-800', label: 'Bertugas' },
+        'Completed': { className:'bg-green-100 text-green-800', label: 'Selesai' },
+        'Izin': { className: 'bg-gray-100 text-gray-800', label: 'Izin' },
+        'Sakit': { className: 'bg-orange-100 text-orange-800', label: 'Sakit' },
+        'Tanpa Keterangan': { className: 'bg-red-100 text-red-800', label: 'Tanpa Keterangan' }
     } as const;
 
-    const { className, label } = config[status] || config['Pending'];
+    const { className, label } = config[status] || { className: 'bg-gray-100 text-gray-800', label: status };
     return <Badge variant={'secondary'} className={className}>{label}</Badge>
   };
   
