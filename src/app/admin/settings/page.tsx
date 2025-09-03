@@ -76,18 +76,17 @@ export default function AdminSettingsPage() {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             const settingsRef = doc(db, 'app_settings', 'config');
             try {
+                // Try to update first, if it fails because it doesn't exist, set it.
                 await updateDoc(settingsRef, { appDownloadLink: downloadURL });
-                setAppDownloadLink(downloadURL);
-                toast({ title: 'Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
             } catch (error) {
                  if ((error as any).code === 'not-found') {
                     await setDoc(settingsRef, { appDownloadLink: downloadURL });
-                    setAppDownloadLink(downloadURL);
-                    toast({ title: 'Berhasil', description: 'Pengaturan dibuat dan file APK berhasil diunggah.' });
                  } else {
                     toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Gagal menyimpan tautan unduhan.' });
                  }
             } finally {
+                 setAppDownloadLink(downloadURL);
+                 toast({ title: 'Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
                  setIsUploading(false);
                  setSelectedFile(null);
                  if(fileInputRef.current) fileInputRef.current.value = "";
@@ -116,7 +115,7 @@ export default function AdminSettingsPage() {
             <div className="flex items-center gap-2">
                 <Input
                     readOnly
-                    value={appDownloadLink || 'Belum ada file APK yang diunggah.'}
+                    value={loading ? "Memuat..." : (appDownloadLink || 'Belum ada file APK yang diunggah.')}
                     className="bg-muted/50"
                 />
                  {appDownloadLink && (
@@ -144,7 +143,7 @@ export default function AdminSettingsPage() {
                   Unggah
                 </Button>
             </div>
-            {selectedFile && <p className="text-xs text-muted-foreground">File dipilih: {selectedFile.name}</p>}
+            {selectedFile && !isUploading && <p className="text-xs text-muted-foreground">File dipilih: {selectedFile.name}</p>}
         </div>
 
         {isUploading && (
