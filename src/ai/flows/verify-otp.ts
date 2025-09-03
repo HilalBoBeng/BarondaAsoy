@@ -4,12 +4,10 @@
  * @fileOverview A Genkit flow for verifying a one-time password (OTP).
  */
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-import { collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { z } from 'zod';
+import { adminDb } from "@/lib/firebase/admin";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { app } from "@/lib/firebase/client";
+import { app } from "@/lib/firebase/client"; // auth needs the client app
 
 const VerifyOtpInputSchema = z.object({
   email: z.string().email().describe('The email address being verified.'),
@@ -38,14 +36,12 @@ const verifyOtpFlow = ai.defineFlow(
   },
   async ({ email, otp, name, password }) => {
     try {
-      const q = query(
-        collection(db, 'otps'),
-        where('email', '==', email),
-        where('otp', '==', otp),
-        where('context', '==', 'userRegistration')
-      );
+      const q = adminDb.collection('otps')
+        .where('email', '==', email)
+        .where('otp', '==', otp)
+        .where('context', '==', 'userRegistration');
       
-      const otpSnapshot = await getDocs(q);
+      const otpSnapshot = await q.get();
 
       if (otpSnapshot.empty) {
         return { success: false, message: 'Kode OTP tidak valid.' };
@@ -59,7 +55,7 @@ const verifyOtpFlow = ai.defineFlow(
       }
       
       // OTP is valid, clean up the OTP document
-      const batch = writeBatch(db);
+      const batch = adminDb.batch();
       batch.delete(otpDoc.ref);
       
       if (!name || !password) {
@@ -72,18 +68,18 @@ const verifyOtpFlow = ai.defineFlow(
 
       await updateProfile(user, { displayName: name });
       
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
+      const userDocRef = adminDb.collection('users').doc(user.uid);
+      await batch.set(userDocRef, {
         uid: user.uid,
         displayName: name,
         email: user.email,
-        createdAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
         photoURL: null,
         phone: '',
         address: '',
         isBlocked: false,
       });
-
+      
       await batch.commit();
 
       return { success: true, message: 'Registrasi berhasil!', userId: user.uid };

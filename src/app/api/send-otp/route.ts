@@ -1,7 +1,7 @@
 
 import { sendOtpMail } from "@/lib/mail";
-import { db } from "@/lib/firebase/client"; // <--- Menggunakan Client SDK
-import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase/admin"; 
+import { FieldValue } from "firebase-admin/firestore";
 
 export const runtime = "nodejs"; // Wajib agar Nodemailer berfungsi
 
@@ -17,19 +17,17 @@ export async function POST(req: Request) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit dari sekarang
 
-    // 2. Hapus OTP lama untuk email ini menggunakan Client SDK
-    const otpQuery = query(collection(db, 'otps'), where('email', '==', email));
-    const oldOtps = await getDocs(otpQuery);
-    const batch = writeBatch(db);
-    oldOtps.forEach(doc => batch.delete(doc.ref));
+    // 2. Hapus OTP lama untuk email ini menggunakan Admin SDK
+    const otpQuery = await adminDb.collection('otps').where('email', '==', email).get();
+    const batch = adminDb.batch();
+    otpQuery.forEach(doc => batch.delete(doc.ref));
     await batch.commit();
 
-
-    // 3. Simpan OTP baru di Firestore menggunakan Client SDK
-    await addDoc(collection(db, 'otps'),{
+    // 3. Simpan OTP baru di Firestore menggunakan Admin SDK
+    await adminDb.collection('otps').add({
       email,
       otp,
-      createdAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       expiresAt,
       context: 'userRegistration'
     });
