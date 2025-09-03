@@ -152,7 +152,7 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Nama Lengkap</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nama Anda" {...field} />
+                      <Input placeholder="Nama Anda" {...field} maxLength={50} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

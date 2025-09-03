@@ -28,7 +28,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const notificationSchema = z.object({
   recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
-  title: z.string().min(1, "Judul tidak boleh kosong."),
+  title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   message: z.string().min(1, "Pesan tidak boleh kosong.").max(1200, "Pesan tidak boleh lebih dari 1200 karakter."),
 });
 
@@ -429,7 +429,18 @@ export default function NotificationsAdminPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Judul</FormLabel>
-                      <FormControl><Input placeholder="Judul pemberitahuan" {...field} /></FormControl>
+                      <FormControl>
+                        <Input 
+                            placeholder="Judul pemberitahuan" 
+                            {...field} 
+                            maxLength={50}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                }
+                            }}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

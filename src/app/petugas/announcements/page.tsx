@@ -260,12 +260,6 @@ export default function AnnouncementsPetugasPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
-                <DialogClose asChild>
-                    <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Tutup</span>
-                    </Button>
-                </DialogClose>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -276,7 +270,17 @@ export default function AnnouncementsPetugasPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Judul</FormLabel>
-                        <FormControl><Input {...field} maxLength={50} /></FormControl>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            maxLength={50}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
