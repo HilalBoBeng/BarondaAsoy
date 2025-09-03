@@ -215,8 +215,8 @@ export default function AdminSettingsPage() {
         
         <div>
             <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><Download className="h-5 w-5" />File Aplikasi</h3>
-             <FormItem>
-                <FormLabel>File APK Aplikasi</FormLabel>
+             <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">File APK Aplikasi</label>
                  <div className="flex items-center gap-2">
                     <Input 
                         value={appDownloadLink || ''}
@@ -250,7 +250,7 @@ export default function AdminSettingsPage() {
                  <p className="text-sm text-muted-foreground">
                     Unggah file APK untuk disebarkan melalui halaman unduhan.
                 </p>
-             </FormItem>
+             </div>
         </div>
 
         <Separator />
