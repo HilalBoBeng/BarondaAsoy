@@ -8,11 +8,10 @@ import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, QrCode, Image as ImageIcon, Camera, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, QrCode, Image as ImageIcon, Camera, CheckCircle, ShieldAlert } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
-import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode';
-
+import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult, type Html5QrcodeScannerState } from 'html5-qrcode';
 
 function ScanPageContent() {
   const router = useRouter();
@@ -39,16 +38,15 @@ function ScanPageContent() {
 
   const stopScanner = useCallback(() => {
     if (scannerRef.current && scannerRef.current.isScanning) {
-      try {
-        scannerRef.current.stop().catch(err => console.error("Gagal menghentikan pemindai.", err));
-      } catch (err) {
-         console.error("Gagal menghentikan pemindai (mungkin sudah berhenti).", err);
-      }
+      scannerRef.current.stop().catch(err => {
+        console.error("Gagal menghentikan pemindai.", err);
+      });
     }
   }, []);
   
   const processDecodedText = useCallback(async (decodedText: string) => {
     if (status === 'processing' || status === 'success') return;
+    
     setStatus('processing');
     setErrorMessage(null);
     stopScanner();
@@ -115,9 +113,8 @@ function ScanPageContent() {
     }
   }, [status, router, toast, scanType, stopScanner]);
 
-
-   useEffect(() => {
-    if (!scanType) return;
+  useEffect(() => {
+    if (!scanType || scannerRef.current) return;
     
     const qrScanner = new Html5Qrcode(scannerContainerId, { verbose: false });
     scannerRef.current = qrScanner;
@@ -127,69 +124,63 @@ function ScanPageContent() {
         processDecodedText(decodedText);
     };
 
-    const onScanFailure = (error: Html5QrcodeError) => {
-        // This is expected, do nothing.
-    };
+    const onScanFailure = (error: Html5QrcodeError) => {};
 
     const startCamera = async () => {
-      setStatus('idle'); // Set status to idle while asking for permission
-      try {
-          await qrScanner.start(
-              { facingMode: "environment" },
-              { fps: 10, qrbox: { width: 250, height: 250 } },
-              onScanSuccess,
-              onScanFailure
-          );
-          setStatus('scanning');
-      } catch (err) {
-          console.error("Camera start error:", err);
-          setStatus('permission_denied');
-          const errMessage = (err as any).name === "NotAllowedError" 
-              ? "Izin akses kamera ditolak. Mohon aktifkan di pengaturan browser Anda."
-              : `Gagal memulai kamera: ${err}`;
-          setErrorMessage(errMessage);
-      }
+        if (!scannerRef.current) return;
+        setStatus('idle');
+        try {
+            await scannerRef.current.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                onScanFailure
+            );
+            setStatus('scanning');
+        } catch (err) {
+            console.error("Camera start error:", err);
+            const errMessage = (err as any).name === "NotAllowedError" 
+                ? "Izin akses kamera ditolak. Mohon aktifkan di pengaturan browser Anda."
+                : `Gagal memulai kamera: ${(err as Error).message}`;
+            setErrorMessage(errMessage);
+            setStatus('permission_denied');
+        }
     };
     
     startCamera();
-    
-    return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(err => console.log("Failed to stop scanner on cleanup.", err));
-      }
-    };
-  }, [scanType, processDecodedText, status]);
 
+    return () => {
+        if (scannerRef.current && scannerRef.current.isScanning) {
+          scannerRef.current.stop().catch(err => console.log("Gagal menghentikan pemindai saat cleanup.", err));
+        }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanType]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    e.target.value = ''; // Reset input to allow re-uploading the same file
+    e.target.value = ''; // Reset
 
-    if (!scannerRef.current) {
-      // Inisialisasi jika belum ada
-      scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
-    }
+    if (!scannerRef.current) return;
 
+    stopScanner();
     setStatus('processing');
     setErrorMessage(null);
     try {
       const decodedText = await scannerRef.current.scanFile(file, false);
       processDecodedText(decodedText);
     } catch (err) {
-       const msg = err instanceof Error ? err.message : "Gagal memproses gambar.";
        setErrorMessage("Tidak dapat menemukan QR code pada gambar. Pastikan gambar jelas dan tidak buram.");
        setStatus('error');
     }
   };
-  
-   const handleTryAgain = () => {
+
+  const handleTryAgain = () => {
     setErrorMessage(null);
     setStatus('idle');
-    // useEffect will handle restarting the camera
     window.location.reload();
   };
-
 
   if (status === 'success') {
     return (
@@ -211,7 +202,8 @@ function ScanPageContent() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
               <QrCode className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle>Pindai Kode QR untuk {scanType === 'start' ? 'Memulai' : 'Mengakhiri'} Patroli</CardTitle>
+          <CardTitle>Pindai Kode QR</CardTitle>
+          <CardDescription>Arahkan kamera ke kode QR untuk {scanType === 'start' ? 'Memulai' : 'Mengakhiri'} Patroli.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative w-full max-w-sm mx-auto aspect-square bg-muted rounded-lg overflow-hidden shadow-inner flex items-center justify-center">
@@ -244,9 +236,12 @@ function ScanPageContent() {
 
           {(status === 'error' || status === 'permission_denied') && errorMessage && (
              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
                 <AlertTitle>Gagal</AlertTitle>
-                <AlertDescription>{errorMessage}</AlertDescription>
-                 <Button onClick={handleTryAgain} className="mt-2" size="sm">Coba Lagi</Button>
+                <AlertDescription>
+                    {errorMessage}
+                    <Button onClick={handleTryAgain} className="mt-2" size="sm" variant="secondary">Coba Lagi</Button>
+                </AlertDescription>
             </Alert>
           )}
 
