@@ -5,33 +5,34 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, Timestamp, orderBy, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
 import ReportHistory from '@/components/profile/report-history';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, formatDistanceToNow, isBefore, addDays } from 'date-fns';
+import { format, formatDistanceToNow, isBefore, addDays, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
+import { cn } from '@/lib/utils';
 
 const profileSchema = z.object({
   displayName: z.string().optional(),
   phone: z.string().optional(),
   addressDetail: z.string().optional(),
+  photoURL: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -47,6 +48,7 @@ export default function ProfilePage() {
   const [editingField, setEditingField] = useState<FieldName | null>(null);
   
   const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { toast } = useToast();
   const auth = getAuth(app);
@@ -60,11 +62,12 @@ export default function ProfilePage() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
-  const canEditField = (field: FieldName) => {
+  const canEditField = useCallback((field: FieldName) => {
     const lastUpdateDate = lastUpdated[field];
     if (!lastUpdateDate) return true;
-    return isBefore(lastUpdateDate, addDays(new Date(), -7));
-  };
+    const cooldownDays = field === 'photoURL' ? 14 : 7;
+    return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
+  }, [lastUpdated]);
 
 
   useEffect(() => {
@@ -83,9 +86,11 @@ export default function ProfilePage() {
                     displayName: currentUser.displayName || 'Warga Baru',
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
+                    photoURL: null,
                     lastUpdated_displayName: null,
                     lastUpdated_phone: null,
-                    lastUpdated_address: null,
+                    lastUpdated_addressDetail: null,
+                    lastUpdated_photoURL: null,
                     phone: '',
                     addressType: 'kilongan',
                     addressDetail: '',
@@ -109,13 +114,14 @@ export default function ProfilePage() {
                 displayName: userData.displayName || '',
                 phone: userData.phone || '',
                 addressDetail: userData.addressDetail || '',
+                photoURL: userData.photoURL || '',
             });
 
-            // Set last updated dates for each field
             const lastUpdatedDates: { [key in FieldName]?: Date | null } = {};
             if (userData.lastUpdated_displayName) lastUpdatedDates.displayName = (userData.lastUpdated_displayName as Timestamp).toDate();
             if (userData.lastUpdated_phone) lastUpdatedDates.phone = (userData.lastUpdated_phone as Timestamp).toDate();
-            if (userData.lastUpdated_address) lastUpdatedDates.addressDetail = (userData.lastUpdated_address as Timestamp).toDate();
+            if (userData.lastUpdated_addressDetail) lastUpdatedDates.addressDetail = (userData.lastUpdated_addressDetail as Timestamp).toDate();
+            if (userData.lastUpdated_photoURL) lastUpdatedDates.photoURL = (userData.lastUpdated_photoURL as Timestamp).toDate();
             setLastUpdated(lastUpdatedDates);
 
 
@@ -145,10 +151,32 @@ export default function ProfilePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, router, toast]);
   
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
+      toast({
+        title: "Berhasil Keluar",
+        description: "Anda akan diarahkan ke halaman utama.",
+      });
+      setTimeout(() => {
+          router.push('/');
+          setIsLoggingOut(false);
+      }, 2000);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Gagal Keluar",
+        description: "Terjadi kesalahan saat mencoba keluar.",
+      });
+      setIsLoggingOut(false);
+    }
+  };
 
   const handleEditClick = (field: FieldName) => {
     if (!canEditField(field)) {
-        toast({ variant: 'destructive', title: 'Data Dikunci', description: 'Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.' });
+        const cooldownDays = field === 'photoURL' ? 14 : 7;
+        toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah ${cooldownDays} hari dari pembaruan terakhir.` });
         return;
     }
     setEditingField(field);
@@ -156,6 +184,17 @@ export default function ProfilePage() {
     setIsEditDialogOpen(true);
   };
   
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('photoURL', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const onSubmit = async (data: ProfileFormValues) => {
       if (!user || !editingField) return;
       setIsSubmitting(true);
@@ -167,10 +206,6 @@ export default function ProfilePage() {
           updateData[editingField] = valueToUpdate;
           updateData[`lastUpdated_${editingField}`] = serverTimestamp();
           
-          if(editingField === 'addressDetail'){
-              updateData.address = valueToUpdate;
-          }
-
           await updateDoc(userDocRef, updateData);
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
@@ -190,27 +225,42 @@ export default function ProfilePage() {
       }
   }
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  if (loading || isLoggingOut) {
+     return (
+        <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
+            <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Loading Logo" 
+                width={120} 
+                height={120} 
+                className="animate-logo-pulse"
+                priority
+            />
+            {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
+        </div>
+    );
   }
   
   const fieldLabels: Record<FieldName, string> = {
     displayName: "Nama Lengkap",
     phone: "Nomor HP / WhatsApp",
-    addressDetail: "Alamat"
+    addressDetail: "Alamat",
+    photoURL: "Foto Profil"
   };
 
   const fieldIcons: Record<keyof ProfileFormValues | 'email' | 'address', React.ElementType> = {
     displayName: User,
     email: Mail,
     phone: Phone,
-    address: MapPin,
     addressDetail: MapPin,
+    photoURL: Camera,
   };
 
   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
     const Icon = fieldIcons[field];
     const canEdit = canEditField(field);
+    const cooldownDays = field === 'photoURL' ? 14 : 7;
+    const lastUpdateDate = lastUpdated[field];
 
     return (
         <div className="flex items-start justify-between gap-4 p-4 border-b last:border-b-0">
@@ -219,22 +269,16 @@ export default function ProfilePage() {
                 <div className="flex-1">
                     <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
                     <p className="font-medium">{value || 'Belum diisi'}</p>
-                     {!canEdit && lastUpdated[field] && (
+                     {!canEdit && lastUpdateDate && (
                         <p className="text-xs text-muted-foreground italic mt-1">
-                            Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdated[field]!, 7), { addSuffix: true, locale: id })}
+                            Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdateDate, cooldownDays), { addSuffix: true, locale: id })}
                         </p>
                     )}
                 </div>
             </div>
-            {canEdit ? (
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)}>
-                    <Pencil className="h-4 w-4" />
-                </Button>
-            ) : (
-                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" disabled>
-                    <Lock className="h-4 w-4" />
-                </Button>
-            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)} disabled={!canEdit}>
+                {canEdit ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+            </Button>
         </div>
     );
   };
@@ -242,25 +286,33 @@ export default function ProfilePage() {
   return (
      <div className="flex min-h-screen flex-col bg-muted/40">
        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <Button asChild variant="outline" size="sm">
-                <Link href="/">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Kembali
-                </Link>
-            </Button>
-            <div className="flex items-center gap-2 text-right">
-              <div className="flex flex-col">
-                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-              </div>
-              <Image 
-                src="https://iili.io/KJ4aGxp.png" 
-                alt="Logo" 
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-          </div>
+            <div className="flex items-center gap-2">
+                <Button asChild variant="outline" size="sm">
+                    <Link href="/">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Kembali
+                    </Link>
+                </Button>
+            </div>
+            <div className="flex items-center gap-2">
+               <Button onClick={handleLogout} variant="destructive" size="sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Keluar
+               </Button>
+                <div className="flex items-center gap-2 text-right">
+                    <div className="hidden sm:flex flex-col">
+                        <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                        <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+                    </div>
+                    <Image 
+                        src="https://iili.io/KJ4aGxp.png" 
+                        alt="Logo" 
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 rounded-full object-cover"
+                    />
+                </div>
+            </div>
        </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
@@ -275,6 +327,9 @@ export default function ProfilePage() {
                                         {user?.displayName?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
+                                <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")} disabled={!canEditField("photoURL")}>
+                                   {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
+                                </Button>
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -361,7 +416,7 @@ export default function ProfilePage() {
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                        {editingField && (
+                        {editingField && editingField !== 'photoURL' && (
                            <FormField
                                 control={form.control}
                                 name={editingField}
@@ -369,6 +424,22 @@ export default function ProfilePage() {
                                 <FormItem>
                                     <FormLabel>{fieldLabels[editingField]}</FormLabel>
                                     <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        )}
+                        {editingField === 'photoURL' && (
+                            <FormField
+                                control={form.control}
+                                name="photoURL"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Pilih Foto Baru</FormLabel>
+                                    <FormControl>
+                                        <Input type="file" accept="image/*" onChange={handleFileChange} />
+                                    </FormControl>
+                                    {field.value && <Image src={field.value} alt="Preview" width={100} height={100} className="mt-2 rounded-full mx-auto" />}
                                     <FormMessage />
                                 </FormItem>
                                 )}
@@ -389,3 +460,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

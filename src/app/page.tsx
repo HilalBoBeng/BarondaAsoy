@@ -156,29 +156,6 @@ export default function Home() {
       setPaginatedNotifications(allNotifications.slice(start, end));
   }, [notificationPage, allNotifications]);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await signOut(auth);
-      toast({
-        title: "Berhasil Keluar",
-        description: "Anda akan diarahkan ke halaman utama.",
-      });
-      // The onAuthStateChanged listener will handle UI updates
-      setTimeout(() => {
-          router.push('/');
-          setIsLoggingOut(false);
-      }, 2000);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Gagal Keluar",
-        description: "Terjadi kesalahan saat mencoba keluar.",
-      });
-      setIsLoggingOut(false);
-    }
-  };
-
     const handleNotificationClick = async (notif: Notification, index: number) => {
       if (userInfo?.isBlocked) {
         toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Anda tidak dapat melihat detail pemberitahuan.' });
@@ -352,11 +329,6 @@ export default function Home() {
                            <span>Pengaturan</span>
                          </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                       <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Keluar</span>
-                      </DropdownMenuItem>
                     </>
                    ) : (
                     <>
@@ -506,3 +478,5 @@ export default function Home() {
     </>
   );
 }
+
+    

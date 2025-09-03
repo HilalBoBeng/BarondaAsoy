@@ -65,7 +65,8 @@ export interface AppUser {
   isBlocked?: boolean;
   lastUpdated_displayName?: Timestamp;
   lastUpdated_phone?: Timestamp;
-  lastUpdated_address?: Timestamp;
+  lastUpdated_addressDetail?: Timestamp;
+  lastUpdated_photoURL?: Timestamp;
 }
 
 export interface Staff {
@@ -134,3 +135,4 @@ export interface DuesPayment {
     recordedById: string; // Staff ID
 }
 
+    
