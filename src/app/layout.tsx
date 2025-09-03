@@ -13,6 +13,8 @@ import { db } from "@/lib/firebase/client";
 import MaintenancePage from "./maintenance/page";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { getAuth } from "firebase/auth";
+
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -34,9 +36,12 @@ function LoadingSkeleton() {
   )
 }
 
-function App({ children }: { children: ReactNode }) {
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const [maintenanceMode, setMaintenanceMode] = useState<boolean | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -45,49 +50,45 @@ function App({ children }: { children: ReactNode }) {
       try {
         const settingsRef = doc(db, 'app_settings', 'config');
         const docSnap = await getDoc(settingsRef);
-        if (docSnap.exists() && docSnap.data().maintenanceMode) {
-          setMaintenanceMode(true);
-        } else {
-          setMaintenanceMode(false);
-        }
+        setMaintenanceMode(docSnap.exists() && docSnap.data().maintenanceMode);
       } catch (error) {
         console.error("Error fetching maintenance status:", error);
-      } finally {
-        setLoading(false);
+        setMaintenanceMode(false);
       }
     };
     fetchSettings();
   }, []);
   
+  const auth = getAuth();
+  const isUserLoggedIn = !!auth.currentUser;
+  
   const isBypassRoute = 
-    pathname.startsWith('/admin') || 
-    pathname.startsWith('/petugas') || 
-    pathname.startsWith('/auth/staff');
+      pathname.startsWith('/admin') || 
+      pathname.startsWith('/petugas') || 
+      pathname.startsWith('/auth/staff');
 
-  useEffect(() => {
-    if (!loading && maintenanceMode && !isBypassRoute) {
-      router.push('/maintenance');
-    }
-  }, [loading, maintenanceMode, isBypassRoute, pathname, router]);
-
-
-  if (loading) {
-    return <LoadingSkeleton />;
+  const isAccessingProtectedRoute = !isBypassRoute && pathname !== '/' && pathname !== '/maintenance';
+  
+  if (maintenanceMode === null) {
+      return (
+        <html lang="id" suppressHydrationWarning>
+           <body className={`${ptSans.className} antialiased bg-background`}>
+                <LoadingSkeleton />
+           </body>
+        </html>
+      )
   }
   
-  if (maintenanceMode && !isBypassRoute) {
-    return <MaintenancePage />;
+  if (maintenanceMode && isAccessingProtectedRoute && !isBypassRoute) {
+      return (
+         <html lang="id" suppressHydrationWarning>
+            <body className={`${ptSans.className} antialiased bg-background`}>
+                <MaintenancePage />
+            </body>
+         </html>
+      )
   }
 
-  return <>{children}</>;
-}
-
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
@@ -102,12 +103,8 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <Suspense fallback={<LoadingSkeleton />}>
-            <App>
-              {children}
-            </App>
-          </Suspense>
-          <Toaster />
+           {children}
+           <Toaster />
         </ThemeProvider>
       </body>
     </html>
