@@ -8,7 +8,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const SendReplyInputSchema = z.object({
   reportId: z.string().describe("The ID of the report being replied to."),
@@ -29,6 +29,8 @@ export type SendReplyOutput = z.infer<typeof SendReplyOutputSchema>;
 export async function sendReply(input: SendReplyInput): Promise<SendReplyOutput> {
   return sendReplyFlow(input);
 }
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendReplyFlow = ai.defineFlow(
   {
@@ -69,15 +71,7 @@ const sendReplyFlow = ai.defineFlow(
             </html>
           `;
       
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      await transporter.sendMail({
+      await resend.emails.send({
         from: '"Baronda" <onboarding@resend.dev>',
         to: recipientEmail,
         subject: 'Re: Laporan Keamanan Anda',

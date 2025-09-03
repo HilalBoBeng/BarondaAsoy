@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow for generating and sending a One-Time Password (OTP) using Nodemailer.
+ * @fileOverview This file defines a Genkit flow for generating and sending a One-Time Password (OTP) using Resend.
  *
  * - sendOtp - Generates, stores, and sends an OTP to a user's email.
  * - SendOtpInput - The input type for the sendOtp function.
@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
@@ -29,6 +29,8 @@ export type SendOtpOutput = z.infer<typeof SendOtpOutputSchema>;
 export async function sendOtp(input: SendOtpInput): Promise<SendOtpOutput> {
   return sendOtpFlow(input);
 }
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendOtpFlow = ai.defineFlow(
   {
@@ -89,15 +91,7 @@ const sendOtpFlow = ai.defineFlow(
             </html>
           `;
 
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      await transporter.sendMail({
+      await resend.emails.send({
         from: '"Baronda" <onboarding@resend.dev>',
         to: email,
         subject: 'Kode Verifikasi Anda',

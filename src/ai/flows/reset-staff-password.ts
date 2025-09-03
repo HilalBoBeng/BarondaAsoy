@@ -9,7 +9,7 @@ import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase/client';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const ResetStaffPasswordInputSchema = z.object({
   email: z.string().email().describe('The email address of the staff member.'),
@@ -25,6 +25,8 @@ export type ResetStaffPasswordOutput = z.infer<typeof ResetStaffPasswordOutputSc
 export async function resetStaffPassword(input: ResetStaffPasswordInput): Promise<ResetStaffPasswordOutput> {
   return resetStaffPasswordFlow(input);
 }
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const resetStaffPasswordFlow = ai.defineFlow(
   {
@@ -61,15 +63,7 @@ const resetStaffPasswordFlow = ai.defineFlow(
             </html>
           `;
 
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      await transporter.sendMail({
+      await resend.emails.send({
         from: '"Baronda" <onboarding@resend.dev>',
         to: email,
         subject: 'Reset Kata Sandi Petugas - Kode Akses Anda',

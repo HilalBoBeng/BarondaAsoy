@@ -6,7 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const SendStaffAccessCodeInputSchema = z.object({
   email: z.string().email().describe('The email address of the new staff member.'),
@@ -24,6 +24,8 @@ export type SendStaffAccessCodeOutput = z.infer<typeof SendStaffAccessCodeOutput
 export async function sendStaffAccessCode(input: SendStaffAccessCodeInput): Promise<SendStaffAccessCodeOutput> {
   return sendStaffAccessCodeFlow(input);
 }
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendStaffAccessCodeFlow = ai.defineFlow(
   {
@@ -50,15 +52,7 @@ const sendStaffAccessCodeFlow = ai.defineFlow(
             </html>
           `;
 
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      await transporter.sendMail({
+      await resend.emails.send({
         from: '"Baronda" <onboarding@resend.dev>',
         to: email,
         subject: 'Pendaftaran Petugas Baronda Disetujui',
