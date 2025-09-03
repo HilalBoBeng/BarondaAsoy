@@ -11,22 +11,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, ArrowLeft, QrCode, Upload, Camera, CheckCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode';
 
-// Check if BarcodeDetector is available in the browser
-const isBarcodeDetectorSupported = () => typeof window !== 'undefined' && 'BarcodeDetector' in window;
 
 function ScanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   
-  const [status, setStatus] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error' | 'permission_denied' | 'unsupported'>('idle');
+  const [status, setStatus] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error' | 'permission_denied'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<'start' | 'end' | null>(null);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const animationFrameId = useRef<number>();
+  const scannerContainerId = "qr-code-full-region";
 
   useEffect(() => {
     const type = searchParams.get('type') as 'start' | 'end';
@@ -38,22 +37,17 @@ function ScanPageContent() {
     }
   }, [searchParams]);
 
-  const stopCamera = () => {
-    if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
+  const stopScanner = useCallback(() => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(err => console.error("Gagal menghentikan pemindai.", err));
     }
-    if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
-    }
-  };
+  }, []);
   
   const processDecodedText = useCallback(async (decodedText: string) => {
     if (status === 'processing' || status === 'success') return;
     setStatus('processing');
     setErrorMessage(null);
-    stopCamera();
+    stopScanner();
 
     try {
       if (!scanType) throw new Error("Tipe pemindaian tidak valid.");
@@ -115,89 +109,75 @@ function ScanPageContent() {
       setErrorMessage(msg);
       setStatus('error');
     }
-  }, [status, router, toast, scanType]);
+  }, [status, router, toast, scanType, stopScanner]);
 
-  const scanFrame = useCallback(async (detector: any) => {
-    if (videoRef.current && videoRef.current.readyState === 4) {
-      try {
-        const barcodes = await detector.detect(videoRef.current);
-        if (barcodes.length > 0) {
-          processDecodedText(barcodes[0].rawValue);
-        } else {
-          animationFrameId.current = requestAnimationFrame(() => scanFrame(detector));
-        }
-      } catch (e) {
-        console.error('Scan Error:', e);
-        animationFrameId.current = requestAnimationFrame(() => scanFrame(detector));
-      }
-    } else {
-       animationFrameId.current = requestAnimationFrame(() => scanFrame(detector));
-    }
-  }, [processDecodedText]);
 
-  useEffect(() => {
-    if (!isBarcodeDetectorSupported()) {
-        setStatus('unsupported');
-        setErrorMessage("Browser Anda tidak mendukung deteksi barcode. Coba gunakan browser lain seperti Chrome atau unggah gambar QR.");
-        return;
-    }
-
-    if (scanType && status === 'idle') {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(stream => {
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.play();
-                    setStatus('scanning');
-                    // @ts-ignore
-                    const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-                    scanFrame(detector);
-                }
-            })
-            .catch(err => {
-                console.error("Camera access error:", err);
-                setStatus('permission_denied');
-                setErrorMessage("Izin kamera ditolak. Mohon izinkan akses kamera di pengaturan browser Anda.");
-            });
-    }
-
-    return () => {
-        stopCamera();
+   useEffect(() => {
+    if (status !== 'idle' || !scanType) return;
+    
+    scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
+    
+    const onScanSuccess = (decodedText: string, result: Html5QrcodeResult) => {
+        processDecodedText(decodedText);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanType, status]);
+
+    const onScanFailure = (error: Html5QrcodeError) => {
+        // Ignore "QR code not found" errors, as this is expected.
+        if (typeof error === 'string' && error.includes("No QR code found")) {
+            return;
+        }
+        console.warn(`QR error = ${JSON.stringify(error)}`);
+    };
+
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+          setStatus('scanning');
+          scannerRef.current?.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            onScanFailure
+          ).catch(err => {
+              console.error("Camera start error:", err);
+              setStatus('permission_denied');
+              setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera di pengaturan browser Anda.");
+          });
+      }
+    }).catch(err => {
+        setStatus('permission_denied');
+        setErrorMessage("Tidak dapat menemukan kamera. Pastikan Anda memiliki kamera dan telah memberikan izin.");
+    });
+    
+    return () => {
+      stopScanner();
+    };
+  }, [status, scanType, stopScanner, processDecodedText]);
 
 
-  const handleFileSelect = async (file: File) => {
-    if (!isBarcodeDetectorSupported()) {
-        setStatus('unsupported');
-        return;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    e.target.value = ''; // Reset input to allow re-uploading the same file
+
+    if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
     }
-    if (!file) return;
 
     setStatus('processing');
     setErrorMessage(null);
     try {
-        // @ts-ignore
-        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-        const imageBitmap = await createImageBitmap(file);
-        const barcodes = await detector.detect(imageBitmap);
-
-        if (barcodes.length > 0) {
-            processDecodedText(barcodes[0].rawValue);
-        } else {
-            throw new Error("Tidak dapat menemukan QR code pada gambar.");
-        }
+      const decodedText = await scannerRef.current.scanFile(file, false);
+      processDecodedText(decodedText);
     } catch (err) {
-        const msg = err instanceof Error ? err.message : "Gagal memproses gambar.";
-        setErrorMessage(msg);
-        setStatus('error');
+       const msg = err instanceof Error ? err.message : "Gagal memproses gambar.";
+       setErrorMessage("Tidak dapat menemukan QR code pada gambar. Pastikan gambar jelas dan tidak buram.");
+       setStatus('error');
     }
   };
   
    const handleTryAgain = () => {
     setErrorMessage(null);
-    setStatus('idle'); // This will re-trigger the useEffect to start the camera
+    setStatus('idle');
   };
 
 
@@ -221,25 +201,29 @@ function ScanPageContent() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
               <QrCode className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle>Pindai Kode QR untuk {scanType === 'start' ? 'Memulai' : 'Mengakhiri'} Tugas</CardTitle>
+          <CardTitle>Pindai Kode QR untuk {scanType === 'start' ? 'Memulai' : 'Mengakhiri'} Patroli</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative w-full max-w-sm mx-auto aspect-square bg-muted rounded-lg overflow-hidden shadow-inner flex items-center justify-center">
-            <video ref={videoRef} className="w-full h-full object-cover" playsInline />
-             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-[250px] h-[250px] aspect-square border-4 border-white/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
-            </div>
-            <Button 
+             <div id={scannerContainerId} className="w-full h-full"></div>
+            {status === 'idle' && (
+                <div className="flex flex-col items-center text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                    <p>Meminta izin kamera...</p>
+                </div>
+            )}
+             <Button 
                 variant="ghost" 
                 size="icon" 
                 className="absolute top-2 right-2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white hover:text-white"
                 onClick={() => fileInputRef.current?.click()}
+                aria-label="Unggah Gambar QR"
             >
                 <Upload className="h-5 w-5" />
             </Button>
           </div>
           
-           <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => e.target.files && e.target.files.length > 0 && handleFileSelect(e.target.files[0])} />
+           <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileSelect} />
 
           {status === 'processing' && (
              <div className="flex items-center justify-center p-4 rounded-md bg-muted">
@@ -248,11 +232,11 @@ function ScanPageContent() {
              </div>
           )}
 
-          {(status === 'error' || status === 'permission_denied' || status === 'unsupported') && errorMessage && (
+          {(status === 'error' || status === 'permission_denied') && errorMessage && (
              <Alert variant="destructive">
                 <AlertTitle>Gagal</AlertTitle>
                 <AlertDescription>{errorMessage}</AlertDescription>
-                <Button onClick={handleTryAgain} className="mt-2" size="sm">Coba Lagi</Button>
+                 <Button onClick={handleTryAgain} className="mt-2" size="sm">Coba Lagi</Button>
             </Alert>
           )}
 
@@ -275,5 +259,3 @@ export default function ScanPage() {
         </Suspense>
     )
 }
-
-    

@@ -166,7 +166,7 @@ export default function PetugasSchedulePage() {
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')} disabled={isSubmitting}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                 </>
             )}
-            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleScan('end')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Selesaikan Tugas</Button>}
+            {schedule.status === 'In Progress' && <Button className="w-full" onClick={() => handleScan('end')} disabled={isSubmitting}><Check className="mr-2 h-4 w-4" /> Selesaikan Patroli</Button>}
             {(schedule.status === 'Completed' || schedule.status === 'Izin' || schedule.status === 'Sakit' || schedule.status === 'Tanpa Keterangan') && <p className="text-sm text-muted-foreground text-center w-full">Tugas untuk hari ini telah ditandai.</p>}
         </CardFooter>
       </Card>
