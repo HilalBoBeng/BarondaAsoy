@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, updateDoc, query, orderBy, where, getDocs, increment, limit, startAfter, endBefore, limitToLast, type QueryDocumentSnapshot, type DocumentData, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, orderBy, where, getDocs, increment, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,7 +86,7 @@ export default function PetugasReportsPage() {
     return () => unsubscribe();
   }, [toast, staffInfo]);
 
-  const filteredAndSortedReports = useEffect(() => {
+  useEffect(() => {
     let filtered = [];
     if (filter === 'new') {
       filtered = allReports.filter(r => r.status === 'new');
@@ -323,17 +323,11 @@ export default function PetugasReportsPage() {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Selesaikan & Balas Laporan</DialogTitle>
-                <DialogClose asChild>
-                    <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 text-primary-foreground h-7 w-7">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Tutup</span>
-                    </Button>
-                </DialogClose>
                 <DialogDescription>Anda harus mengirim balasan untuk menyelesaikan laporan ini.</DialogDescription>
             </DialogHeader>
             <Form {...replyForm}>
-                <form onSubmit={replyForm.handleSubmit(onReplySubmit)} className="space-y-4 pt-4">
-                    <DialogBody>
+                <form onSubmit={replyForm.handleSubmit(onReplySubmit)}>
+                    <DialogBody className="space-y-4">
                         <div className="space-y-2 text-sm">
                             <p><strong>Pelapor:</strong> {currentReport?.reporterName}</p>
                             <p className="text-muted-foreground break-word"><strong>Laporan:</strong> {currentReport?.reportText}</p>

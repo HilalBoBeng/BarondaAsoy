@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -332,7 +332,7 @@ export default function UsersAdminPage() {
           </TabsList>
           
           <TabsContent value="users" className="mt-4">
-            <div className="rounded-lg border">
+            <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -385,7 +385,7 @@ export default function UsersAdminPage() {
           </TabsContent>
 
           <TabsContent value="staff" className="mt-4">
-             <div className="rounded-lg border">
+             <div className="rounded-lg border overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -460,7 +460,7 @@ export default function UsersAdminPage() {
           </TabsContent>
 
           <TabsContent value="pending-staff" className="mt-4">
-             <div className="rounded-lg border">
+             <div className="rounded-lg border overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -526,8 +526,8 @@ export default function UsersAdminPage() {
                 </DialogDescription>
             </DialogHeader>
             <Form {...rejectionForm}>
-                <form onSubmit={rejectionForm.handleSubmit(onRejectionSubmit)} className="space-y-4">
-                    <div className="py-4">
+                <form onSubmit={rejectionForm.handleSubmit(onRejectionSubmit)}>
+                    <DialogBody className="space-y-4">
                         <FormField
                             control={rejectionForm.control}
                             name="rejectionReason"
@@ -541,7 +541,7 @@ export default function UsersAdminPage() {
                                 </FormItem>
                             )}
                         />
-                    </div>
+                    </DialogBody>
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Batal</Button>
@@ -565,43 +565,45 @@ export default function UsersAdminPage() {
                 </DialogDescription>
             </DialogHeader>
              <Form {...actionReasonForm}>
-                <form onSubmit={actionReasonForm.handleSubmit(onActionSubmit)} className="space-y-4 pt-4">
-                    <FormField
-                      control={actionReasonForm.control}
-                      name="reason"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Alasan {actionType === 'block' ? 'Pemblokiran' : 'Penangguhan'}</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} rows={3} placeholder="Contoh: Melanggar aturan komunitas..." />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {actionType === 'suspend' && (
+                <form onSubmit={actionReasonForm.handleSubmit(onActionSubmit)}>
+                    <DialogBody className="space-y-4">
                         <FormField
                         control={actionReasonForm.control}
-                        name="duration"
+                        name="reason"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Durasi Penangguhan</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Pilih durasi..." /></SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <SelectItem value="7_days">7 Hari</SelectItem>
-                                <SelectItem value="14_days">14 Hari</SelectItem>
-                                <SelectItem value="1_months">1 Bulan</SelectItem>
-                                <SelectItem value="0_permanent">Permanen</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <FormLabel>Alasan {actionType === 'block' ? 'Pemblokiran' : 'Penangguhan'}</FormLabel>
+                            <FormControl>
+                                <Textarea {...field} rows={3} placeholder="Contoh: Melanggar aturan komunitas..." />
+                            </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
                         />
-                    )}
+                        {actionType === 'suspend' && (
+                            <FormField
+                            control={actionReasonForm.control}
+                            name="duration"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Durasi Penangguhan</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Pilih durasi..." /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="7_days">7 Hari</SelectItem>
+                                    <SelectItem value="14_days">14 Hari</SelectItem>
+                                    <SelectItem value="1_months">1 Bulan</SelectItem>
+                                    <SelectItem value="0_permanent">Permanen</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                    </DialogBody>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsActionDialogOpen(false)}>Batal</Button>
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>

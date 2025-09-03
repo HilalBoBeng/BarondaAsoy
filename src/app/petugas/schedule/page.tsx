@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
@@ -205,20 +205,22 @@ export default function PetugasSchedulePage() {
                     <DialogTitle>Formulir Pengajuan {absenceType}</DialogTitle>
                 </DialogHeader>
                 <Form {...reasonForm}>
-                    <form onSubmit={reasonForm.handleSubmit(onAbsenceSubmit)} className="space-y-4">
-                        <FormField
-                            control={reasonForm.control}
-                            name="reason"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Alasan {absenceType}</FormLabel>
-                                <FormControl>
-                                    <Textarea {...field} rows={4} placeholder={`Tulis alasan Anda ${absenceType.toLowerCase()} di sini...`} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
+                    <form onSubmit={reasonForm.handleSubmit(onAbsenceSubmit)}>
+                        <DialogBody>
+                            <FormField
+                                control={reasonForm.control}
+                                name="reason"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Alasan {absenceType}</FormLabel>
+                                    <FormControl>
+                                        <Textarea {...field} rows={4} placeholder={`Tulis alasan Anda ${absenceType.toLowerCase()} di sini...`} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </DialogBody>
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>

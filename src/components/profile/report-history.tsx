@@ -156,11 +156,12 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             ) : paginatedReports.length > 0 ? (
                 <>
                 {paginatedReports.map((report) => (
-                    <Card key={report.id} className="relative overflow-hidden">
+                    <Card key={report.id} className="overflow-hidden">
                         <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2 gap-4">
-                                <div className="flex-grow pr-16">
-                                    <p className="text-sm text-foreground/90 break-words">
+                            <div className="flex justify-between items-start mb-2 gap-2">
+                                <div className="flex-grow">
+                                    <p className="text-xs font-bold">{report.reporterName}</p>
+                                    <p className="text-sm text-foreground/90 break-words pr-4">
                                         {report.reportText}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-2">

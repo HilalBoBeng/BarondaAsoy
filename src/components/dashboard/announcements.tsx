@@ -123,7 +123,7 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg">
+            <DialogContent>
                 {selectedAnnouncement && (
                     <>
                         <DialogHeader>

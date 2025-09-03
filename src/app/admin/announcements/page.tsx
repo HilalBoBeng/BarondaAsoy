@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription, DialogBody } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -161,7 +161,7 @@ export default function AnnouncementsAdminPage() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex-grow">
           <CardTitle>Manajemen Pengumuman</CardTitle>
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
@@ -268,8 +268,8 @@ export default function AnnouncementsAdminPage() {
               <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <DialogBody className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -302,7 +302,7 @@ export default function AnnouncementsAdminPage() {
                       </FormItem>
                     )}
                   />
-                </div>
+                </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>

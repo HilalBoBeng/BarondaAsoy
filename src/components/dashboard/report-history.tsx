@@ -49,6 +49,8 @@ export default function ReportHistory() {
         const fetchReports = async () => {
             setLoading(true);
             try {
+                // Modified query: Fetch by date first, then filter by visibility client-side.
+                // This avoids the need for a composite index.
                 const reportsQuery = query(
                     collection(db, 'reports'), 
                     orderBy('createdAt', 'desc'),
@@ -67,11 +69,8 @@ export default function ReportHistory() {
                          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
                          replies: repliesArray
                      } as Report;
-                });
+                }).filter(report => report.visibility === 'public'); // Client-side filter
 
-                // Filter for public reports on the client side
-                reportsData = reportsData.filter(report => report.visibility === 'public');
-                
                 setAllReports(reportsData);
 
             } catch (error) {
@@ -137,7 +136,7 @@ export default function ReportHistory() {
                         <div className="flex justify-between items-start mb-2 gap-2">
                             <div className="flex-grow">
                                 <p className="text-xs font-bold">{report.reporterName}</p>
-                                <p className="text-sm text-foreground/90 break-word pr-4">
+                                <p className="text-sm text-foreground/90 break-words pr-4">
                                     {report.reportText}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-2">

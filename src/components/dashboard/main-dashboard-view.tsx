@@ -263,7 +263,7 @@ export default function MainDashboardView() {
           </>
         ) : (
              <Dialog open={!!suspensionInfo} onOpenChange={() => { setSuspensionInfo(null); router.push('/auth/login'); }}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="text-2xl text-destructive flex items-center gap-2">
                             <ShieldAlert className="h-7 w-7" />
@@ -273,35 +273,37 @@ export default function MainDashboardView() {
                             Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir' : 'ditangguhkan sementara'} oleh admin.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4 text-sm">
-                        <div className="space-y-2 rounded-md border p-4">
-                             <div className="flex items-center gap-2">
-                                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{suspensionInfo?.user.displayName}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                <span>{suspensionInfo?.user.email}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                <span>{suspensionInfo?.user.phone || 'No. HP tidak tersedia'}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold">Alasan:</h4>
-                            <p className="text-destructive font-bold">{suspensionInfo?.reason}</p>
-                        </div>
-                        {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
-                            <div>
-                                <h4 className="font-semibold">Penangguhan Berakhir dalam:</h4>
-                                <p className="text-primary font-mono font-semibold text-lg">{countdown || 'Menghitung...'}</p>
-                            </div>
-                        )}
-                        <p className="text-xs text-muted-foreground pt-4">
-                            Jika Anda merasa ini adalah sebuah kesalahan, silakan hubungi admin untuk bantuan lebih lanjut.
-                        </p>
-                    </div>
+                    <DialogBody>
+                      <div className="space-y-4 py-4 text-sm">
+                          <div className="space-y-2 rounded-md border p-4">
+                              <div className="flex items-center gap-2">
+                                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{suspensionInfo?.user.displayName}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <Mail className="h-4 w-4 text-muted-foreground" />
+                                  <span>{suspensionInfo?.user.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-muted-foreground" />
+                                  <span>{suspensionInfo?.user.phone || 'No. HP tidak tersedia'}</span>
+                              </div>
+                          </div>
+                          <div>
+                              <h4 className="font-semibold">Alasan:</h4>
+                              <p className="text-destructive font-bold">{suspensionInfo?.reason}</p>
+                          </div>
+                          {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
+                              <div>
+                                  <h4 className="font-semibold">Penangguhan Berakhir dalam:</h4>
+                                  <p className="text-primary font-semibold text-lg">{countdown || 'Menghitung...'}</p>
+                              </div>
+                          )}
+                          <p className="text-xs text-muted-foreground pt-4">
+                              Jika Anda merasa ini adalah sebuah kesalahan, silakan hubungi admin untuk bantuan lebih lanjut.
+                          </p>
+                      </div>
+                    </DialogBody>
                     <DialogFooter>
                         <Button onClick={() => { setSuspensionInfo(null); router.push('/auth/login'); }} className="w-full">Saya Mengerti</Button>
                     </DialogFooter>
@@ -564,7 +566,7 @@ export default function MainDashboardView() {
     </div>
     
     <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
-      <DialogContent className="w-[90%] sm:max-w-lg rounded-lg">
+      <DialogContent>
         {selectedNotification && (
           <>
              <DialogHeader>
