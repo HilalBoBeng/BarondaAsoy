@@ -23,13 +23,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import Image from "next/image";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const loginSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -41,6 +43,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   
@@ -48,6 +51,14 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
+
+  useEffect(() => {
+    const registrationSuccess = localStorage.getItem('registrationSuccess');
+    if (registrationSuccess) {
+      setShowSuccessMessage(true);
+      localStorage.removeItem('registrationSuccess');
+    }
+  }, []);
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
@@ -76,6 +87,15 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
+       {showSuccessMessage && (
+        <Alert className="mb-4 bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300 [&>svg]:text-green-600">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Registrasi Berhasil!</AlertTitle>
+            <AlertDescription>
+            Akun Anda telah berhasil dibuat. Silakan masuk.
+            </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Masuk Akun</CardTitle>
@@ -113,7 +133,7 @@ export default function LoginPage() {
                      <div className="text-right">
                       <Link
                         href="/auth/forgot-password"
-                        className="ml-auto inline-block text-xs text-primary hover:underline"
+                        className="ml-auto inline-block text-xs text-primary hover:text-primary/80"
                       >
                         Lupa kata sandi?
                       </Link>
@@ -132,7 +152,7 @@ export default function LoginPage() {
                   Belum punya akun?{" "}
                   <Link
                       href="/auth/register"
-                      className="text-primary hover:underline"
+                      className="text-primary hover:text-primary/80"
                   >
                       Daftar di sini
                   </Link>

@@ -120,7 +120,10 @@ export default function VerifyOtpPage() {
     if (!contextData) return;
     setIsResending(true);
     try {
-      const result = await sendOtp({ email: contextData.email, context: contextData.flow });
+      // Fix: Determine the correct context for the sendOtp flow
+      const contextToSend = contextData.flow === 'userPasswordReset' ? 'userRegistration' : contextData.flow;
+      
+      const result = await sendOtp({ email: contextData.email, context: contextToSend });
       if (!result.success) throw new Error(result.message);
 
       toast({ title: "Berhasil", description: "Kode OTP baru telah dikirim." });
@@ -164,6 +167,7 @@ export default function VerifyOtpPage() {
         // Clean up local storage
         if (contextData.flow === 'userRegistration') {
             localStorage.removeItem('registrationData');
+            localStorage.setItem('registrationSuccess', 'true'); // Set flag for login page
         } else {
             localStorage.removeItem('verificationContext');
         }
@@ -235,7 +239,7 @@ export default function VerifyOtpPage() {
                 <Button 
                     type="button" 
                     variant="link" 
-                    className="p-0 h-auto"
+                    className="p-0 h-auto text-primary hover:text-primary/80"
                     onClick={handleResendOtp}
                     disabled={isResending || cooldown > 0}
                 >
@@ -249,15 +253,22 @@ export default function VerifyOtpPage() {
                  {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Verifikasi & Lanjutkan
+                Verifikasi
               </Button>
                {(contextData?.flow === 'userRegistration' || contextData?.flow === 'userPasswordReset') && (
                   <div className="text-center text-sm">
-                    <Link href="/auth/register" className="underline">
+                    <Link href={contextData.flow === 'userRegistration' ? "/auth/register" : "/auth/forgot-password"} className="text-primary hover:text-primary/80">
                       Kembali untuk mengubah email
                     </Link>
                   </div>
                )}
+                {(contextData?.flow === 'staffResetPassword') && (
+                    <div className="text-center text-sm">
+                        <Link href="/auth/staff-forgot-password" className="text-primary hover:text-primary/80">
+                        Kembali untuk mengubah email
+                        </Link>
+                    </div>
+                )}
             </CardFooter>
           </form>
         </Form>

@@ -64,15 +64,13 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      const result = await sendOtp({ email: data.email, context: 'userRegistration' }); // Placeholder context
+      const result = await sendOtp({ email: data.email, context: 'userRegistration' }); 
       if (result.success) {
         toast({
           title: "Berhasil",
           description: "Kode OTP untuk mengatur ulang kata sandi telah dikirim ke email Anda.",
         });
         
-        // This should lead to a new flow for resetting password, not just verifying OTP for registration
-        // For now, it reuses the verify-otp page with a specific context.
         localStorage.setItem('verificationContext', JSON.stringify({ email: data.email, flow: 'userPasswordReset' }));
         router.push('/auth/verify-otp');
       } else {
@@ -126,7 +124,7 @@ export default function ForgotPasswordPage() {
                 Kirim Kode OTP
               </Button>
               <div className="text-center text-sm">
-                <Link href="/auth/login" className="underline">
+                <Link href="/auth/login" className="text-primary hover:text-primary/80">
                   Kembali ke Halaman Masuk
                 </Link>
               </div>
