@@ -10,13 +10,13 @@ import type { ScheduleEntry } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Calendar, Clock, User, MapPin, Loader2, RefreshCw, QrCode } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Loader2, RefreshCw, QrCode, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { generateScheduleToken } from '@/ai/flows/generate-schedule-token';
 
-export default function ScheduleDetailPage({ params }: { params: Promise<{ scheduleId: string }> }) {
+export default function ScheduleDetailPage({ params }: { params: { scheduleId: string } }) {
   const { scheduleId } = use(params);
   const [schedule, setSchedule] = useState<ScheduleEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,7 +109,13 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ sched
             </div>
         </div>
 
-        {schedule.qrToken ? (
+        {schedule.status === 'In Progress' || schedule.status === 'Completed' ? (
+           <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg bg-green-50 text-green-800">
+                 <CheckCircle className="h-10 w-10 mb-2" />
+                 <p className="font-semibold">Kode absensi telah digunakan.</p>
+                 <p className="text-xs">Sesi patroli ini sedang atau telah berlangsung.</p>
+            </div>
+        ) : schedule.qrToken ? (
             <div className="flex flex-col items-center gap-4">
                 <div className="p-4 border rounded-lg bg-white">
                     <Image
