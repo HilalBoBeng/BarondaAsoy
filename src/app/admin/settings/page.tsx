@@ -6,9 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ import { id } from 'date-fns/locale';
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
+  customSlug: z.string().regex(/^[a-zA-Z0-9_-]*$/, "Custom slug hanya boleh berisi huruf, angka, -, dan _.").max(50, "Custom slug maksimal 50 karakter.").optional(),
 });
 type ShortLinkFormValues = z.infer<typeof shortLinkSchema>;
 
@@ -42,7 +43,7 @@ export default function ShortLinkAdminPage() {
 
   const form = useForm<ShortLinkFormValues>({
     resolver: zodResolver(shortLinkSchema),
-    defaultValues: { longUrl: '' },
+    defaultValues: { longUrl: '', customSlug: '' },
   });
   
   useEffect(() => {
@@ -64,7 +65,18 @@ export default function ShortLinkAdminPage() {
     setGeneratedLink(null);
 
     try {
-      const shortCode = nanoid(7);
+      const shortCode = values.customSlug || nanoid(7);
+      
+      if (values.customSlug) {
+          const q = query(collection(db, 'shortlinks'), where('slug', '==', values.customSlug));
+          const existing = await getDocs(q);
+          if (!existing.empty) {
+              form.setError('customSlug', { type: 'manual', message: 'Custom slug ini sudah digunakan.' });
+              setIsSubmitting(false);
+              return;
+          }
+      }
+
       await addDoc(collection(db, 'shortlinks'), {
         slug: shortCode,
         longUrl: values.longUrl,
@@ -135,6 +147,22 @@ export default function ShortLinkAdminPage() {
                                 </FormItem>
                             )}
                             />
+                            <FormField
+                            control={form.control}
+                            name="customSlug"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Custom Slug (Opsional)</FormLabel>
+                                <FormControl>
+                                    <div className="flex items-center">
+                                       <span className="text-sm text-muted-foreground p-2 bg-muted rounded-l-md border border-r-0">/go/</span>
+                                       <Input {...field} placeholder="promo-juli" className="rounded-l-none"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
                             <Button type="submit" disabled={isSubmitting} className="w-full">
                                 {isSubmitting ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -150,7 +178,7 @@ export default function ShortLinkAdminPage() {
                         <div className="space-y-2 pt-4 mt-4 border-t">
                             <h3 className="text-sm font-medium">Tautan Baru:</h3>
                             <div className="flex items-center gap-2">
-                                <Input value={generatedLink} readOnly />
+                                <Input value={generatedLink} readOnly className="bg-muted/50" />
                                 <Button type="button" size="icon" variant="outline" onClick={() => copyToClipboard(generatedLink)}>
                                     <Copy className="h-4 w-4" />
                                 </Button>
