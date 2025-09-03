@@ -57,7 +57,7 @@ const formatDuration = (start: Date, end: Date) => {
     const parts = [];
     if (duration.days) parts.push(`${duration.days} hari`);
     if (duration.hours) parts.push(`${duration.hours} jam`);
-    if (duration.minutes) parts.push(`${duration.minutes} detik`);
+    if (duration.minutes) parts.push(`${duration.minutes} menit`);
     if (duration.seconds) parts.push(`${duration.seconds} detik`);
     return parts.join(' ');
 };
@@ -296,7 +296,7 @@ function LoginForm() {
                 {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
                      <div className="text-center">
                         <h4 className="font-semibold">Penangguhan Berakhir dalam:</h4>
-                        <p className="text-primary font-mono font-semibold text-lg">{countdown || 'Menghitung...'}</p>
+                        <p className="text-primary font-mono font-semibold text-base">{countdown || 'Menghitung...'}</p>
                     </div>
                 )}
                  <p className="text-xs text-muted-foreground pt-4">
@@ -319,5 +319,3 @@ export default function LoginPage() {
         </Suspense>
     )
 }
-
-    

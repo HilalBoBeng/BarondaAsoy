@@ -20,11 +20,18 @@ function ScanPageContent() {
   const [status, setStatus] = useState<'idle' | 'scanning' | 'processing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<'start' | 'end' | null>(null);
+  
+  // Use useRef to hold the scanner instance
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const readerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Initialize the scanner instance once
+    if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode('qr-reader');
+    }
+    
     const type = searchParams.get('type') as 'start' | 'end';
     if (type) {
       setScanType(type);
@@ -33,7 +40,7 @@ function ScanPageContent() {
       setStatus('error');
     }
   }, [searchParams]);
-
+  
   const processDecodedText = useCallback(async (decodedText: string) => {
     if (status === 'processing' || status === 'success') return;
     setStatus('processing');
@@ -101,66 +108,74 @@ function ScanPageContent() {
     }
   }, [status, router, toast, scanType]);
 
+
   const startScanner = useCallback(() => {
-    if (!readerRef.current || !scannerRef.current) return;
+     if (!scannerRef.current || !readerRef.current) return;
     setStatus('scanning');
     setErrorMessage(null);
-
-    const config = {
-      fps: 10,
-      qrbox: 250,
-      rememberLastUsedCamera: true,
-      supportedScanTypes: [0] // SCAN_TYPE_CAMERA
-    };
+    const scanner = scannerRef.current;
     
-    scannerRef.current.start(
-      { facingMode: "environment" },
-      config,
-      processDecodedText,
-      (error) => { /* ignore */ }
-    ).catch(err => {
-      setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera.");
-      setStatus('error');
-    });
-  }, [processDecodedText]);
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0];
-        try {
-            const decodedText = await scannerRef.current?.scanFile(file, false);
-            if (decodedText) {
-                processDecodedText(decodedText);
-            }
-        } catch (err) {
-            setErrorMessage("Tidak dapat menemukan QR code pada gambar.");
-            setStatus('error');
+    // Check for cameras
+    Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+             scanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                processDecodedText,
+                (errorMessage) => { /* ignore */ }
+            ).catch(err => {
+                setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera.");
+                setStatus('error');
+            });
+        } else {
+             setErrorMessage("Tidak ada kamera yang ditemukan di perangkat ini.");
+             setStatus('error');
         }
-    }
-  };
+    }).catch(err => {
+        setErrorMessage("Gagal mendapatkan izin kamera. Mohon izinkan akses di pengaturan browser Anda.");
+        setStatus('error');
+    });
+
+  }, [processDecodedText]);
 
 
   useEffect(() => {
-    if (!scannerRef.current) {
-      scannerRef.current = new Html5Qrcode('qr-reader', {
-         experimentalFeatures: {
-            useOffscreenCanvas: true,
-         },
-      });
-    }
-    
-    const scanner = scannerRef.current;
-    
     if (scanType && status === 'idle') {
         startScanner();
     }
 
     return () => {
-      if (scanner?.isScanning) {
-          scanner.stop().catch(console.error);
+      const scanner = scannerRef.current;
+      if (scanner && scanner.isScanning) {
+          scanner.stop().catch(err => {
+              // This can happen if the component unmounts before the stop promise resolves
+              // It's generally safe to ignore.
+          });
       }
     };
   }, [scanType, status, startScanner]);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        if (scannerRef.current) {
+            try {
+                // Ensure scanner is stopped before scanning a file
+                if (scannerRef.current.isScanning) {
+                   await scannerRef.current.stop();
+                }
+                const decodedText = await scannerRef.current.scanFile(file, false);
+                if (decodedText) {
+                    processDecodedText(decodedText);
+                }
+            } catch (err) {
+                setErrorMessage("Tidak dapat menemukan QR code pada gambar.");
+                setStatus('error');
+            }
+        }
+    }
+  };
+
 
   if (status === 'success') {
     return (
@@ -187,13 +202,9 @@ function ScanPageContent() {
         <CardContent className="space-y-4">
           <div id="qr-reader-container" className="relative w-full max-w-sm mx-auto aspect-square bg-muted rounded-lg overflow-hidden shadow-inner">
             <div id="qr-reader" ref={readerRef} className="w-full h-full"></div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[250px] h-[250px] border-4 border-white/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
+            </div>
             <Button
               size="icon"
               variant="ghost"
@@ -203,6 +214,13 @@ function ScanPageContent() {
             >
               <Upload className="h-5 w-5" />
             </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
           </div>
 
           {status === 'processing' && (
@@ -216,7 +234,7 @@ function ScanPageContent() {
              <Alert variant="destructive">
                 <AlertTitle>Gagal</AlertTitle>
                 <AlertDescription>{errorMessage}</AlertDescription>
-                {errorMessage.includes("kamera") && <Button onClick={startScanner} className="mt-2">Coba Lagi</Button>}
+                <Button onClick={startScanner} className="mt-2" size="sm">Coba Lagi</Button>
             </Alert>
           )}
 
