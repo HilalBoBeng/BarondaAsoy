@@ -32,6 +32,7 @@ import { formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { nanoid } from 'nanoid';
 
 const NOTIFICATIONS_PER_PAGE = 5;
 
@@ -474,13 +475,6 @@ export default function MainDashboardView() {
                     {currentDate} | {currentTime}
                 </p>
             </div>
-            {user && (
-              <Button asChild>
-                  <Link href="/download">
-                      Unduh Aplikasi
-                  </Link>
-              </Button>
-            )}
           </div>
 
           <div className="space-y-6">
