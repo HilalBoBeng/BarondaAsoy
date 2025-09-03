@@ -101,7 +101,6 @@ export default function AdminSettingsPage() {
       }
   }
 
-
   const handleApkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -194,7 +193,7 @@ export default function AdminSettingsPage() {
                             </FormItem>
                         )}
                         />
-                         <Button type={appNameIsDirty ? 'submit' : 'button'} size="icon" disabled={isSubmitting} onClick={() => {if (!isEditingAppName) setIsEditingAppName(true)}}>
+                         <Button type={appNameIsDirty ? 'submit' : 'button'} size="icon" disabled={isSubmitting && isEditingAppName} onClick={() => {if (!isEditingAppName) setIsEditingAppName(true)}}>
                             {isSubmitting && isEditingAppName ? <Loader2 className="h-4 w-4 animate-spin"/> :
                              (appNameIsDirty ? <Save className="h-4 w-4" /> : <Pencil className={cn("h-4 w-4", isEditingAppName && "text-primary")} />)}
                         </Button>
@@ -216,7 +215,7 @@ export default function AdminSettingsPage() {
                             </FormItem>
                         )}
                         />
-                         <Button type={logoUrlIsDirty ? 'submit' : 'button'} size="icon" disabled={isSubmitting} onClick={() => {if (!isEditingLogoUrl) setIsEditingLogoUrl(true)}}>
+                         <Button type={logoUrlIsDirty ? 'submit' : 'button'} size="icon" disabled={isSubmitting && isEditingLogoUrl} onClick={() => {if (!isEditingLogoUrl) setIsEditingLogoUrl(true)}}>
                             {isSubmitting && isEditingLogoUrl ? <Loader2 className="h-4 w-4 animate-spin"/> :
                              (logoUrlIsDirty ? <Save className="h-4 w-4" /> : <Pencil className={cn("h-4 w-4", isEditingLogoUrl && "text-primary")} />)}
                         </Button>
@@ -226,12 +225,13 @@ export default function AdminSettingsPage() {
         </div>
         <Separator />
         
-        <div>
+        <div className="space-y-2">
             <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><Download className="h-5 w-5" />File Aplikasi</h3>
-             <div className="space-y-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Link Unduh Aplikasi</label>
-                 <div className="flex items-center gap-2">
+            <div>
+                <Label htmlFor="apk-link">Link Unduh Aplikasi</Label>
+                 <div className="flex items-center gap-2 mt-2">
                     <Input 
+                        id="apk-link"
                         value={appDownloadLink || ''}
                         readOnly
                         placeholder="Tidak ada file APK yang diunggah"
@@ -260,10 +260,10 @@ export default function AdminSettingsPage() {
                       <p className="text-xs text-muted-foreground mt-1 text-center">{Math.round(uploadProgress)}%</p>
                     </div>
                 )}
-                 <p className="text-sm text-muted-foreground">
+                 <p className="text-sm text-muted-foreground pt-2">
                     Unggah file APK untuk disebarkan melalui halaman unduhan.
                 </p>
-             </div>
+            </div>
         </div>
 
         <Separator />
@@ -272,10 +272,6 @@ export default function AdminSettingsPage() {
             <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
             <Form {...maintenanceForm}>
                 <form onSubmit={maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))}>
-                    <FormField
-                    control={maintenanceForm.control}
-                    name="maintenanceMode"
-                    render={({ field }) => (
                         <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                             <div className="space-y-0.5">
                                 <Label htmlFor="maintenance-mode-switch" className="text-base">
@@ -288,16 +284,14 @@ export default function AdminSettingsPage() {
                             <FormControl>
                                 <Switch
                                 id="maintenance-mode-switch"
-                                checked={field.value}
+                                checked={maintenanceForm.watch('maintenanceMode')}
                                 onCheckedChange={(checked) => {
-                                    field.onChange(checked);
-                                    maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))();
+                                    maintenanceForm.setValue('maintenanceMode', checked, { shouldDirty: true });
+                                    handleSave('maintenanceMode', { maintenanceMode: checked });
                                 }}
                                 />
                             </FormControl>
                         </div>
-                    )}
-                    />
                 </form>
             </Form>
         </div>
