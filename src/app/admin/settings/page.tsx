@@ -229,7 +229,7 @@ export default function AdminSettingsPage() {
         <div>
             <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><Download className="h-5 w-5" />File Aplikasi</h3>
              <div className="space-y-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">File APK Aplikasi</label>
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Link Unduh Aplikasi</label>
                  <div className="flex items-center gap-2">
                     <Input 
                         value={appDownloadLink || ''}
@@ -269,10 +269,7 @@ export default function AdminSettingsPage() {
         <Separator />
 
         <div className="space-y-2">
-            <h3 className="text-lg font-medium flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
-            <p className="text-sm text-muted-foreground">
-                Saat diaktifkan, hanya admin yang dapat mengakses aplikasi.
-            </p>
+            <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
             <Form {...maintenanceForm}>
                 <form onSubmit={maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))}>
                     <FormField
