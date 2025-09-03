@@ -106,7 +106,9 @@ export default function Home() {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as AppUser;
              if (userData.isBlocked) {
-                toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Akun Anda telah diblokir oleh admin.' });
+                const dialog = document.createElement('div');
+                document.body.appendChild(dialog);
+                alert(`Akun Diblokir. Alasan: Anda tidak dapat mengakses aplikasi.`);
                 auth.signOut();
                 router.push('/auth/login');
                 return;
@@ -114,7 +116,9 @@ export default function Home() {
              if (userData.isSuspended) {
                  const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
                  const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
-                 toast({ variant: 'destructive', title: 'Akun Ditangguhkan', description: `Akun Anda ditangguhkan hingga ${endDateString}.` });
+                const dialog = document.createElement('div');
+                document.body.appendChild(dialog);
+                alert(`Akun Ditangguhkan. Alasan: ${userData.suspensionReason || 'Tidak ada alasan'}. Penangguhan berakhir ${endDateString}.`);
                  auth.signOut();
                  router.push('/auth/login');
                  return;
@@ -136,7 +140,7 @@ export default function Home() {
           const sortedNotifs = notifsData.sort((a, b) => {
             const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
             const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
-            return timeB - a;
+            return timeB - timeA;
           });
           setAllNotifications(sortedNotifs);
         }, (error) => {
@@ -199,7 +203,7 @@ export default function Home() {
       setTimeout(() => {
           router.push('/');
           setIsLoggingOut(false);
-      }, 2000);
+      }, 1500);
     } catch (error) {
       toast({
         variant: "destructive",

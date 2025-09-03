@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -120,7 +120,6 @@ export default function ProfilePage() {
                 const dialog = document.createElement('div');
                 document.body.appendChild(dialog);
                 
-                // Simple dialog, replace with your component library if available
                 alert(`Akun Ditangguhkan. Alasan: ${userData.suspensionReason || 'Tidak ada alasan'}. Penangguhan berakhir ${endDateString}.`);
                  
                  auth.signOut();
@@ -170,23 +169,6 @@ export default function ProfilePage() {
     return () => unsubscribeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, router, toast]);
-  
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await signOut(auth);
-      setTimeout(() => {
-          router.push('/');
-      }, 1500);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Gagal Keluar",
-        description: "Terjadi kesalahan saat mencoba keluar.",
-      });
-      setIsLoggingOut(false);
-    }
-  };
 
   const handleEditClick = (field: FieldName) => {
     if (!canEditField(field)) {
@@ -201,7 +183,11 @@ export default function ProfilePage() {
       addressDetail: user?.addressDetail || '',
       photoURL: user?.photoURL || '',
     });
-    setIsEditDialogOpen(true);
+    if (field === 'photoURL') {
+        fileInputRef.current?.click();
+    } else {
+        setIsEditDialogOpen(true);
+    }
   };
 
     const compressImage = (file: File, maxSizeKB: number): Promise<string> => {
@@ -215,7 +201,6 @@ export default function ProfilePage() {
                     const canvas = document.createElement('canvas');
                     let { width, height } = img;
                     
-                    // Center crop to 1:1 square
                     const size = Math.min(width, height);
                     const x = (width - size) / 2;
                     const y = (height - size) / 2;
@@ -250,6 +235,7 @@ export default function ProfilePage() {
             }
             const compressedDataUrl = await compressImage(file, 64);
             form.setValue('photoURL', compressedDataUrl);
+            setIsEditDialogOpen(true); // Open dialog after file is selected and processed
         }
     };
 
@@ -403,6 +389,7 @@ export default function ProfilePage() {
                                 <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")} disabled={!canEditField("photoURL")}>
                                    {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
                                 </Button>
+                                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -482,7 +469,7 @@ export default function ProfilePage() {
             </div>
         </main>
         
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
             <DialogContent className="rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
@@ -508,11 +495,9 @@ export default function ProfilePage() {
                                 name="photoURL"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Pilih Foto Baru</FormLabel>
                                     <FormControl>
-                                        <Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} />
+                                        <div className="hidden"><Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} /></div>
                                     </FormControl>
-                                    <FormDescription>Rasio bebas, maks 256 KB. Akan dipotong persegi.</FormDescription>
                                     {field.value && (
                                        <div className="flex flex-col items-center gap-4">
                                             <Avatar className="h-32 w-32 mt-2">
@@ -546,7 +531,7 @@ export default function ProfilePage() {
                             />
                         )}
                         <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                            <Button type="button" variant="secondary" onClick={() => {setIsEditDialogOpen(false); setEditingField(null)}}>Batal</Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Simpan
