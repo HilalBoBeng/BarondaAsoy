@@ -29,8 +29,9 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { verifyOtp } from "@/ai/flows/verify-otp";
+import { sendOtp } from "@/ai/flows/send-otp";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -44,7 +45,10 @@ type VerifyOtpFormValues = z.infer<typeof verifyOtpSchema>;
 export default function VerifyOtpPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [resendAttempts, setResendAttempts] = useState(0);
   const router = useRouter();
   
   const form = useForm<VerifyOtpFormValues>({
@@ -52,9 +56,22 @@ export default function VerifyOtpPage() {
     defaultValues: { otp: "" },
   });
 
+  const getCooldownKey = (email: string) => `otpCooldown_${email}`;
+
+  const getCooldownData = useCallback(() => {
+    if (typeof window === 'undefined' || !registrationData?.email) return null;
+    const data = localStorage.getItem(getCooldownKey(registrationData.email));
+    if (!data) return null;
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      return null;
+    }
+  }, [registrationData?.email]);
+
   useEffect(() => {
-    const data = localStorage.getItem('registrationData');
-    if (!data) {
+    const dataStr = localStorage.getItem('registrationData');
+    if (!dataStr) {
       toast({
         variant: "destructive",
         title: "Data Tidak Ditemukan",
@@ -62,9 +79,66 @@ export default function VerifyOtpPage() {
       });
       router.push('/auth/register');
     } else {
-      setRegistrationData(JSON.parse(data));
+      setRegistrationData(JSON.parse(dataStr));
     }
   }, [router, toast]);
+  
+  useEffect(() => {
+    const savedCooldown = getCooldownData();
+    if (savedCooldown) {
+      const now = new Date().getTime();
+      const remaining = Math.ceil((savedCooldown.expiry - now) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+        setResendAttempts(savedCooldown.attempts);
+      } else {
+        localStorage.removeItem(getCooldownKey(registrationData.email));
+      }
+    }
+  }, [registrationData, getCooldownData]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => {
+            if(prev - 1 <= 0) {
+                if (registrationData?.email) localStorage.removeItem(getCooldownKey(registrationData.email));
+                return 0;
+            }
+            return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown, registrationData]);
+
+  const handleResendOtp = async () => {
+    if (!registrationData) return;
+    setIsResending(true);
+    try {
+      const result = await sendOtp({ email: registrationData.email, context: 'userRegistration' });
+      if (!result.success) throw new Error(result.message);
+
+      toast({ title: "Berhasil", description: "Kode OTP baru telah dikirim." });
+
+      const newAttempts = resendAttempts + 1;
+      setResendAttempts(newAttempts);
+
+      let newCooldown = 60; // 1 minute
+      if (newAttempts === 2) newCooldown = 180; // 3 minutes
+      else if (newAttempts > 2) newCooldown = 300; // 5 minutes
+
+      setCooldown(newCooldown);
+      const expiry = new Date().getTime() + newCooldown * 1000;
+      localStorage.setItem(getCooldownKey(registrationData.email), JSON.stringify({ expiry, attempts: newAttempts }));
+
+    } catch (error) {
+      toast({ variant: "destructive", title: "Gagal Mengirim Ulang", description: error instanceof Error ? error.message : "Terjadi kesalahan." });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const onSubmit = async (data: VerifyOtpFormValues) => {
     if (!registrationData) {
@@ -86,6 +160,7 @@ export default function VerifyOtpPage() {
           description: "Akun Anda telah berhasil dibuat. Silakan masuk.",
         });
         localStorage.removeItem('registrationData');
+        localStorage.removeItem(getCooldownKey(registrationData.email));
         router.push('/auth/login');
       } else {
         throw new Error(result.message);
@@ -117,7 +192,7 @@ export default function VerifyOtpPage() {
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent>
+            <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="otp"
@@ -143,6 +218,17 @@ export default function VerifyOtpPage() {
                   </FormItem>
                 )}
               />
+                <Button 
+                    type="button" 
+                    variant="link" 
+                    className="p-0 h-auto"
+                    onClick={handleResendOtp}
+                    disabled={isResending || cooldown > 0}
+                >
+                    {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Kirim ulang OTP"}
+                </Button>
+
             </CardContent>
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>

@@ -32,17 +32,6 @@ const sendOtpFlow = ai.defineFlow(
     outputSchema: SendOtpOutputSchema,
   },
   async ({ email, context }) => {
-    // These environment variables must be set in your production environment.
-    // The .env file is used for local development.
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-
-    if (!smtpUser || !smtpPass) {
-      const errorMessage = 'SMTP credentials are not configured in the environment.';
-      console.error(errorMessage);
-      return { success: false, message: errorMessage };
-    }
-
     try {
       // 1. Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -64,18 +53,18 @@ const sendOtpFlow = ai.defineFlow(
         expiresAt,
       });
 
-      // 4. Configure Nodemailer
+      // 4. Configure Nodemailer with hardcoded credentials
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: smtpUser,
-          pass: smtpPass,
+          user: 'bobeng.icu@gmail.com',
+          pass: 'hrll wccf slpw shmt',
         },
       });
 
       // 5. Send Email
       const mailOptions = {
-        from: `"Baronda" <${smtpUser}>`,
+        from: `"Baronda" <bobeng.icu@gmail.com>`,
         to: email,
         subject: 'Kode Verifikasi Anda',
         html: `
