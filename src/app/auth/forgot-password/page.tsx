@@ -27,10 +27,11 @@ import { sendOtp } from "@/ai/flows/send-otp";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -42,11 +43,25 @@ export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showResetPasswordAlert, setShowResetPasswordAlert] = useState(false);
   
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: "" },
   });
+
+  useEffect(() => {
+    const emailForReset = searchParams.get('email');
+    const resetAlert = searchParams.get('resetAlert');
+    if (emailForReset) {
+      form.setValue('email', emailForReset);
+    }
+     if (resetAlert === 'true') {
+      setShowResetPasswordAlert(true);
+    }
+  }, [searchParams, form]);
+
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsSubmitting(true);
@@ -94,6 +109,14 @@ export default function ForgotPasswordPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
+      {showResetPasswordAlert && (
+          <Alert variant="destructive" className="mb-4 animate-fade-in">
+              <AlertTitle>Terlalu Banyak Percobaan Login Gagal</AlertTitle>
+              <AlertDescription>
+                Demi keamanan, silakan atur ulang kata sandi Anda.
+              </AlertDescription>
+          </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Lupa Kata Sandi</CardTitle>

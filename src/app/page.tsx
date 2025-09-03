@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -160,7 +160,15 @@ export default function Home() {
     setIsLoggingOut(true);
     try {
       await signOut(auth);
-      // Let onAuthStateChanged handle state updates
+      toast({
+        title: "Berhasil Keluar",
+        description: "Anda akan diarahkan ke halaman utama.",
+      });
+      // The onAuthStateChanged listener will handle UI updates
+      setTimeout(() => {
+          router.push('/');
+          setIsLoggingOut(false);
+      }, 2000);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -222,7 +230,7 @@ export default function Home() {
             className="animate-logo-pulse"
             priority
         />
-        {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground">Anda telah keluar...</p>}
+        {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
       </div>
     );
   }

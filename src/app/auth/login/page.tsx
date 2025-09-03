@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/lib/firebase/client";
 import Image from "next/image";
@@ -44,7 +44,11 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState<Record<string, number>>({});
+  const [showResetPasswordAlert, setShowResetPasswordAlert] = useState(false);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = getAuth(app);
   
   const form = useForm<LoginFormValues>({
@@ -58,23 +62,44 @@ export default function LoginPage() {
       setShowSuccessMessage(true);
       localStorage.removeItem('registrationSuccess');
     }
-  }, []);
+    
+    const resetAlert = searchParams.get('resetAlert');
+    const emailForReset = searchParams.get('email');
+    if (resetAlert && emailForReset) {
+      setShowResetPasswordAlert(true);
+      form.setValue('email', emailForReset);
+    }
+
+  }, [searchParams, form]);
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
+      setLoginAttempts(prev => ({...prev, [data.email]: 0})); // Reset counter on success
       toast({
         title: "Login Berhasil",
         description: "Selamat datang kembali!",
       });
       router.push("/");
     } catch (error) {
-       toast({
-        variant: "destructive",
-        title: "Login Gagal",
-        description: "Email atau kata sandi salah. Silakan coba lagi.",
-      });
+       const currentAttempts = (loginAttempts[data.email] || 0) + 1;
+       setLoginAttempts(prev => ({...prev, [data.email]: currentAttempts}));
+
+       if (currentAttempts >= 3) {
+            toast({
+                variant: "destructive",
+                title: "Terlalu Banyak Percobaan Login",
+                description: "Anda akan dialihkan untuk mengatur ulang kata sandi.",
+            });
+            router.push(`/auth/forgot-password?email=${encodeURIComponent(data.email)}&resetAlert=true`);
+       } else {
+            toast({
+                variant: "destructive",
+                title: "Login Gagal",
+                description: `Email atau kata sandi salah. Percobaan ke-${currentAttempts} dari 3.`,
+            });
+       }
     } finally {
         setIsSubmitting(false);
     }
@@ -88,7 +113,7 @@ export default function LoginPage() {
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
        {showSuccessMessage && (
-        <Alert className="mb-4 bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300 [&>svg]:text-green-600">
+        <Alert className="mb-4 bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300 [&>svg]:text-green-600 animate-fade-in">
             <CheckCircle className="h-4 w-4" />
             <AlertTitle>Registrasi Berhasil!</AlertTitle>
             <AlertDescription>
@@ -96,6 +121,15 @@ export default function LoginPage() {
             </AlertDescription>
         </Alert>
       )}
+       {showResetPasswordAlert && (
+        <Alert variant="destructive" className="mb-4 animate-fade-in">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Terlalu Banyak Percobaan Login Gagal</AlertTitle>
+            <AlertDescription>
+              Demi keamanan, silakan atur ulang kata sandi Anda.
+            </AlertDescription>
+        </Alert>
+       )}
       <Card>
         <CardHeader>
           <CardTitle>Masuk Akun</CardTitle>
@@ -130,7 +164,7 @@ export default function LoginPage() {
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
-                     <div className="text-right">
+                     <div className="text-right mt-2">
                       <Link
                         href="/auth/forgot-password"
                         className="ml-auto inline-block text-xs text-primary hover:text-primary/80"
