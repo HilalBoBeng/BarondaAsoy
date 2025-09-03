@@ -71,15 +71,19 @@ function ScanPageContent() {
       const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
       setError(errorMessage);
       setMessage('Gagal. Silakan coba lagi.');
-    } finally {
-       setIsProcessing(false);
+      setIsProcessing(false);
     }
   }, [isProcessing, router, toast]);
   
   // This useEffect handles scanner setup and teardown only. Runs once.
   useEffect(() => {
-    const qrCodeScanner = new Html5Qrcode(qrReaderId);
-    html5QrCodeRef.current = qrCodeScanner;
+    // Only instantiate scanner on client
+    if (typeof window === "undefined") {
+        return;
+    }
+      
+    html5QrCodeRef.current = new Html5Qrcode(qrReaderId);
+    const qrCodeScanner = html5QrCodeRef.current;
 
     const startScanner = async () => {
       try {
@@ -88,9 +92,11 @@ function ScanPageContent() {
         
         qrCodeScanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: 250 },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText, decodedResult) => {
-            processDecodedText(decodedText);
+            if (!isProcessing) {
+               processDecodedText(decodedText);
+            }
           },
           (errorMessage) => { /* ignore */ }
         ).catch(err => {
@@ -110,13 +116,12 @@ function ScanPageContent() {
     return () => {
       if (qrCodeScanner && qrCodeScanner.isScanning) {
         qrCodeScanner.stop().catch(err => {
-          // This error can be ignored, as it often happens when the component unmounts
-          // while the scanner is still trying to initialize.
           console.warn("Peringatan saat menghentikan pemindai:", err);
         });
       }
     };
-  }, [processDecodedText]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
