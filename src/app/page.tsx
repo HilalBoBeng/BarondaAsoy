@@ -184,22 +184,6 @@ export default function Home() {
       }
     };
 
-    const handleNavigateNotification = (direction: 'next' | 'prev') => {
-        let newIndex = direction === 'next' 
-            ? selectedNotificationIndex + 1 
-            : selectedNotificationIndex - 1;
-            
-        if (newIndex >= 0 && newIndex < allNotifications.length) {
-            setSelectedNotificationIndex(newIndex);
-            setSelectedNotification(allNotifications[newIndex]);
-            // Mark as read if not already
-            if (!allNotifications[newIndex].read) {
-                const docRef = doc(db, 'notifications', allNotifications[newIndex].id);
-                updateDoc(docRef, { read: true });
-            }
-        }
-    };
-
 
   const handleAllNotificationsDelete = async () => {
       if (!user || allNotifications.length === 0) return;
@@ -502,17 +486,7 @@ export default function Home() {
               <p className="font-bold mb-2">{selectedNotification.title}</p>
               <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\\n/g, '<br />') }}></p>
             </div>
-            <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">
-                <div className="flex gap-2">
-                     <Button type="button" size="sm" variant="outline" onClick={() => handleNavigateNotification('prev')} disabled={selectedNotificationIndex === 0}>
-                        <ArrowLeft className="h-4 w-4" />
-                        <span className="sr-only">Sebelumnya</span>
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => handleNavigateNotification('next')} disabled={selectedNotificationIndex === allNotifications.length - 1}>
-                        <ArrowRight className="h-4 w-4" />
-                        <span className="sr-only">Berikutnya</span>
-                    </Button>
-                </div>
+            <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
               <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedNotification(null)}>
                 Tutup
               </Button>

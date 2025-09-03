@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useToast } from "@/hooks/use-toast"
 import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword, signOut, deleteUser } from "firebase/auth"
 import { useRouter } from "next/navigation"
@@ -26,6 +26,7 @@ import Image from "next/image"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { db } from "@/lib/firebase/client"
 import { doc, deleteDoc } from "firebase/firestore"
+import { cn } from "@/lib/utils"
 
 // Schemas
 const passwordSchema = z.object({
@@ -41,6 +42,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 const deleteAccountSchema = z.object({
   password: z.string().min(1, "Kata sandi diperlukan untuk konfirmasi."),
+  captcha: z.string().min(1, "Captcha harus diisi."),
 });
 type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
@@ -49,6 +51,8 @@ export default function SettingsPage() {
   const { setTheme, theme } = useTheme();
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [captcha, setCaptcha] = useState('');
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const { toast } = useToast();
   const auth = getAuth();
   const router = useRouter();
@@ -56,6 +60,19 @@ export default function SettingsPage() {
 
   const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema) });
   const deleteAccountForm = useForm<DeleteAccountFormValues>({ resolver: zodResolver(deleteAccountSchema) });
+
+  const generateCaptcha = useCallback(() => {
+    const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setCaptcha(randomString);
+    deleteAccountForm.reset({ password: '', captcha: '' });
+  }, [deleteAccountForm]);
+
+  useEffect(() => {
+    if (isDeleteAlertOpen) {
+      generateCaptcha();
+    }
+  }, [isDeleteAlertOpen, generateCaptcha]);
+
 
   const onPasswordSubmit = async (data: PasswordFormValues) => {
     if (!user || !user.email) return;
@@ -76,6 +93,13 @@ export default function SettingsPage() {
 
   const onDeleteAccount = async (data: DeleteAccountFormValues) => {
     if (!user || !user.email) return;
+    
+    if (data.captcha !== captcha) {
+        deleteAccountForm.setError("captcha", { type: "manual", message: "Captcha tidak cocok." });
+        generateCaptcha(); // Regenerate captcha on failure
+        return;
+    }
+
     setIsDeleting(true);
 
     try {
@@ -92,10 +116,12 @@ export default function SettingsPage() {
       await deleteDoc(userDocRef);
 
       toast({ title: "Akun Dihapus", description: "Akun Anda telah berhasil dihapus secara permanen." });
+      setIsDeleteAlertOpen(false);
       router.push('/');
 
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Kata sandi salah atau terjadi kesalahan." });
+        generateCaptcha();
     } finally {
         setIsDeleting(false);
     }
@@ -204,7 +230,7 @@ export default function SettingsPage() {
                           {/* Delete Account */}
                            <div>
                             <h3 className="font-semibold text-destructive flex items-center gap-2 mb-2"><Trash2 className="h-5 w-5" />Hapus Akun</h3>
-                             <AlertDialog>
+                             <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                                   <AlertDialogTrigger asChild>
                                       <Button variant="destructive">
                                           Hapus Akun Saya Secara Permanen
@@ -214,18 +240,34 @@ export default function SettingsPage() {
                                       <AlertDialogHeader>
                                           <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                                           <AlertDialogDescription>
-                                              Tindakan ini tidak dapat dibatalkan. Semua data Anda, termasuk riwayat laporan, akan dihapus secara permanen.
-                                              Masukkan kata sandi Anda untuk konfirmasi.
+                                              Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus permanen. Masukkan kata sandi dan captcha untuk konfirmasi.
                                           </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <Form {...deleteAccountForm}>
                                           <form onSubmit={deleteAccountForm.handleSubmit(onDeleteAccount)} className="space-y-4">
+                                               <div className="flex items-center justify-center space-x-2 my-4">
+                                                    <span className="text-2xl font-bold tracking-widest bg-muted p-3 rounded-md select-none">
+                                                        {captcha}
+                                                    </span>
+                                                    <Button type="button" variant="outline" size="sm" onClick={generateCaptcha}>Refresh</Button>
+                                                </div>
+                                              <FormField
+                                                  control={deleteAccountForm.control}
+                                                  name="captcha"
+                                                  render={({ field }) => (
+                                                  <FormItem>
+                                                      <FormLabel>Ketik Ulang Teks di Atas</FormLabel>
+                                                      <FormControl><Input {...field} autoComplete="off" /></FormControl>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                                  )}
+                                              />
                                               <FormField
                                                   control={deleteAccountForm.control}
                                                   name="password"
                                                   render={({ field }) => (
                                                   <FormItem>
-                                                      <FormLabel>Kata Sandi</FormLabel>
+                                                      <FormLabel>Kata Sandi Anda</FormLabel>
                                                       <FormControl><Input type="password" {...field} /></FormControl>
                                                       <FormMessage />
                                                   </FormItem>
