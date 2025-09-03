@@ -10,9 +10,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Form,
@@ -23,46 +23,66 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { sendOtp } from "@/ai/flows/send-otp";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { app } from "@/lib/firebase/client";
 import Image from "next/image";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
-const loginSchema = z.object({
+const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
-  password: z.string().min(1, "Kata sandi tidak boleh kosong."),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const auth = getAuth(app);
   
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  const form = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: "Login Berhasil",
-        description: "Selamat datang kembali!",
-      });
-      router.push("/");
+      const usersQuery = query(collection(db, "users"), where("email", "==", data.email));
+      const usersSnapshot = await getDocs(usersQuery);
+
+      if (usersSnapshot.empty) {
+        toast({
+          variant: "destructive",
+          title: "Gagal",
+          description: "Email tidak terdaftar sebagai pengguna.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const result = await sendOtp({ email: data.email, context: 'userRegistration' }); // Placeholder context
+      if (result.success) {
+        toast({
+          title: "Berhasil",
+          description: "Kode OTP untuk mengatur ulang kata sandi telah dikirim ke email Anda.",
+        });
+        
+        // This should lead to a new flow for resetting password, not just verifying OTP for registration
+        // For now, it reuses the verify-otp page with a specific context.
+        localStorage.setItem('verificationContext', JSON.stringify({ email: data.email, flow: 'userPasswordReset' }));
+        router.push('/auth/verify-otp');
+      } else {
+        throw new Error(result.message);
+      }
     } catch (error) {
        toast({
         variant: "destructive",
-        title: "Login Gagal",
-        description: "Email atau kata sandi salah. Silakan coba lagi.",
+        title: "Gagal Mengirim OTP",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan.",
       });
     } finally {
         setIsSubmitting(false);
@@ -70,7 +90,7 @@ export default function LoginPage() {
   };
 
   return (
-     <>
+    <>
       <div className="flex flex-col items-center justify-center mb-6 text-center">
         <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
@@ -78,14 +98,14 @@ export default function LoginPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Masuk Akun</CardTitle>
+          <CardTitle>Lupa Kata Sandi</CardTitle>
           <CardDescription>
-            Masukkan email dan kata sandi Anda untuk melanjutkan.
+            Masukkan email Anda untuk menerima kode OTP untuk mengatur ulang kata sandi Anda.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+            <CardContent>
               <FormField
                 control={form.control}
                 name="email"
@@ -99,41 +119,16 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                     <div className="flex items-center">
-                      <FormLabel>Kata Sandi</FormLabel>
-                      <Link
-                        href="/auth/forgot-password"
-                        className="ml-auto inline-block text-xs underline"
-                      >
-                        Lupa kata sandi?
-                      </Link>
-                    </div>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Masuk
+                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Kirim Kode OTP
               </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                  Belum punya akun?{" "}
-                  <Link
-                      href="/auth/register"
-                      className="underline text-primary"
-                  >
-                      Daftar di sini
-                  </Link>
+              <div className="text-center text-sm">
+                <Link href="/auth/login" className="underline">
+                  Kembali ke Halaman Masuk
+                </Link>
               </div>
             </CardFooter>
           </form>

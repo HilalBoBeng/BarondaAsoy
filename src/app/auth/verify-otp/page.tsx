@@ -68,11 +68,9 @@ export default function VerifyOtpPage() {
   }, [contextData?.email]);
 
   useEffect(() => {
-    let dataStr = localStorage.getItem('registrationData');
-    let context = 'userRegistration';
-    if (!dataStr) {
-      dataStr = localStorage.getItem('verificationContext');
-      context = 'staffResetPassword';
+    let dataStr: string | null = null;
+    if (typeof window !== 'undefined') {
+        dataStr = localStorage.getItem('registrationData') || localStorage.getItem('verificationContext');
     }
 
     if (!dataStr) {
@@ -250,7 +248,7 @@ export default function VerifyOtpPage() {
                 ) : null}
                 Verifikasi & Lanjutkan
               </Button>
-               {contextData?.flow === 'userRegistration' && (
+               {(contextData?.flow === 'userRegistration' || contextData?.flow === 'userPasswordReset') && (
                   <div className="text-center text-sm">
                     <Link href="/auth/register" className="underline">
                       Kembali untuk mengubah email

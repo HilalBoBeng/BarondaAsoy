@@ -126,7 +126,7 @@ export interface DuesPayment {
     amount: number;
     month: string;
     year: string;
-    paymentDate: Date;
+    paymentDate: Date | Timestamp;
     recordedBy: string; // Staff name
     recordedById: string; // Staff ID
 }

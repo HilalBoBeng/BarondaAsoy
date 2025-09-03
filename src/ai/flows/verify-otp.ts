@@ -6,8 +6,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from "@/lib/firebase/admin";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { app } from "@/lib/firebase/client"; // auth needs the client app
+import { getAuth } from "firebase-admin/auth";
 import { FieldValue } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 
@@ -16,7 +15,7 @@ const VerifyOtpInputSchema = z.object({
   otp: z.string().length(6, 'OTP must be 6 digits.').describe('The 6-digit OTP.'),
   name: z.string().optional().describe('The user\'s full name (for registration).'),
   password: z.string().optional().describe('The user\'s password (for registration).'),
-  flow: z.enum(['userRegistration', 'staffResetPassword']).describe('The flow context for OTP verification.'),
+  flow: z.enum(['userRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
 
@@ -80,7 +79,7 @@ const verifyOtpFlow = ai.defineFlow(
       const q = adminDb.collection('otps')
         .where('email', '==', email)
         .where('otp', '==', otp)
-        .where('context', '==', flow);
+        .where('context', '==', flow === 'userPasswordReset' ? 'userRegistration' : flow);
       
       const otpSnapshot = await q.get();
 
@@ -104,17 +103,18 @@ const verifyOtpFlow = ai.defineFlow(
             return { success: false, message: 'Informasi nama atau password tidak lengkap untuk registrasi.' };
         }
 
-        const auth = getAuth(app);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        await updateProfile(user, { displayName: name });
-        
-        const userDocRef = adminDb.collection('users').doc(user.uid);
-        batch.set(userDocRef, {
-            uid: user.uid,
+        const auth = getAuth();
+        const userRecord = await auth.createUser({
+            email: email,
+            password: password,
             displayName: name,
-            email: user.email,
+        });
+        
+        const userDocRef = adminDb.collection('users').doc(userRecord.uid);
+        batch.set(userDocRef, {
+            uid: userRecord.uid,
+            displayName: name,
+            email: email,
             createdAt: FieldValue.serverTimestamp(),
             photoURL: null,
             phone: '',
@@ -125,7 +125,7 @@ const verifyOtpFlow = ai.defineFlow(
         // Welcome notification
         const welcomeNotifRef = adminDb.collection('notifications').doc();
         batch.set(welcomeNotifRef, {
-             userId: user.uid,
+             userId: userRecord.uid,
              title: `Selamat Datang di Baronda, ${name}!`,
              message: 'Terima kasih telah bergabung! Akun Anda telah berhasil dibuat. Mari bersama-sama menjaga keamanan lingkungan kita. Jelajahi aplikasi untuk melihat pengumuman terbaru dan melaporkan kejadian.',
              read: false,
@@ -134,7 +134,7 @@ const verifyOtpFlow = ai.defineFlow(
         });
         
         await batch.commit();
-        return { success: true, message: 'Registrasi berhasil!', userId: user.uid };
+        return { success: true, message: 'Registrasi berhasil!', userId: userRecord.uid };
       }
       
       if (flow === 'staffResetPassword') {
@@ -153,16 +153,22 @@ const verifyOtpFlow = ai.defineFlow(
           return { success: true, message: 'Verifikasi berhasil. Kode akses Anda telah dikirim ke email.' };
       }
 
+      if (flow === 'userPasswordReset') {
+          // Password reset logic will be added here. For now, just confirm OTP.
+           await batch.commit();
+          return { success: true, message: 'Verifikasi berhasil. Anda akan diarahkan untuk mengatur ulang kata sandi.' };
+      }
+
 
       await batch.commit(); // commit batch for otp deletion if no other flow matched
       return { success: false, message: 'Alur verifikasi tidak valid.' };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in verifyOtpFlow:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-       if ((error as any).code === 'auth/email-already-in-use') {
+       if (error.code === 'auth/email-already-exists') {
            return { success: false, message: 'Email ini sudah terdaftar. Silakan gunakan email lain.' };
        }
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return { success: false, message: `Gagal memverifikasi OTP: ${errorMessage}` };
     }
   }
