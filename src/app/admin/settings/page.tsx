@@ -30,6 +30,8 @@ export default function AdminSettingsPage() {
         const docSnap = await getDoc(settingsRef);
         if (docSnap.exists()) {
           setAppDownloadLink(docSnap.data().appDownloadLink || '');
+        } else {
+          setAppDownloadLink(''); // Ensure it's empty if doc doesn't exist
         }
       } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memuat pengaturan.' });
