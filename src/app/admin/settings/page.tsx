@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil, Download } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil, Download, Save } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -51,6 +51,9 @@ export default function AdminSettingsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const [appDownloadLink, setAppDownloadLink] = useState('');
+  
+  const [isEditingAppName, setIsEditingAppName] = useState(false);
+  const [isEditingLogoUrl, setIsEditingLogoUrl] = useState(false);
 
   const appNameForm = useForm<AppNameValues>({ resolver: zodResolver(appNameSchema) });
   const appLogoForm = useForm<AppLogoValues>({ resolver: zodResolver(appLogoSchema) });
@@ -69,7 +72,6 @@ export default function AdminSettingsPage() {
                 maintenanceForm.reset({ maintenanceMode: data.maintenanceMode || false });
                 setAppDownloadLink(data.appDownloadLink || '');
             } else {
-                 // Set default values if doc doesn't exist
                 appNameForm.reset({ appName: "Baronda" });
                 appLogoForm.reset({ appLogoUrl: "https://iili.io/KJ4aGxp.png" });
                 maintenanceForm.reset({ maintenanceMode: false });
@@ -90,6 +92,8 @@ export default function AdminSettingsPage() {
         const settingsRef = doc(db, 'app_settings', 'config');
         await setDoc(settingsRef, { [field]: data[field] }, { merge: true });
         toast({ title: "Berhasil", description: "Pengaturan berhasil diperbarui." });
+        if (field === 'appName') setIsEditingAppName(false);
+        if (field === 'appLogoUrl') setIsEditingLogoUrl(false);
       } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan pengaturan." });
       } finally {
@@ -160,6 +164,9 @@ export default function AdminSettingsPage() {
     );
   }
 
+  const appNameIsDirty = appNameForm.formState.isDirty;
+  const logoUrlIsDirty = appLogoForm.formState.isDirty;
+
   return (
     <Card>
       <CardHeader>
@@ -181,13 +188,16 @@ export default function AdminSettingsPage() {
                             <FormItem className="flex-grow">
                             <FormLabel>Judul Aplikasi</FormLabel>
                             <FormControl>
-                                <Input {...field} placeholder="e.g. Baronda App" />
+                                <Input {...field} placeholder="e.g. Baronda App" readOnly={!isEditingAppName} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
                         />
-                        <Button type="submit" size="sm" disabled={isSubmitting}><Pencil className="h-4 w-4" /></Button>
+                        <Button type={appNameIsDirty ? 'submit' : 'button'} size="sm" disabled={isSubmitting} onClick={() => {if (!appNameIsDirty) setIsEditingAppName(true)}}>
+                            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin"/>}
+                            {!isSubmitting && (appNameIsDirty ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />)}
+                        </Button>
                     </form>
                 </Form>
 
@@ -200,13 +210,16 @@ export default function AdminSettingsPage() {
                             <FormItem className="flex-grow">
                             <FormLabel>URL Logo Aplikasi</FormLabel>
                             <FormControl>
-                                <Input {...field} placeholder="https://example.com/logo.png" />
+                                <Input {...field} placeholder="https://example.com/logo.png" readOnly={!isEditingLogoUrl} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
                         />
-                         <Button type="submit" size="sm" disabled={isSubmitting}><Pencil className="h-4 w-4" /></Button>
+                        <Button type={logoUrlIsDirty ? 'submit' : 'button'} size="sm" disabled={isSubmitting} onClick={() => {if (!logoUrlIsDirty) setIsEditingLogoUrl(true)}}>
+                            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin"/>}
+                            {!isSubmitting && (logoUrlIsDirty ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />)}
+                        </Button>
                     </form>
                 </Form>
             </div>
