@@ -229,6 +229,21 @@ export default function ScheduleAdminPage() {
     return itemDayIndex === selectedDayIndex;
   });
 
+  const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
+    const val = e.target.value;
+    let formattedVal = val.replace(/[^0-9]/g, '');
+
+    if (formattedVal.length > 2) {
+      formattedVal = formattedVal.slice(0, 2) + ':' + formattedVal.slice(2, 4);
+    }
+    
+    if (formattedVal.length > 5) {
+      formattedVal = formattedVal.slice(0, 5);
+    }
+    
+    field.onChange(formattedVal);
+  };
+
 
   return (
     <Card>
@@ -436,7 +451,7 @@ export default function ScheduleAdminPage() {
                         <FormItem>
                             <FormLabel>Jam Mulai</FormLabel>
                             <FormControl>
-                              <Input type="time" {...field} />
+                              <Input type="text" {...field} placeholder="HH:MM" onChange={(e) => handleTimeInputChange(e, field)} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -445,7 +460,7 @@ export default function ScheduleAdminPage() {
                         <FormItem>
                             <FormLabel>Jam Selesai</FormLabel>
                             <FormControl>
-                                <Input type="time" {...field} />
+                                <Input type="text" {...field} placeholder="HH:MM" onChange={(e) => handleTimeInputChange(e, field)} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

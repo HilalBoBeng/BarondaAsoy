@@ -16,6 +16,8 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -111,11 +113,55 @@ export default function AttendancePage() {
   }
 
   const handleExportPdf = () => {
-    toast({
-        title: 'Fitur Dalam Pengembangan',
-        description: `Fungsi ekspor ke PDF akan segera tersedia.`,
-    });
-  }
+    if (filteredSchedules.length === 0) {
+      toast({ variant: 'destructive', title: 'Tidak Ada Data', description: 'Tidak ada data untuk diekspor.' });
+      return;
+    }
+
+    const doc = new jsPDF();
+    const logoImg = new Image();
+    logoImg.src = 'https://iili.io/KJ4aGxp.png'; // Make sure this is accessible, or use a base64 string.
+    
+    logoImg.onload = () => {
+        doc.addImage(logoImg, 'PNG', 14, 10, 20, 20);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Laporan Kehadiran Petugas Baronda', 40, 20);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Periode: ${selectedMonth} ${selectedYear}`, 40, 26);
+
+        (doc as any).autoTable({
+            startY: 40,
+            head: [['Tanggal Patroli', 'Nama Petugas', 'Area Tugas', 'Jam Tugas', 'Status Kehadiran']],
+            body: filteredSchedules.map(s => [
+                format(s.date as Date, "d MMMM yyyy", { locale: id }),
+                s.officer,
+                s.area,
+                s.time,
+                statusConfig[s.status]?.label || s.status
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: [255, 116, 38] }, // Orange color for header
+            styles: { font: 'helvetica', fontSize: 9 },
+        });
+
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Dicetak pada: ${format(new Date(), 'PPP p', { locale: id })}`, 14, doc.internal.pageSize.height - 10);
+            doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 10);
+        }
+
+        doc.save(`daftar_hadir_${selectedMonth}_${selectedYear}.pdf`);
+    };
+
+    logoImg.onerror = () => {
+        toast({ variant: 'destructive', title: 'Gagal Memuat Logo', description: 'Tidak dapat memuat logo untuk PDF.' });
+    };
+  };
 
   return (
     <Card>
@@ -235,5 +281,3 @@ export default function AttendancePage() {
     </Card>
   );
 }
-
-    

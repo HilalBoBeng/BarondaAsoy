@@ -133,15 +133,7 @@ const verifyOtpFlow = ai.defineFlow(
             isBlocked: false,
         });
 
-        const welcomeNotifRef = adminDb.collection('notifications').doc();
-        batch.set(welcomeNotifRef, {
-             userId: userRecord.uid,
-             title: `Selamat Datang di Baronda, ${name}!`,
-             message: 'Terima kasih telah bergabung! Akun Anda telah berhasil dibuat. Mari bersama-sama menjaga keamanan lingkungan kita. Jelajahi aplikasi untuk melihat pengumuman terbaru dan melaporkan kejadian.',
-             read: false,
-             createdAt: FieldValue.serverTimestamp(),
-             link: '/profile'
-        });
+        // Welcome notification is removed from admin history.
         
         await batch.commit();
         return { success: true, message: 'Registrasi berhasil!', userId: userRecord.uid };

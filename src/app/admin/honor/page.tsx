@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Banknote } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Banknote, Eye } from 'lucide-react';
 import type { Honorarium, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,8 @@ export default function HonorariumAdminPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentHonorarium, setCurrentHonorarium] = useState<Honorarium | null>(null);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [noteToShow, setNoteToShow] = useState('');
   const { toast } = useToast();
 
   const form = useForm<HonorariumFormValues>({
@@ -91,16 +93,26 @@ export default function HonorariumAdminPage() {
       setStaff(staffData);
     });
 
-    const honorQuery = query(collection(db, 'honorariums'), orderBy('issueDate', 'desc'));
+    const honorQuery = query(collection(db, 'honorariums'));
     const unsubHonor = onSnapshot(honorQuery, (snapshot) => {
-      setHonorariums(snapshot.docs.map(doc => {
+      let honorData = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             ...data,
             issueDate: data.issueDate ? (data.issueDate as Timestamp).toDate() : new Date(),
           } as Honorarium;
-      }));
+      });
+
+      honorData = honorData.sort((a, b) => {
+        const [monthA, yearA] = a.period.split(' ');
+        const [monthB, yearB] = b.period.split(' ');
+        const dateA = new Date(parseInt(yearA), months.indexOf(monthA));
+        const dateB = new Date(parseInt(yearB), months.indexOf(monthB));
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setHonorariums(honorData);
       setLoading(false);
     });
 
@@ -152,9 +164,7 @@ export default function HonorariumAdminPage() {
           staffName: selectedStaff.name,
           period: `${values.month} ${values.year}`,
        };
-      // remove month and year from payload
       const { month, year, ...finalPayload } = payload;
-
 
       if (currentHonorarium) {
         const docRef = doc(db, 'honorariums', currentHonorarium.id);
@@ -181,8 +191,14 @@ export default function HonorariumAdminPage() {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus data." });
     }
   };
+  
+  const showNote = (note: string) => {
+    setNoteToShow(note);
+    setIsNoteDialogOpen(true);
+  }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
@@ -198,9 +214,8 @@ export default function HonorariumAdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Nama Petugas</TableHead>
                 <TableHead>Periode</TableHead>
+                <TableHead>Nama Petugas</TableHead>
                 <TableHead>Jumlah</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Catatan</TableHead>
@@ -217,15 +232,19 @@ export default function HonorariumAdminPage() {
               ) : honorariums.length > 0 ? (
                 honorariums.map((h) => (
                   <TableRow key={h.id}>
-                    <TableCell>{format(h.issueDate as Date, "PPP", { locale: id })}</TableCell>
-                    <TableCell>{h.staffName}</TableCell>
                     <TableCell>{h.period}</TableCell>
+                    <TableCell>{h.staffName}</TableCell>
                     <TableCell>{formatCurrency(h.amount)}</TableCell>
                     <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge></TableCell>
-                    <TableCell className="max-w-xs truncate">{h.notes || '-'}</TableCell>
+                    <TableCell>
+                        {h.notes ? (
+                            <Button variant="ghost" size="icon" onClick={() => showNote(h.notes || '')}>
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                        ) : '-'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="icon" onClick={() => { setCurrentHonorarium(h); setIsDialogOpen(true); }}><Edit /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="destructive" size="icon"><Trash /></Button></AlertDialogTrigger>
                           <AlertDialogContent>
@@ -252,105 +271,119 @@ export default function HonorariumAdminPage() {
           </Table>
         </div>
       </CardContent>
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{currentHonorarium ? 'Edit' : 'Tambah'} Honorarium</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="month" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bulan</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                 <FormField control={form.control} name="year" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tahun</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-              <FormField control={form.control} name="staffId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Petugas</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger disabled={!watchedMonth || !watchedYear}><SelectValue placeholder={!watchedMonth || !watchedYear ? "Pilih periode dulu" : "Pilih petugas"} /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {availableStaff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="amount" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Jumlah (Rp)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="text"
-                      inputMode="numeric"
-                      value={field.value ? formatNumberInput(field.value.toString()) : ''}
-                      onChange={(e) => {
-                          const formattedValue = formatNumberInput(e.target.value);
-                          const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
-                          field.onChange(numericValue);
-                      }}
-                      placeholder="Contoh: 500.000"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="Dibayarkan">Dibayarkan</SelectItem>
-                      <SelectItem value="Tertunda">Tertunda</SelectItem>
-                      <SelectItem value="Dipotong">Dipotong</SelectItem>
-                      <SelectItem value="Batal">Batal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="notes" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Catatan (Opsional)</FormLabel>
-                  <FormControl><Textarea {...field} placeholder="Contoh: Dipotong karena tidak masuk 2 hari" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <DialogFooter className="sm:justify-between">
-                <div></div>
-                <div className="flex gap-2">
-                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2" />} Simpan
-                    </Button>
-                </div>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </Card>
+
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{currentHonorarium ? 'Edit' : 'Tambah'} Honorarium</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="month" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bulan</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+                <FormField control={form.control} name="year" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tahun</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+            <FormField control={form.control} name="staffId" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nama Petugas</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger disabled={!watchedMonth || !watchedYear}><SelectValue placeholder={!watchedMonth || !watchedYear ? "Pilih periode dulu" : "Pilih petugas"} /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {availableStaff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="amount" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Jumlah (Rp)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="text"
+                    inputMode="numeric"
+                    value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                    onChange={(e) => {
+                        const formattedValue = formatNumberInput(e.target.value);
+                        const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
+                        field.onChange(numericValue);
+                    }}
+                    placeholder="Contoh: 500.000"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="status" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="Dibayarkan">Dibayarkan</SelectItem>
+                    <SelectItem value="Tertunda">Tertunda</SelectItem>
+                    <SelectItem value="Dipotong">Dipotong</SelectItem>
+                    <SelectItem value="Batal">Batal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="notes" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Catatan (Opsional)</FormLabel>
+                <FormControl><Textarea {...field} placeholder="Contoh: Dipotong karena tidak masuk 2 hari" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <DialogFooter className="sm:justify-between">
+              <div></div>
+              <div className="flex gap-2">
+                  <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                  <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 className="mr-2" />} Simpan
+                  </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Catatan Honorarium</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 whitespace-pre-wrap">{noteToShow}</div>
+            <DialogFooter>
+                <Button onClick={() => setIsNoteDialogOpen(false)}>Tutup</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
