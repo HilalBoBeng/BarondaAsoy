@@ -118,6 +118,10 @@ export default {
           '0%': { transform: 'translateY(100%)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        "caret-blink": {
+          "0%,70%,100%": { opacity: "1" },
+          "20%,50%": { opacity: "0" },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -126,6 +130,7 @@ export default {
         'fade-in': 'fade-in 0.5s ease-out forwards',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
         'slide-in-up': 'slide-in-up 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
+        "caret-blink": "caret-blink 1.25s ease-out infinite",
       },
     },
   },

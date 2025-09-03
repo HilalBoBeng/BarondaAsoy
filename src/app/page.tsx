@@ -502,9 +502,10 @@ export default function Home() {
         {selectedNotification && (
           <>
             <DialogHeader className="flex flex-row items-center justify-between space-y-0 bg-primary text-primary-foreground p-4 rounded-t-lg">
-              <DialogTitle>{selectedNotification.title}</DialogTitle>
+              <DialogTitle>Pemberitahuan</DialogTitle>
             </DialogHeader>
             <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
+              <p className="font-bold mb-2">{selectedNotification.title}</p>
               <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\n/g, '<br />') }}></p>
             </div>
             <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center w-full pt-4 border-t">

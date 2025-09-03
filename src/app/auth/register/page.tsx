@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { sendOtp } from "@/ai/flows/send-otp";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -53,7 +54,6 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const auth = getAuth(app);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -63,41 +63,30 @@ export default function RegisterPage() {
  const onSubmit = async (data: RegisterFormValues) => {
     setIsSubmitting(true);
     try {
-      // Create user with email and password
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+      const result = await sendOtp({
+        email: data.email,
+        context: 'userRegistration',
+      });
       
-      // Update the user's profile in Firebase Authentication
-      await updateProfile(user, {
-        displayName: data.name,
-      });
-
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        displayName: data.name,
-        email: user.email,
-        createdAt: serverTimestamp(),
-        photoURL: null,
-        phone: '',
-        address: '',
-        isBlocked: false,
-      });
-
-      toast({
-        title: "Pendaftaran Berhasil",
-        description: "Akun Anda telah berhasil dibuat. Silakan masuk.",
-      });
-      router.push('/auth/login');
-    } catch (error: any) {
-      let errorMessage = "Terjadi kesalahan saat pendaftaran.";
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "Email ini sudah terdaftar. Silakan gunakan email lain.";
+      if (!result.success) {
+        throw new Error(result.message);
       }
+      
+      toast({
+        title: "Kode OTP Terkirim",
+        description: `Kode verifikasi telah dikirim ke ${data.email}.`,
+      });
+
+      // Store form data to be used after OTP verification
+      localStorage.setItem('registrationData', JSON.stringify(data));
+      
+      router.push('/auth/verify-otp');
+
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Pendaftaran Gagal",
-        description: errorMessage,
+        description: error.message || "Terjadi kesalahan saat pendaftaran.",
       });
     } finally {
       setIsSubmitting(false);
@@ -115,7 +104,7 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle>Daftar Akun Baru</CardTitle>
           <CardDescription>
-            Buat akun untuk mulai menggunakan aplikasi.
+            Buat akun untuk mulai menggunakan aplikasi. Kami akan mengirimkan kode verifikasi ke email Anda.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
