@@ -10,7 +10,7 @@ import type { ScheduleEntry } from '@/lib/types';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Clock, MapPin, Check, FileText, Info, Camera } from 'lucide-react';
+import { Calendar, User, Clock, MapPin, Check, FileText, Info, Camera, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -21,6 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 const reasonSchema = z.object({
   reason: z.string().min(5, "Alasan harus diisi (minimal 5 karakter)."),
@@ -50,6 +51,7 @@ export default function PetugasSchedulePage() {
   const [absenceType, setAbsenceType] = useState<AbsenceType>('Izin');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
   
   const reasonForm = useForm<ReasonFormValues>({ resolver: zodResolver(reasonSchema) });
 
@@ -85,13 +87,9 @@ export default function PetugasSchedulePage() {
     }
   }, []);
 
-  const handleStartPatrol = () => {
-    toast({
-      variant: 'destructive',
-      title: 'Fitur Dalam Pengembangan',
-      description: 'Pemindaian QR Code untuk memulai patroli akan segera tersedia.'
-    });
-  }
+  const handleStartPatrol = (scheduleId: string) => {
+    router.push(`/petugas/scan?scheduleId=${scheduleId}`);
+  };
 
   const handleUpdateStatus = async (schedule: ScheduleEntry, status: ScheduleEntry['status'], reason?: string) => {
     if (!schedule) return;
@@ -158,7 +156,7 @@ export default function PetugasSchedulePage() {
          <CardFooter className="flex-col sm:flex-row gap-2">
             {schedule.status === 'Pending' && (
                 <>
-                    <Button className="w-full sm:w-auto" onClick={handleStartPatrol} disabled={isSubmitting}><Camera className="mr-2 h-4 w-4" /> Mulai Bertugas</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => handleStartPatrol(schedule.id)} disabled={isSubmitting}><QrCode className="mr-2 h-4 w-4" /> Mulai Bertugas</Button>
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Izin')} disabled={isSubmitting}><FileText className="mr-2 h-4 w-4" /> Ajukan Izin</Button>
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleOpenAbsenceDialog(schedule, 'Sakit')} disabled={isSubmitting}><Info className="mr-2 h-4 w-4" /> Lapor Sakit</Button>
                 </>

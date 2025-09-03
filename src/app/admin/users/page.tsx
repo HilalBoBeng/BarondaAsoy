@@ -293,9 +293,8 @@ export default function UsersAdminPage() {
                         <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">
                                {user.isSuspended ? (
-                                    <Button variant="outline" size="sm" onClick={() => handleRemoveSuspension(user, 'user')}>
-                                      <ShieldCheck className="h-4 w-4 mr-2" />
-                                      Cabut Tangguhan
+                                    <Button variant="outline" size="icon" onClick={() => handleRemoveSuspension(user, 'user')}>
+                                      <ShieldCheck className="h-4 w-4" />
                                     </Button>
                                 ) : (
                                     <Button variant="outline" size="icon" onClick={() => openSuspensionDialog(user, 'user')}>
@@ -398,9 +397,8 @@ export default function UsersAdminPage() {
                                     <TableCell className="text-right">
                                        <div className="flex gap-2 justify-end">
                                           {s.status === 'suspended' ? (
-                                              <Button variant="outline" size="sm" onClick={() => handleRemoveSuspension(s, 'staff')}>
-                                                <ShieldCheck className="h-4 w-4 mr-2" />
-                                                Cabut
+                                              <Button variant="outline" size="icon" onClick={() => handleRemoveSuspension(s, 'staff')}>
+                                                <ShieldCheck className="h-4 w-4" />
                                               </Button>
                                           ) : (
                                               <Button variant="outline" size="icon" onClick={() => openSuspensionDialog(s, 'staff')}>

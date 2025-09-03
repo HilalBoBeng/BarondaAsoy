@@ -18,13 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check, QrCode } from 'lucide-react';
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -295,6 +296,9 @@ export default function ScheduleAdminPage() {
                     <TableCell><StatusBadge status={item.status} /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end items-center">
+                          <Button asChild variant="outline" size="icon">
+                            <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
+                          </Button>
                           <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
                             <Edit className="h-4 w-4" />
                           </Button>

@@ -15,7 +15,8 @@ import {
   MessageSquare,
   Settings,
   Landmark,
-  ArrowLeft
+  ArrowLeft,
+  QrCode
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -89,11 +90,16 @@ export default function AdminLayout({
   
   useEffect(() => {
     const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
+    const scheduleDetailRegex = /^\/admin\/schedule\/(.+)$/;
     const duesDetailMatch = pathname.match(duesDetailRegex);
+    const scheduleDetailMatch = pathname.match(scheduleDetailRegex);
 
     if (duesDetailMatch) {
       setIsDetailPage(true);
       setPageTitle('Riwayat Iuran');
+    } else if (scheduleDetailMatch) {
+      setIsDetailPage(true);
+      setPageTitle('Detail Jadwal & QR Code');
     } else {
       setIsDetailPage(false);
       const activeItem = navItems.find(item => pathname.startsWith(item.href));
