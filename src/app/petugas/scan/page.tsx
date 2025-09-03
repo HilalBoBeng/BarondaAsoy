@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, ArrowLeft, QrCode, CheckCircle, ShieldAlert, Image as ImageIcon, CameraOff, Camera } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
-import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeResult } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeResult } from 'html5-qrcode';
 
 function ScanPageContent() {
   const router = useRouter();
@@ -19,7 +19,6 @@ function ScanPageContent() {
   const { toast } = useToast();
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrReaderContainerId = "qr-reader-container";
   
@@ -44,6 +43,7 @@ function ScanPageContent() {
   };
   
   const onScanFailure = (error: any) => {
+    // This can be verbose, so we don't show toast for every failure.
     // console.warn(`QR error: ${error}`);
   };
 
@@ -86,36 +86,26 @@ function ScanPageContent() {
     if (!file || !scannerRef.current) return;
     
     setStatus('processing');
-    if (scannerRef.current.isScanning) await scannerRef.current.stop();
 
     try {
-        await scannerRef.current.scanFile(file, true)
-          .then(onScanSuccess)
-          .catch(err => {
-             throw new Error("Tidak dapat menemukan QR code pada gambar.");
-          });
+        const decodedText = await scannerRef.current.scanFile(file, true);
+        onScanSuccess(decodedText, {
+            decodedText: decodedText,
+            result: {
+                text: decodedText,
+                format: {
+                    formatName: 'QR_CODE'
+                }
+            }
+        });
     } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Gagal memproses gambar.';
+        const msg = err instanceof Error ? err.message : 'Gagal memproses gambar. Tidak ada QR code ditemukan.';
         setErrorMessage(msg);
         setStatus('error');
-        setTimeout(() => setStatus('idle'), 2000);
+        // Reset to allow re-scanning
+        setTimeout(() => setStatus('scanning'), 2000);
     }
   };
-
-  const handleCapture = async () => {
-    if (!scannerRef.current || !scannerRef.current.isScanning) return;
-    try {
-        const imageSrc = scannerRef.current.getRunningTrackCameraCapabilities()?.stream?.getVideoTracks()[0];
-        if (imageSrc) {
-            // This is a simplification. Html5Qrcode doesn't directly support capturing a frame.
-            // A more robust solution would use the video stream directly.
-            // For now, we instruct the user to use the file upload.
-            toast({ title: 'Fungsi Dalam Pengembangan', description: 'Silakan gunakan opsi unggah dari galeri untuk saat ini.' });
-        }
-    } catch(e) {
-        toast({variant: 'destructive', title: 'Gagal', description: 'Tidak dapat mengambil gambar dari kamera.'});
-    }
-  }
 
 
   const processDecodedText = async (decodedText: string | null | undefined) => {
@@ -218,13 +208,6 @@ function ScanPageContent() {
                         )}
                     </div>
                     <div className="flex justify-center gap-2">
-                         <Button
-                            variant="secondary"
-                            onClick={handleCapture}
-                            title="Ambil Foto"
-                        >
-                            <Camera className="mr-2 h-5 w-5" /> Ambil Foto
-                        </Button>
                         <Button
                             variant="secondary"
                             onClick={() => fileInputRef.current?.click()}

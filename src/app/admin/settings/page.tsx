@@ -19,20 +19,20 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from "@/lib/firebase/client";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 const settingsSchema = z.object({
   appName: z.string().min(1, "Nama aplikasi tidak boleh kosong."),
@@ -50,6 +50,7 @@ export default function AdminSettingsPage() {
   const { setTheme, theme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -94,35 +95,49 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleApkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleApkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
+    if (!file) return;
+    
     if (!file.name.endsWith('.apk')) {
         toast({ variant: 'destructive', title: 'File Tidak Valid', description: 'Silakan unggah file dengan format .apk' });
         return;
     }
 
     setIsUploading(true);
-    try {
-        const storage = getStorage();
-        const storageRef = ref(storage, `release/${file.name}`);
-        
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
+    setUploadProgress(0);
 
-        const settingsRef = doc(db, 'app_settings', 'config');
-        await updateDoc(settingsRef, { appDownloadLink: downloadURL });
-        
-        form.setValue('appDownloadLink', downloadURL);
+    const storage = getStorage();
+    const storageRef = ref(storage, `release/${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
 
-        toast({ title: 'Unggah Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
-    } catch (error) {
-        console.error("Upload error:", error);
-        toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: 'Terjadi kesalahan saat mengunggah file APK.' });
-    } finally {
-        setIsUploading(false);
+    uploadTask.on('state_changed', 
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+        }, 
+        (error) => {
+            console.error("Upload error:", error);
+            toast({ variant: 'destructive', title: 'Gagal Mengunggah', description: 'Terjadi kesalahan saat mengunggah file APK.' });
+            setIsUploading(false);
+            setUploadProgress(0);
+        }, 
+        async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            const settingsRef = doc(db, 'app_settings', 'config');
+            await updateDoc(settingsRef, { appDownloadLink: downloadURL });
+            form.setValue('appDownloadLink', downloadURL);
+            toast({ title: 'Unggah Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
+            setIsUploading(false);
+        }
+    );
+  };
+
+  const copyToClipboard = () => {
+    const link = form.getValues('appDownloadLink');
+    if (link) {
+      navigator.clipboard.writeText(link);
+      toast({ title: 'Tautan disalin!' });
     }
   };
 
@@ -182,21 +197,27 @@ export default function AdminSettingsPage() {
                   <FormControl>
                     <Input {...field} placeholder="https://example.com/logo.png" />
                   </FormControl>
-                   <FormDescription>
+                   <p className="text-sm text-muted-foreground">
                     Pastikan URL gambar dapat diakses secara publik.
-                  </FormDescription>
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
             />
              <FormItem>
                 <FormLabel>File APK Aplikasi</FormLabel>
-                <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-2">
                     <Input 
                         value={form.watch('appDownloadLink') || ''}
                         readOnly
                         placeholder="Tidak ada file APK yang diunggah"
+                        className="bg-muted/50"
                     />
+                     {form.watch('appDownloadLink') && (
+                        <Button type="button" variant="outline" size="icon" onClick={copyToClipboard}>
+                           <Copy className="h-4 w-4" />
+                        </Button>
+                     )}
                     <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                         {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                         Unggah
@@ -209,9 +230,15 @@ export default function AdminSettingsPage() {
                         onChange={handleApkUpload}
                     />
                 </div>
-                <FormDescription>
+                 {isUploading && (
+                    <div className="mt-2">
+                      <Progress value={uploadProgress} className="w-full" />
+                      <p className="text-xs text-muted-foreground mt-1 text-center">{Math.round(uploadProgress)}%</p>
+                    </div>
+                )}
+                 <p className="text-sm text-muted-foreground">
                     Unggah file APK untuk disebarkan melalui halaman unduhan.
-                </FormDescription>
+                </p>
              </FormItem>
 
              <Separator />
@@ -231,9 +258,9 @@ export default function AdminSettingsPage() {
                     <FormLabel className="text-base">
                       Aktifkan Mode Pemeliharaan
                     </FormLabel>
-                    <FormDescription>
+                    <p className="text-sm text-muted-foreground">
                       Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
-                    </FormDescription>
+                    </p>
                   </div>
                   <FormControl>
                     <Switch
