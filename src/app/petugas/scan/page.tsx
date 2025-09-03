@@ -46,8 +46,11 @@ function ScanPageContent() {
   };
   
   useEffect(() => {
-    html5QrCodeRef.current = new Html5Qrcode('qr-reader', false);
-    
+    // Initialize the scanner instance once.
+    if (!html5QrCodeRef.current) {
+        html5QrCodeRef.current = new Html5Qrcode('qr-reader', false);
+    }
+
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -75,6 +78,7 @@ function ScanPageContent() {
     if (status === 'processing' || status === 'success') return;
     setStatus('processing');
     setErrorMessage(null);
+    stopCamera();
 
     try {
       if (!scanType) throw new Error("Tipe pemindaian tidak valid.");
@@ -158,6 +162,8 @@ function ScanPageContent() {
 
   const handleFileSelect = async (file: File) => {
     if (html5QrCodeRef.current) {
+        setStatus('processing');
+        setErrorMessage(null);
         try {
             const decodedText = await html5QrCodeRef.current.scanFile(file, false);
             if (decodedText) {
@@ -167,6 +173,9 @@ function ScanPageContent() {
             setErrorMessage("Tidak dapat menemukan QR code pada gambar.");
             setStatus('error');
         }
+    } else {
+        setErrorMessage("Pemindai belum siap, coba lagi.");
+        setStatus('error');
     }
   };
 
@@ -198,16 +207,21 @@ function ScanPageContent() {
           <div className="relative w-full max-w-sm mx-auto aspect-square bg-muted rounded-lg overflow-hidden shadow-inner flex items-center justify-center">
             <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-[250px] h-[250px] border-4 border-white/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
+                <div className="w-[250px] h-[250px] aspect-square border-4 border-white/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
             </div>
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-2 right-2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white hover:text-white"
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <Upload className="h-5 w-5" />
+            </Button>
           </div>
           
           <div className="flex gap-2">
              <Button className="w-full" onClick={handleCapture} disabled={status !== 'scanning'}>
-                <Camera className="mr-2"/> Ambil Gambar
-             </Button>
-             <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={status === 'processing'}>
-                 <Upload className="mr-2"/> Unggah
+                <Camera className="mr-2"/> Ambil Gambar & Proses
              </Button>
              <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={(e) => e.target.files && e.target.files.length > 0 && handleFileSelect(e.target.files[0])} />
           </div>
