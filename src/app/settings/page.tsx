@@ -160,7 +160,6 @@ export default function SettingsPage() {
                     <CardContent className="space-y-8">
                       {user ? (
                         <>
-                          {/* Change Password */}
                           <Form {...passwordForm}>
                               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
                                   <h3 className="font-semibold flex items-center gap-2"><KeyRound className="h-5 w-5" />Ubah Kata Sandi</h3>
@@ -205,8 +204,7 @@ export default function SettingsPage() {
                           </Form>
                           <Separator />
 
-                          {/* Display Settings */}
-                          <div className="flex items-center justify-between rounded-lg">
+                          <div className="flex items-center justify-between">
                               <div className="space-y-0.5">
                                   <h3 className="font-medium">Tema Aplikasi</h3>
                                   <p className="text-sm text-muted-foreground">
@@ -227,7 +225,6 @@ export default function SettingsPage() {
                           
                           <Separator />
 
-                          {/* Delete Account */}
                            <div>
                             <h3 className="font-semibold text-destructive flex items-center gap-2 mb-2"><Trash2 className="h-5 w-5" />Hapus Akun</h3>
                              <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>

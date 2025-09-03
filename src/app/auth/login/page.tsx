@@ -35,6 +35,7 @@ import { doc, getDoc, Timestamp } from "firebase/firestore";
 import type { AppUser } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 
 const loginSchema = z.object({
@@ -93,7 +94,7 @@ function LoginForm() {
             const userData = userDocSnap.data() as AppUser;
             if (userData.isBlocked) {
                 await auth.signOut();
-                toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Akun Anda telah diblokir oleh admin. Hubungi admin untuk informasi lebih lanjut.' });
+                setSuspensionInfo({ reason: 'Akun Anda telah diblokir oleh admin. Hubungi admin untuk informasi lebih lanjut.', endDate: 'Permanen' });
                 setIsSubmitting(false);
                 return;
             }
@@ -152,14 +153,6 @@ function LoginForm() {
             </AlertDescription>
         </Alert>
       )}
-       {suspensionInfo && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Akun Ditangguhkan</AlertTitle>
-            <AlertDescription>
-              Akun Anda ditangguhkan karena: "{suspensionInfo.reason}". Penangguhan berakhir {suspensionInfo.endDate}.
-            </AlertDescription>
-          </Alert>
-        )}
        {showResetPasswordAlert && (
         <Alert variant="destructive" className="mb-4 animate-fade-in">
             <AlertTitle>Terlalu Banyak Percobaan Login Gagal</AlertTitle>
@@ -233,6 +226,24 @@ function LoginForm() {
           </form>
         </Form>
       </Card>
+      <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Akun Ditangguhkan</DialogTitle>
+            <DialogDescription>
+              {suspensionInfo?.reason}
+            </DialogDescription>
+          </DialogHeader>
+           {suspensionInfo?.endDate !== 'Permanen' && (
+             <div className="text-sm text-center text-muted-foreground">
+                Penangguhan berakhir {suspensionInfo?.endDate}.
+            </div>
+           )}
+          <DialogFooter>
+            <Button onClick={() => setSuspensionInfo(null)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -126,8 +126,8 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
             <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
                 {selectedAnnouncement && (
                     <>
-                        <DialogHeader className="p-4 rounded-t-lg">
-                            <DialogTitle className="sr-only">{selectedAnnouncement.title}</DialogTitle>
+                        <DialogHeader className="p-6 pb-0 rounded-t-lg bg-primary text-primary-foreground">
+                            <DialogTitle>{selectedAnnouncement.title}</DialogTitle>
                         </DialogHeader>
                         <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
                             <p className="text-foreground">{selectedAnnouncement.content}</p>

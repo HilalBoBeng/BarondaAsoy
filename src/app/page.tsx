@@ -49,7 +49,6 @@ export default function Home() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [patrolLogs, setPatrolLogs] = useState<PatrolLog[]>([]);
   const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
-  const [selectedNotificationIndex, setSelectedNotificationIndex] = useState(0);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -112,6 +111,12 @@ export default function Home() {
                 router.push('/auth/login');
                 return;
             }
+             if (userData.isSuspended) {
+                toast({ variant: 'destructive', title: 'Akun Ditangguhkan', description: 'Akun Anda telah ditangguhkan. Anda tidak dapat mengakses aplikasi saat ini.' });
+                auth.signOut();
+                router.push('/auth/login');
+                return;
+             }
             setUserInfo(userData);
           } else {
             setUserInfo(null);
@@ -129,7 +134,7 @@ export default function Home() {
           const sortedNotifs = notifsData.sort((a, b) => {
             const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
             const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
-            return timeB - timeA;
+            return timeB - a;
           });
           setAllNotifications(sortedNotifs);
         }, (error) => {
@@ -156,13 +161,12 @@ export default function Home() {
       setPaginatedNotifications(allNotifications.slice(start, end));
   }, [notificationPage, allNotifications]);
 
-    const handleNotificationClick = async (notif: Notification, index: number) => {
+    const handleNotificationClick = async (notif: Notification) => {
       if (userInfo?.isBlocked) {
         toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Anda tidak dapat melihat detail pemberitahuan.' });
         return;
       };
       setSelectedNotification(notif);
-      setSelectedNotificationIndex(index);
       if (!notif.read) {
           const docRef = doc(db, 'notifications', notif.id);
           await updateDoc(docRef, { read: true });
@@ -190,10 +194,6 @@ export default function Home() {
     setIsLoggingOut(true);
     try {
       await signOut(auth);
-      toast({
-        title: "Berhasil Keluar",
-        description: "Anda akan diarahkan ke halaman utama.",
-      });
       setTimeout(() => {
           router.push('/');
           setIsLoggingOut(false);
@@ -293,8 +293,8 @@ export default function Home() {
                         <DropdownMenuSeparator />
                         
                         {allNotifications.length > 0 ? (
-                            allNotifications.map((notif, index) => (
-                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif, index);}} className="flex items-start justify-between cursor-pointer p-0">
+                            allNotifications.map((notif) => (
+                                <DropdownMenuItem key={notif.id} onSelect={(e) => { e.preventDefault(); handleNotificationClick(notif);}} className="flex items-start justify-between cursor-pointer p-0">
                                    <div className="flex w-full flex-grow flex-col py-1.5 pl-2 pr-1 min-w-0">
                                         <div className="flex items-center justify-between w-full">
                                             <p className="font-semibold truncate flex-grow w-0 min-w-0">{notif.title}</p>
@@ -487,11 +487,10 @@ export default function Home() {
       <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
         {selectedNotification && (
           <>
-            <DialogHeader className="p-4 rounded-t-lg">
-              <DialogTitle className="sr-only">{selectedNotification.title}</DialogTitle>
+            <DialogHeader className="p-6 pb-0 rounded-t-lg bg-primary text-primary-foreground">
+              <DialogTitle>{selectedNotification.title}</DialogTitle>
             </DialogHeader>
             <div className="p-6 whitespace-pre-wrap break-words min-h-[150px] flex-grow text-left">
-              <p className="font-bold mb-2">{selectedNotification.title}</p>
               <p className="text-foreground" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\\n/g, '<br />') }}></p>
             </div>
             <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">

@@ -32,7 +32,7 @@ import { collection, query, where, getDocs, Timestamp } from "firebase/firestore
 import { db } from "@/lib/firebase/client";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 
 const staffLoginSchema = z.object({
@@ -133,14 +133,6 @@ export default function StaffLoginPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
-      {suspensionInfo && (
-        <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Akun Ditangguhkan</AlertTitle>
-            <AlertDescription>
-                Akun Anda ditangguhkan karena: "{suspensionInfo.reason}". Penangguhan berakhir {suspensionInfo.endDate}.
-            </AlertDescription>
-        </Alert>
-      )}
       <Card>
         <CardHeader>
           <CardTitle>Halaman Akses Staf & Admin</CardTitle>
@@ -177,6 +169,25 @@ export default function StaffLoginPage() {
             </form>
         </Form>
       </Card>
+
+      <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Akun Ditangguhkan</DialogTitle>
+            <DialogDescription>
+              {suspensionInfo?.reason}
+            </DialogDescription>
+          </DialogHeader>
+           {suspensionInfo?.endDate !== 'permanen' && (
+             <div className="text-sm text-center text-muted-foreground">
+                Penangguhan berakhir {suspensionInfo?.endDate}.
+            </div>
+           )}
+          <DialogFooter>
+            <Button onClick={() => setSuspensionInfo(null)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
