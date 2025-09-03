@@ -57,9 +57,9 @@ export default function AdminSettingsPage() {
   const [isEditingAppName, setIsEditingAppName] = useState(false);
   const [isEditingLogoUrl, setIsEditingLogoUrl] = useState(false);
 
-  const appNameForm = useForm<AppNameValues>({ resolver: zodResolver(appNameSchema) });
-  const appLogoForm = useForm<AppLogoValues>({ resolver: zodResolver(appLogoSchema) });
-  const maintenanceForm = useForm<MaintenanceValues>({ resolver: zodResolver(maintenanceSchema) });
+  const appNameForm = useForm<AppNameValues>({ resolver: zodResolver(appNameSchema), defaultValues: { appName: '' } });
+  const appLogoForm = useForm<AppLogoValues>({ resolver: zodResolver(appLogoSchema), defaultValues: { appLogoUrl: '' } });
+  const maintenanceForm = useForm<MaintenanceValues>({ resolver: zodResolver(maintenanceSchema), defaultValues: { maintenanceMode: false } });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -228,7 +228,9 @@ export default function AdminSettingsPage() {
         <div className="space-y-2">
             <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><Download className="h-5 w-5" />File Aplikasi</h3>
             <div>
-                <Label htmlFor="apk-link">Link Unduh Aplikasi</Label>
+                <label htmlFor="apk-link" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Link Unduh Aplikasi
+                </label>
                  <div className="flex items-center gap-2 mt-2">
                     <Input 
                         id="apk-link"
