@@ -88,13 +88,12 @@ export default function ScheduleAdminPage() {
 
   
   useEffect(() => {
-    const fetchStaff = async () => {
-      const staffQuery = query(collection(db, "staff"), where('status', '==', 'active'), orderBy("name"));
-      const staffSnapshot = await getDocs(staffQuery);
-      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+    const staffQuery = query(collection(db, "staff"), where('status', '==', 'active'));
+    const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
+      const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
+      staffData.sort((a, b) => a.name.localeCompare(b.name));
       setStaff(staffData);
-    };
-    fetchStaff();
+    });
 
     const q = query(collection(db, 'schedules'), orderBy('date', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -109,7 +108,10 @@ export default function ScheduleAdminPage() {
       console.error("Error fetching schedules:", error);
       setLoading(false);
     });
-    return () => unsubscribe();
+    return () => {
+        unsubStaff();
+        unsubscribe();
+    }
   }, []);
   
   useEffect(() => {

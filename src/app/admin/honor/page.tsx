@@ -84,14 +84,14 @@ export default function HonorariumAdminPage() {
 
   useEffect(() => {
     const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'));
-    const honorQuery = query(collection(db, 'honorariums'), orderBy('issueDate', 'desc'));
-
+    
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
       const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
       staffData.sort((a, b) => a.name.localeCompare(b.name));
       setStaff(staffData);
     });
 
+    const honorQuery = query(collection(db, 'honorariums'), orderBy('issueDate', 'desc'));
     const unsubHonor = onSnapshot(honorQuery, (snapshot) => {
       setHonorariums(snapshot.docs.map(doc => ({
         id: doc.id,
@@ -335,11 +335,14 @@ export default function HonorariumAdminPage() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <DialogFooter>
-                <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2" />} Simpan
-                </Button>
+              <DialogFooter className="sm:justify-between">
+                <div></div>
+                <div className="flex gap-2">
+                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2" />} Simpan
+                    </Button>
+                </div>
               </DialogFooter>
             </form>
           </Form>
