@@ -92,7 +92,7 @@ export default function StaffSettingsPage() {
         }
 
         await updateDoc(staffRef, { 
-            accessCode: data.newAccessCode.toUpperCase(),
+            accessCode: data.newAccessCode,
             lastCodeChangeTimestamp: serverTimestamp(),
         });
 

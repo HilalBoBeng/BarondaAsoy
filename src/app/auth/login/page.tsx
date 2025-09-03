@@ -106,16 +106,18 @@ export default function LoginPage() {
                   <FormItem>
                      <div className="flex items-center">
                       <FormLabel>Kata Sandi</FormLabel>
-                      <Link
-                        href="/auth/forgot-password"
-                        className="ml-auto inline-block text-xs underline"
-                      >
-                        Lupa kata sandi?
-                      </Link>
                     </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
+                     <div className="text-right">
+                      <Link
+                        href="/auth/forgot-password"
+                        className="ml-auto inline-block text-xs text-primary hover:underline"
+                      >
+                        Lupa kata sandi?
+                      </Link>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -130,7 +132,7 @@ export default function LoginPage() {
                   Belum punya akun?{" "}
                   <Link
                       href="/auth/register"
-                      className="underline text-primary"
+                      className="text-primary hover:underline"
                   >
                       Daftar di sini
                   </Link>

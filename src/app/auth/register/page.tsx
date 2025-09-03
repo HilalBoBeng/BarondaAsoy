@@ -101,7 +101,7 @@ export default function RegisterPage() {
       const registrationData = { 
         ...data, 
         flow: 'userRegistration',
-        address: data.addressType === 'kilongan' ? 'KILONGAN' : data.addressDetail,
+        addressDetail: data.addressType === 'kilongan' ? 'KILONGAN' : data.addressDetail,
       };
 
       // Store form data to be used after OTP verification
@@ -249,7 +249,7 @@ export default function RegisterPage() {
                   Sudah punya akun?{" "}
                   <Link
                       href="/auth/login"
-                      className="underline text-primary"
+                      className="text-primary hover:underline"
                   >
                       Masuk di sini
                   </Link>
