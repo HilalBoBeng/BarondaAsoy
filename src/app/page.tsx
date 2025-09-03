@@ -328,7 +328,7 @@ export default function Home() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar>
-                        <AvatarImage src={user?.photoURL || ''} alt="User profile" />
+                        <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User profile'} />
                         <AvatarFallback>
                             <UserCircle className="h-8 w-8" />
                         </AvatarFallback>
