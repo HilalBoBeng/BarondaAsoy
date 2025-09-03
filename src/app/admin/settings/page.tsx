@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil } from "lucide-react";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil, Download } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
