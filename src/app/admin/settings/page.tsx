@@ -49,11 +49,14 @@ export default function ShortLinkAdminPage() {
   useEffect(() => {
     const q = query(collection(db, 'shortlinks'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const historyData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: (doc.data().createdAt as Timestamp).toDate(),
-        })) as ShortLinkData[];
+        const historyData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(), // Safety check for createdAt
+            } as ShortLinkData;
+        });
         setHistory(historyData);
         setLoadingHistory(false);
     });
@@ -216,13 +219,20 @@ export default function ShortLinkAdminPage() {
                                         </TableRow>
                                     ))
                                 ) : history.length > 0 ? (
-                                    history.map((link) => (
+                                    history.map((link) => {
+                                        const fullShortUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/go/${link.slug}`;
+                                        return (
                                         <TableRow key={link.id}>
                                             <TableCell>{format(link.createdAt, 'd MMM yyyy', { locale: id })}</TableCell>
                                             <TableCell>
-                                                <a href={`/go/${link.slug}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                                                    /go/{link.slug} <ExternalLink className="h-3 w-3"/>
-                                                </a>
+                                                <div className="flex items-center gap-2">
+                                                    <a href={fullShortUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                                                        {fullShortUrl}
+                                                    </a>
+                                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(fullShortUrl)}>
+                                                        <Copy className="h-4 w-4"/>
+                                                     </Button>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="max-w-xs">
                                                 <div className="flex items-center gap-2">
@@ -250,7 +260,7 @@ export default function ShortLinkAdminPage() {
                                                 </AlertDialog>
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                    )})
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-24 text-center">Belum ada tautan yang dibuat.</TableCell>
