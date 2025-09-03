@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, QrCode, Upload, Camera, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, QrCode, Image as ImageIcon, Camera, CheckCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode';
@@ -39,7 +39,11 @@ function ScanPageContent() {
 
   const stopScanner = useCallback(() => {
     if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(err => console.error("Gagal menghentikan pemindai.", err));
+      try {
+        scannerRef.current.stop();
+      } catch (err) {
+         console.error("Gagal menghentikan pemindai (mungkin sudah berhenti).", err);
+      }
     }
   }, []);
   
@@ -115,7 +119,10 @@ function ScanPageContent() {
    useEffect(() => {
     if (status !== 'idle' || !scanType) return;
     
-    scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
+    // Ensure the instance is created only once.
+    if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(scannerContainerId, { verbose: false });
+    }
     
     const onScanSuccess = (decodedText: string, result: Html5QrcodeResult) => {
         processDecodedText(decodedText);
@@ -129,24 +136,26 @@ function ScanPageContent() {
         console.warn(`QR error = ${JSON.stringify(error)}`);
     };
 
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-          setStatus('scanning');
-          scannerRef.current?.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            onScanSuccess,
-            onScanFailure
-          ).catch(err => {
-              console.error("Camera start error:", err);
-              setStatus('permission_denied');
-              setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera di pengaturan browser Anda.");
-          });
-      }
-    }).catch(err => {
-        setStatus('permission_denied');
-        setErrorMessage("Tidak dapat menemukan kamera. Pastikan Anda memiliki kamera dan telah memberikan izin.");
-    });
+    const startCamera = async () => {
+        try {
+            await Html5Qrcode.getCameras(); // Check for camera availability and permissions
+            if (scannerRef.current) {
+                setStatus('scanning');
+                await scannerRef.current.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    onScanSuccess,
+                    onScanFailure
+                );
+            }
+        } catch (err) {
+            console.error("Camera start error:", err);
+            setStatus('permission_denied');
+            setErrorMessage("Gagal memulai kamera. Mohon berikan izin akses kamera di pengaturan browser Anda.");
+        }
+    };
+    
+    startCamera();
     
     return () => {
       stopScanner();
@@ -219,7 +228,7 @@ function ScanPageContent() {
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Unggah Gambar QR"
             >
-                <Upload className="h-5 w-5" />
+                <ImageIcon className="h-5 w-5" />
             </Button>
           </div>
           
@@ -243,7 +252,7 @@ function ScanPageContent() {
            <Button variant="secondary" className="w-full" asChild>
                 <Link href="/petugas/schedule">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Batal & Kembali
+                    Batal
                 </Link>
            </Button>
         </CardContent>
