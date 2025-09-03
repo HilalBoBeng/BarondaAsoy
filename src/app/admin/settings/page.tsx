@@ -32,6 +32,7 @@ import { db } from "@/lib/firebase/client";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 const appNameSchema = z.object({ appName: z.string().min(1, "Nama aplikasi tidak boleh kosong.") });
 const appLogoSchema = z.object({ appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")) });
@@ -68,12 +69,12 @@ export default function AdminSettingsPage() {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 appNameForm.reset({ appName: data.appName || "Baronda" });
-                appLogoForm.reset({ appLogoUrl: data.appLogoUrl || "https://iili.io/KJ4aGxp.png" });
+                appLogoForm.reset({ appLogoUrl: data.appLogoUrl || "" });
                 maintenanceForm.reset({ maintenanceMode: data.maintenanceMode || false });
                 setAppDownloadLink(data.appDownloadLink || '');
             } else {
                 appNameForm.reset({ appName: "Baronda" });
-                appLogoForm.reset({ appLogoUrl: "https://iili.io/KJ4aGxp.png" });
+                appLogoForm.reset({ appLogoUrl: "" });
                 maintenanceForm.reset({ maintenanceMode: false });
                 setAppDownloadLink('');
             }
@@ -82,8 +83,6 @@ export default function AdminSettingsPage() {
         } finally {
             setLoading(false);
         }
-    };
-    fetchSettings();
   }, [appNameForm, appLogoForm, maintenanceForm, toast]);
   
   const handleSave = async (field: keyof (AppNameValues & AppLogoValues & MaintenanceValues), data: any) => {
@@ -194,9 +193,9 @@ export default function AdminSettingsPage() {
                             </FormItem>
                         )}
                         />
-                        <Button type={appNameIsDirty ? 'submit' : 'button'} size="sm" disabled={isSubmitting} onClick={() => {if (!appNameIsDirty) setIsEditingAppName(true)}}>
-                            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin"/>}
-                            {!isSubmitting && (appNameIsDirty ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />)}
+                         <Button type={appNameIsDirty ? 'submit' : 'button'} size="icon" disabled={isSubmitting} onClick={() => {if (!isEditingAppName) setIsEditingAppName(true)}}>
+                            {isSubmitting && isEditingAppName ? <Loader2 className="h-4 w-4 animate-spin"/> :
+                             (appNameIsDirty ? <Save className="h-4 w-4" /> : <Pencil className={cn("h-4 w-4", isEditingAppName && "text-primary")} />)}
                         </Button>
                     </form>
                 </Form>
@@ -216,9 +215,9 @@ export default function AdminSettingsPage() {
                             </FormItem>
                         )}
                         />
-                        <Button type={logoUrlIsDirty ? 'submit' : 'button'} size="sm" disabled={isSubmitting} onClick={() => {if (!logoUrlIsDirty) setIsEditingLogoUrl(true)}}>
-                            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin"/>}
-                            {!isSubmitting && (logoUrlIsDirty ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />)}
+                         <Button type={logoUrlIsDirty ? 'submit' : 'button'} size="icon" disabled={isSubmitting} onClick={() => {if (!isEditingLogoUrl) setIsEditingLogoUrl(true)}}>
+                            {isSubmitting && isEditingLogoUrl ? <Loader2 className="h-4 w-4 animate-spin"/> :
+                             (logoUrlIsDirty ? <Save className="h-4 w-4" /> : <Pencil className={cn("h-4 w-4", isEditingLogoUrl && "text-primary")} />)}
                         </Button>
                     </form>
                 </Form>
@@ -280,25 +279,26 @@ export default function AdminSettingsPage() {
                 control={maintenanceForm.control}
                 name="maintenanceMode"
                 render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                        Aktifkan Mode Pemeliharaan
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                        Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
-                        </p>
+                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="maintenance-mode-switch" className="text-base">
+                                Aktifkan Mode Pemeliharaan
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                            Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
+                            </p>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            id="maintenance-mode-switch"
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))();
+                            }}
+                            />
+                        </FormControl>
                     </div>
-                    <FormControl>
-                        <Switch
-                        checked={field.value}
-                        onCheckedChange={(checked) => {
-                            field.onChange(checked);
-                            maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))();
-                        }}
-                        />
-                    </FormControl>
-                    </FormItem>
                 )}
                 />
             </form>
