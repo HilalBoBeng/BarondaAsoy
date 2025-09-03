@@ -29,8 +29,7 @@ const editDuesSchema = z.object({
 
 type EditDuesFormValues = z.infer<typeof editDuesSchema>;
 
-export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
-  const { userId } = params;
+export default function UserDuesHistoryPage({ params: { userId } }: { params: { userId: string } }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
