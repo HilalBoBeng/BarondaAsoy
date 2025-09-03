@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, updateDoc, writeBatch, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, updateDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -22,12 +22,21 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { add } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 const rejectionSchema = z.object({
     rejectionReason: z.string().min(10, 'Alasan penolakan minimal 10 karakter.'),
 });
 type RejectionFormValues = z.infer<typeof rejectionSchema>;
+
+const suspensionSchema = z.object({
+  reason: z.string().min(10, 'Alasan penangguhan minimal 10 karakter.'),
+  duration: z.string().min(1, 'Durasi harus dipilih.'),
+});
+type SuspensionFormValues = z.infer<typeof suspensionSchema>;
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -38,12 +47,16 @@ export default function UsersAdminPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visibleAccessCodes, setVisibleAccessCodes] = useState<Record<string, boolean>>({});
+  
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [selectedStaffForRejection, setSelectedStaffForRejection] = useState<Staff | null>(null);
 
-  const rejectionForm = useForm<RejectionFormValues>({
-    resolver: zodResolver(rejectionSchema),
-  });
+  const [isSuspensionDialogOpen, setIsSuspensionDialogOpen] = useState(false);
+  const [selectedUserForSuspension, setSelectedUserForSuspension] = useState<AppUser | Staff | null>(null);
+  const [suspensionType, setSuspensionType] = useState<'user' | 'staff' | null>(null);
+
+  const rejectionForm = useForm<RejectionFormValues>({ resolver: zodResolver(rejectionSchema) });
+  const suspensionForm = useForm<SuspensionFormValues>({ resolver: zodResolver(suspensionSchema) });
 
   useEffect(() => {
     setLoading(true);
@@ -61,7 +74,7 @@ export default function UsersAdminPage() {
     
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
         const allStaff = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Staff[];
-        setStaff(allStaff.filter(s => s.status === 'active'));
+        setStaff(allStaff.filter(s => s.status === 'active' || s.status === 'suspended'));
         setPendingStaff(allStaff.filter(s => s.status === 'pending'));
         setLoading(false);
     }, (error) => {
@@ -115,11 +128,72 @@ export default function UsersAdminPage() {
     rejectionForm.reset();
     setIsRejectionDialogOpen(true);
   };
-
+  
   const onRejectionSubmit = (values: RejectionFormValues) => {
     if (selectedStaffForRejection) {
       handleStaffApproval(selectedStaffForRejection, false, values.rejectionReason);
     }
+  };
+
+  const openSuspensionDialog = (user: AppUser | Staff, type: 'user' | 'staff') => {
+      setSelectedUserForSuspension(user);
+      setSuspensionType(type);
+      suspensionForm.reset();
+      setIsSuspensionDialogOpen(true);
+  }
+
+  const onSuspensionSubmit = async (values: SuspensionFormValues) => {
+      if (!selectedUserForSuspension || !suspensionType) return;
+      setIsSubmitting(true);
+
+      const [count, unit] = values.duration.split('_');
+      let endDate: Date | null = new Date();
+      if (unit === 'permanent') {
+          endDate = null;
+      } else {
+          endDate = add(endDate, { [unit]: parseInt(count) });
+      }
+
+      const collectionName = suspensionType === 'user' ? 'users' : 'staff';
+      const docId = (selectedUserForSuspension as AppUser).uid || (selectedUserForSuspension as Staff).id;
+      const userRef = doc(db, collectionName, docId);
+      
+      const statusField = suspensionType === 'user' ? 'isSuspended' : 'status';
+      const statusValue = suspensionType === 'user' ? true : 'suspended';
+      
+      try {
+        await updateDoc(userRef, {
+            [statusField]: statusValue,
+            suspensionReason: values.reason,
+            suspensionEndDate: endDate ? Timestamp.fromDate(endDate) : null,
+        });
+        toast({ title: 'Berhasil', description: `Pengguna berhasil ditangguhkan.` });
+        setIsSuspensionDialogOpen(false);
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal', description: `Gagal menangguhkan pengguna.` });
+      } finally {
+        setIsSubmitting(false);
+      }
+  };
+  
+  const handleRemoveSuspension = async (user: AppUser | Staff, type: 'user' | 'staff') => {
+      const collectionName = type === 'user' ? 'users' : 'staff';
+      const docId = (user as AppUser).uid || (user as Staff).id;
+      const userRef = doc(db, collectionName, docId);
+
+      const statusField = type === 'user' ? 'isSuspended' : 'status';
+      const statusValue = type === 'user' ? false : 'active';
+      
+      try {
+        await updateDoc(userRef, {
+            [statusField]: statusValue,
+            suspensionReason: null,
+            suspensionEndDate: null,
+        });
+        toast({ title: 'Berhasil', description: 'Penangguhan pengguna telah dicabut.' });
+      } catch (error) {
+         toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencabut penangguhan.' });
+      }
   };
 
 
@@ -150,6 +224,11 @@ export default function UsersAdminPage() {
       }
   };
 
+  const getUserStatus = (user: AppUser) => {
+    if (user.isBlocked) return { text: 'Diblokir', className: 'bg-red-100 text-red-800' };
+    if (user.isSuspended) return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
+    return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
+  }
 
   return (
     <>
@@ -202,12 +281,23 @@ export default function UsersAdminPage() {
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
-                          <Badge variant={user.isBlocked ? 'destructive' : 'secondary'}>
-                            {user.isBlocked ? 'Diblokir' : 'Aktif'}
+                          <Badge variant={'secondary'} className={getUserStatus(user).className}>
+                              {getUserStatus(user).text}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">
+                               {user.isSuspended ? (
+                                    <Button variant="outline" size="sm" onClick={() => handleRemoveSuspension(user, 'user')}>
+                                      <ShieldCheck className="h-4 w-4 mr-2" />
+                                      Cabut Tangguhan
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" size="sm" onClick={() => openSuspensionDialog(user, 'user')}>
+                                      <ShieldAlert className="h-4 w-4 mr-2" />
+                                      Tangguhkan
+                                    </Button>
+                                )}
                                 <Button variant="outline" size="sm" onClick={() => handleToggleBlockUser(user.uid, !!user.isBlocked)}>
                                     {user.isBlocked ? <ShieldCheck className="h-4 w-4" /> : <ShieldX className="h-4 w-4" />}
                                     <span className="ml-2 hidden sm:inline">{user.isBlocked ? 'Buka Blokir' : 'Blokir'}</span>
@@ -250,6 +340,7 @@ export default function UsersAdminPage() {
                             <TableHead>Email</TableHead>
                             <TableHead>Poin</TableHead>
                             <TableHead>Kode Akses</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -261,6 +352,7 @@ export default function UsersAdminPage() {
                                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
@@ -268,7 +360,7 @@ export default function UsersAdminPage() {
                             staff.map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
-                                    <TableCell>{s.email}</TableCell>
+                                    <TableCell>*****</TableCell>
                                     <TableCell>
                                         <div className="flex items-center font-bold">
                                             <Star className="h-4 w-4 mr-1 text-yellow-500 fill-yellow-400" />
@@ -280,35 +372,53 @@ export default function UsersAdminPage() {
                                             {visibleAccessCodes[s.id] ? (
                                                 <span className="font-mono">{s.accessCode}</span>
                                             ) : (
-                                                <span className="font-mono">••••••••</span>
+                                                <span className="font-mono">*****</span>
                                             )}
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleAccessCodeVisibility(s.id)}>
                                                 {visibleAccessCodes[s.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                                             </Button>
                                         </div>
                                     </TableCell>
+                                    <TableCell>
+                                        <Badge variant={s.status === 'active' ? 'secondary' : 'default'} className={cn(s.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800')}>
+                                          {s.status === 'active' ? 'Aktif' : 'Ditangguhkan'}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent className="rounded-lg">
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Hapus Staf?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Tindakan ini akan menghapus staf secara permanen.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteStaff(s.id)}>Hapus</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                       <div className="flex gap-2 justify-end">
+                                          {s.status === 'suspended' ? (
+                                              <Button variant="outline" size="sm" onClick={() => handleRemoveSuspension(s, 'staff')}>
+                                                <ShieldCheck className="h-4 w-4 mr-2" />
+                                                Cabut
+                                              </Button>
+                                          ) : (
+                                              <Button variant="outline" size="sm" onClick={() => openSuspensionDialog(s, 'staff')}>
+                                                <ShieldAlert className="h-4 w-4 mr-2" />
+                                                Tangguhkan
+                                              </Button>
+                                          )}
+                                          <AlertDialog>
+                                              <AlertDialogTrigger asChild>
+                                                  <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                                              </AlertDialogTrigger>
+                                              <AlertDialogContent className="rounded-lg">
+                                                  <AlertDialogHeader>
+                                                      <AlertDialogTitle>Hapus Staf?</AlertDialogTitle>
+                                                      <AlertDialogDescription>Tindakan ini akan menghapus staf secara permanen.</AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                      <AlertDialogAction onClick={() => handleDeleteStaff(s.id)}>Hapus</AlertDialogAction>
+                                                  </AlertDialogFooter>
+                                              </AlertDialogContent>
+                                          </AlertDialog>
+                                       </div>
                                     </TableCell>
                                 </TableRow>
                             ))
                          ) : (
                              <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">Belum ada staf aktif.</TableCell>
+                                <TableCell colSpan={6} className="h-24 text-center">Belum ada staf aktif.</TableCell>
                             </TableRow>
                          )}
                     </TableBody>
@@ -406,6 +516,62 @@ export default function UsersAdminPage() {
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>
                              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Kirim Penolakan
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog open={isSuspensionDialogOpen} onOpenChange={setIsSuspensionDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Tangguhkan Pengguna</DialogTitle>
+                <DialogDescription>
+                  Pengguna yang ditangguhkan tidak akan bisa masuk ke aplikasi untuk sementara waktu.
+                </DialogDescription>
+            </DialogHeader>
+             <Form {...suspensionForm}>
+                <form onSubmit={suspensionForm.handleSubmit(onSuspensionSubmit)} className="space-y-4 pt-4">
+                    <FormField
+                      control={suspensionForm.control}
+                      name="reason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Alasan Penangguhan</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} rows={3} placeholder="Contoh: Melanggar aturan komunitas..." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={suspensionForm.control}
+                      name="duration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Durasi Penangguhan</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Pilih durasi..." /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="7_days">7 Hari</SelectItem>
+                              <SelectItem value="14_days">14 Hari</SelectItem>
+                              <SelectItem value="1_months">1 Bulan</SelectItem>
+                              <SelectItem value="0_permanent">Permanen</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsSuspensionDialogOpen(false)}>Batal</Button>
+                        <Button type="submit" variant="destructive" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Tangguhkan
                         </Button>
                     </DialogFooter>
                 </form>

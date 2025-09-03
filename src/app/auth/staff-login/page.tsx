@@ -28,8 +28,12 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const staffLoginSchema = z.object({
   accessCode: z.string().min(1, "Kode akses tidak boleh kosong."),
@@ -40,6 +44,7 @@ type StaffLoginFormValues = z.infer<typeof staffLoginSchema>;
 export default function StaffLoginPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [suspensionInfo, setSuspensionInfo] = useState<{ reason: string; endDate: string } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -58,8 +63,7 @@ export default function StaffLoginPage() {
   
   const onSubmit = async (data: StaffLoginFormValues) => {
     setIsSubmitting(true);
-    
-    // Simulate network delay for better UX
+    setSuspensionInfo(null);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Admin login check
@@ -77,17 +81,33 @@ export default function StaffLoginPage() {
     try {
         const staffQuery = query(
             collection(db, "staff"), 
-            where("accessCode", "==", data.accessCode),
-            where("status", "==", "active")
+            where("accessCode", "==", data.accessCode)
         );
         const staffSnapshot = await getDocs(staffQuery);
 
         if (staffSnapshot.empty) {
-            throw new Error("Kode akses salah atau akun Anda tidak aktif.");
+            throw new Error("Kode akses salah atau akun Anda tidak aktif/tertunda.");
         }
-
+        
         const staffDoc = staffSnapshot.docs[0];
         const staffData = staffDoc.data();
+        
+        if (staffData.status === 'pending') {
+             throw new Error("Akun Anda masih menunggu persetujuan dari admin.");
+        }
+        
+        if (staffData.status === 'suspended') {
+            const endDate = staffData.suspensionEndDate ? (staffData.suspensionEndDate as Timestamp).toDate() : null;
+            const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
+            setSuspensionInfo({ reason: staffData.suspensionReason || 'Tidak ada alasan yang diberikan.', endDate: endDateString });
+            setIsSubmitting(false);
+            return;
+        }
+        
+        if (staffData.status !== 'active') {
+             throw new Error("Akun Anda tidak aktif.");
+        }
+
 
         localStorage.setItem('userRole', 'petugas');
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email }));
@@ -113,6 +133,14 @@ export default function StaffLoginPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
+      {suspensionInfo && (
+        <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Akun Ditangguhkan</AlertTitle>
+            <AlertDescription>
+                Akun Anda ditangguhkan karena: "{suspensionInfo.reason}". Penangguhan berakhir {suspensionInfo.endDate}.
+            </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Halaman Akses Staf & Admin</CardTitle>

@@ -28,9 +28,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { app } from "@/lib/firebase/client";
+import { app, db } from "@/lib/firebase/client";
 import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
+import type { AppUser } from "@/lib/types";
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 
 const loginSchema = z.object({
@@ -47,6 +51,7 @@ function LoginForm() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState<Record<string, number>>({});
   const [showResetPasswordAlert, setShowResetPasswordAlert] = useState(false);
+  const [suspensionInfo, setSuspensionInfo] = useState<{ reason: string; endDate: string } | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,15 +80,39 @@ function LoginForm() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
+    
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      setLoginAttempts(prev => ({...prev, [data.email]: 0})); // Reset counter on success
-      toast({
-        title: "Login Berhasil",
-        description: "Selamat datang kembali!",
-      });
-      router.push("/");
+        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+        const user = userCredential.user;
+        
+        // Check user status in Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data() as AppUser;
+            if (userData.isBlocked) {
+                await auth.signOut();
+                toast({ variant: 'destructive', title: 'Akun Diblokir', description: 'Akun Anda telah diblokir oleh admin. Hubungi admin untuk informasi lebih lanjut.' });
+                setIsSubmitting(false);
+                return;
+            }
+             if (userData.isSuspended) {
+                await auth.signOut();
+                const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
+                const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
+                setSuspensionInfo({ reason: userData.suspensionReason || 'Tidak ada alasan yang diberikan.', endDate: endDateString });
+                setIsSubmitting(false);
+                return;
+            }
+        }
+        
+        setLoginAttempts(prev => ({...prev, [data.email]: 0})); // Reset counter on success
+        toast({
+            title: "Login Berhasil",
+            description: "Selamat datang kembali!",
+        });
+        router.push("/");
     } catch (error) {
        const currentAttempts = (loginAttempts[data.email] || 0) + 1;
        setLoginAttempts(prev => ({...prev, [data.email]: currentAttempts}));
@@ -123,6 +152,14 @@ function LoginForm() {
             </AlertDescription>
         </Alert>
       )}
+       {suspensionInfo && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Akun Ditangguhkan</AlertTitle>
+            <AlertDescription>
+              Akun Anda ditangguhkan karena: "{suspensionInfo.reason}". Penangguhan berakhir {suspensionInfo.endDate}.
+            </AlertDescription>
+          </Alert>
+        )}
        {showResetPasswordAlert && (
         <Alert variant="destructive" className="mb-4 animate-fade-in">
             <AlertTitle>Terlalu Banyak Percobaan Login Gagal</AlertTitle>

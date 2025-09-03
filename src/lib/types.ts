@@ -62,6 +62,9 @@ export interface AppUser {
   addressType?: 'kilongan' | 'luar_kilongan';
   addressDetail?: string;
   isBlocked?: boolean;
+  isSuspended?: boolean;
+  suspensionReason?: string;
+  suspensionEndDate?: Timestamp | null;
   lastUpdated_displayName?: Timestamp;
   lastUpdated_phone?: Timestamp;
   lastUpdated_addressDetail?: Timestamp;
@@ -76,7 +79,9 @@ export interface Staff {
   addressType: 'kilongan' | 'luar_kilongan';
   addressDetail: string;
   accessCode: string;
-  status: 'pending' | 'active' | 'rejected';
+  status: 'pending' | 'active' | 'rejected' | 'suspended';
+  suspensionReason?: string;
+  suspensionEndDate?: Timestamp | null; // null for permanent
   points?: number;
   lastCodeChangeTimestamp?: Timestamp;
 }

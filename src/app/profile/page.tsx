@@ -95,6 +95,9 @@ export default function ProfilePage() {
                     addressType: 'kilongan',
                     addressDetail: '',
                     isBlocked: false,
+                    isSuspended: false,
+                    suspensionReason: null,
+                    suspensionEndDate: null,
                 };
                 await setDoc(userDocRef, newUserPayload);
                 const newUserSnap = await getDoc(userDocRef);
@@ -107,6 +110,12 @@ export default function ProfilePage() {
                  router.push('/auth/login');
                  return;
             }
+             if (userData.isSuspended) {
+                 toast({ variant: 'destructive', title: 'Akun Ditangguhkan', description: 'Akun Anda telah ditangguhkan. Anda tidak dapat mengakses aplikasi saat ini.' });
+                 auth.signOut();
+                 router.push('/auth/login');
+                 return;
+             }
 
 
             setUser(userData);
@@ -155,10 +164,6 @@ export default function ProfilePage() {
     setIsLoggingOut(true);
     try {
       await signOut(auth);
-      toast({
-        title: "Berhasil Keluar",
-        description: "Anda akan diarahkan ke halaman utama.",
-      });
       setTimeout(() => {
           router.push('/');
           setIsLoggingOut(false);
@@ -294,24 +299,18 @@ export default function ProfilePage() {
                     </Link>
                 </Button>
             </div>
-            <div className="flex items-center gap-2">
-               <Button onClick={handleLogout} variant="destructive" size="sm">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Keluar
-               </Button>
-                <div className="flex items-center gap-2 text-right">
-                    <div className="hidden sm:flex flex-col">
-                        <span className="text-base font-bold text-primary leading-tight">Baronda</span>
-                        <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-                    </div>
-                    <Image 
-                        src="https://iili.io/KJ4aGxp.png" 
-                        alt="Logo" 
-                        width={32}
-                        height={32}
-                        className="h-8 w-8 rounded-full object-cover"
-                    />
-                </div>
+            <div className="flex items-center gap-2 text-right">
+              <div className="flex flex-col">
+                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
             </div>
        </header>
 
@@ -460,5 +459,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
