@@ -78,11 +78,42 @@ export default function AttendancePage() {
         return staffMatch && monthMatch && yearMatch && statusMatch;
     });
   }, [schedules, selectedStaff, selectedMonth, selectedYear, selectedStatus]);
+  
+  const handleExportCsv = () => {
+    if (filteredSchedules.length === 0) {
+        toast({ variant: 'destructive', title: 'Tidak Ada Data', description: 'Tidak ada data untuk diekspor.' });
+        return;
+    }
+    
+    const headers = ["Tanggal Patroli", "Nama Petugas", "Area Tugas", "Jam Tugas", "Status Kehadiran"];
+    const csvRows = [
+        headers.join(','),
+        ...filteredSchedules.map(s => {
+            const row = [
+                format(s.date as Date, "yyyy-MM-dd", { locale: id }),
+                `"${s.officer}"`,
+                `"${s.area}"`,
+                `"${s.time}"`,
+                `"${statusConfig[s.status]?.label || s.status}"`
+            ];
+            return row.join(',');
+        })
+    ];
+    
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `daftar_hadir_${selectedMonth}_${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
-  const handleExport = (type: 'csv' | 'pdf') => {
+  const handleExportPdf = () => {
     toast({
         title: 'Fitur Dalam Pengembangan',
-        description: `Fungsi ekspor ke ${type.toUpperCase()} akan segera tersedia.`,
+        description: `Fungsi ekspor ke PDF akan segera tersedia.`,
     });
   }
 
@@ -148,10 +179,10 @@ export default function AttendancePage() {
 
         <div className="flex justify-end mb-4">
              <div className="flex gap-2">
-                <Button onClick={() => handleExport('csv')} variant="outline">
+                <Button onClick={handleExportCsv} variant="outline">
                     <FileDown className="mr-2" /> Ekspor CSV
                 </Button>
-                <Button onClick={() => handleExport('pdf')} variant="outline">
+                <Button onClick={handleExportPdf} variant="outline">
                     <FileDown className="mr-2" /> Ekspor PDF
                 </Button>
              </div>
@@ -204,3 +235,5 @@ export default function AttendancePage() {
     </Card>
   );
 }
+
+    

@@ -57,7 +57,7 @@ const formatDuration = (start: Date, end: Date) => {
     const parts = [];
     if (duration.days) parts.push(`${duration.days} hari`);
     if (duration.hours) parts.push(`${duration.hours} jam`);
-    if (duration.minutes) parts.push(`${duration.minutes} menit`);
+    if (duration.minutes) parts.push(`${duration.minutes} detik`);
     if (duration.seconds) parts.push(`${duration.seconds} detik`);
     return parts.join(' ');
 };
@@ -250,7 +250,7 @@ function LoginForm() {
                   Belum punya akun?{" "}
                   <Link
                       href="/auth/register"
-                      className="text-primary hover:text-primary/80"
+                      className="text-primary hover:text-primary/80 no-underline"
                   >
                       Daftar di sini
                   </Link>
@@ -319,3 +319,5 @@ export default function LoginPage() {
         </Suspense>
     )
 }
+
+    
