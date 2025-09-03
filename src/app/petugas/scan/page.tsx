@@ -23,8 +23,9 @@ function ScanPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
-  const scannerStarted = useRef(false);
+  
+  // Use state to hold the instance, allows for better lifecycle control
+  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
 
   const processDecodedText = useCallback(async (decodedText: string) => {
     if (isProcessing) return;
@@ -33,7 +34,7 @@ function ScanPageContent() {
     setError(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const schedulesRef = collection(db, 'schedules');
       const q = query(schedulesRef, where("qrToken", "==", decodedText));
@@ -70,73 +71,66 @@ function ScanPageContent() {
       const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
       setError(errorMessage);
       setMessage('Gagal. Silakan coba lagi.');
-      setTimeout(() => {
-          if (html5QrCodeRef.current && !html5QrCodeRef.current.isScanning) {
-            startScanner();
-          }
-      }, 2000);
+      // No need to auto-restart scanner, user can retry by showing the QR again.
     } finally {
        setIsProcessing(false);
     }
   }, [isProcessing, router, toast]);
-
-  const startScanner = useCallback(() => {
-    if (html5QrCodeRef.current && !html5QrCodeRef.current.isScanning && scannerStarted.current) {
-        setError(null);
-        setMessage('Arahkan kamera ke QR code absensi...');
-        setIsProcessing(false);
-        const config = { fps: 10, qrbox: 250 };
-        
-        html5QrCodeRef.current.start(
-            { facingMode: 'environment' },
-            config,
-            (decodedText, decodedResult) => {
-                if (html5QrCodeRef.current?.isScanning) {
-                    html5QrCodeRef.current.stop();
-                }
-                processDecodedText(decodedText);
-            },
-            (errorMessage) => { /* ignore */ }
-        ).catch((err) => {
-             setError("Gagal memulai kamera. Pastikan Anda memberikan izin.");
-             setHasCameraPermission(false);
-        });
-    }
-  }, [processDecodedText]);
   
+  // This useEffect now ONLY handles scanner setup and teardown.
   useEffect(() => {
-    if (!scannerStarted.current) {
-        html5QrCodeRef.current = new Html5Qrcode(qrReaderId);
-        scannerStarted.current = true;
+    const scanner = new Html5Qrcode(qrReaderId);
+    setHtml5QrCode(scanner);
 
-        Html5Qrcode.getCameras().then(devices => {
-          if (devices && devices.length) {
-            setHasCameraPermission(true);
-            startScanner();
-          } else {
-            setHasCameraPermission(false);
-          }
-        }).catch(err => {
-          setHasCameraPermission(false);
-          setError("Tidak dapat mengakses kamera. Mohon periksa izin pada browser Anda.");
-        });
-    }
-
+    // The cleanup function is critical.
     return () => {
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        html5QrCodeRef.current.stop().catch(e => console.error("Gagal menghentikan scanner.", e));
+      if (scanner && scanner.isScanning) {
+        scanner.stop().catch(err => {
+          console.error("Error stopping the scanner:", err);
+        });
       }
     };
-  }, [startScanner]);
+  }, []);
+
+  // This useEffect handles starting the scanner once the instance is ready.
+  useEffect(() => {
+    if (!html5QrCode) return;
+
+    const startScanner = async () => {
+        try {
+            await Html5Qrcode.getCameras();
+            setHasCameraPermission(true);
+            const config = { fps: 10, qrbox: 250 };
+            
+            await html5QrCode.start(
+                { facingMode: 'environment' },
+                config,
+                (decodedText, decodedResult) => {
+                    if (html5QrCode.isScanning) {
+                        html5QrCode.stop();
+                    }
+                    processDecodedText(decodedText);
+                },
+                (errorMessage) => { /* ignore */ }
+            );
+        } catch (err) {
+            setHasCameraPermission(false);
+            setError("Gagal memulai kamera. Mohon berikan izin pada browser Anda.");
+        }
+    }
+    
+    startScanner();
+
+  }, [html5QrCode, processDecodedText]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && !isProcessing) {
-       if (html5QrCodeRef.current?.isScanning) {
-          await html5QrCodeRef.current.stop();
+    if (file && !isProcessing && html5QrCode) {
+       if (html5QrCode.isScanning) {
+          await html5QrCode.stop();
       }
        try {
-        const decodedText = await html5QrCodeRef.current?.scanFile(file, false);
+        const decodedText = await html5QrCode.scanFile(file, false);
         if (decodedText) {
           processDecodedText(decodedText);
         }
