@@ -51,14 +51,13 @@ export default function ReportHistory() {
             try {
                 const reportsQuery = query(
                     collection(db, 'reports'), 
-                    where('visibility', '==', 'public'),
                     orderBy('createdAt', 'desc'),
-                    limit(50) // Limit to last 50 public reports to avoid large reads
+                    limit(50) // Limit to last 50 reports to avoid large reads
                 );
                 
                 const snapshot = await getDocs(reportsQuery);
                 
-                const reportsData = snapshot.docs.map(doc => {
+                let reportsData = snapshot.docs.map(doc => {
                      const data = doc.data();
                      const repliesObject = data.replies || {};
                      const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
@@ -69,6 +68,9 @@ export default function ReportHistory() {
                          replies: repliesArray
                      } as Report;
                 });
+
+                // Filter for public reports on the client side
+                reportsData = reportsData.filter(report => report.visibility === 'public');
                 
                 setAllReports(reportsData);
 
