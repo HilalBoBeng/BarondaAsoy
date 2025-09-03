@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, ArrowLeft, QrCode, Upload } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
-import { Html5Qrcode, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const qrReaderId = "qr-reader-container";
 
@@ -24,8 +24,8 @@ function ScanPageContent() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Use state to hold the instance, allows for better lifecycle control
-  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
+  // Use useRef to hold the scanner instance to prevent re-renders from affecting it.
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   const processDecodedText = useCallback(async (decodedText: string) => {
     if (isProcessing) return;
@@ -71,66 +71,62 @@ function ScanPageContent() {
       const errorMessage = err instanceof Error ? err.message : 'Gagal memulai patroli.';
       setError(errorMessage);
       setMessage('Gagal. Silakan coba lagi.');
-      // No need to auto-restart scanner, user can retry by showing the QR again.
     } finally {
        setIsProcessing(false);
     }
   }, [isProcessing, router, toast]);
   
-  // This useEffect now ONLY handles scanner setup and teardown.
+  // This useEffect handles scanner setup and teardown only. Runs once.
   useEffect(() => {
-    const scanner = new Html5Qrcode(qrReaderId);
-    setHtml5QrCode(scanner);
+    const qrCodeScanner = new Html5Qrcode(qrReaderId);
+    html5QrCodeRef.current = qrCodeScanner;
+
+    const startScanner = async () => {
+      try {
+        await Html5Qrcode.getCameras();
+        setHasCameraPermission(true);
+        
+        qrCodeScanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: 250 },
+          (decodedText, decodedResult) => {
+            processDecodedText(decodedText);
+          },
+          (errorMessage) => { /* ignore */ }
+        ).catch(err => {
+            setHasCameraPermission(false);
+            setError("Gagal memulai kamera. Mohon berikan izin pada browser Anda.");
+        });
+
+      } catch (err) {
+        setHasCameraPermission(false);
+        setError("Kamera tidak ditemukan atau akses ditolak. Mohon berikan izin pada browser Anda.");
+      }
+    };
+
+    startScanner();
 
     // The cleanup function is critical.
     return () => {
-      if (scanner && scanner.isScanning) {
-        scanner.stop().catch(err => {
-          console.error("Error stopping the scanner:", err);
+      if (qrCodeScanner && qrCodeScanner.isScanning) {
+        qrCodeScanner.stop().catch(err => {
+          // This error can be ignored, as it often happens when the component unmounts
+          // while the scanner is still trying to initialize.
+          console.warn("Peringatan saat menghentikan pemindai:", err);
         });
       }
     };
-  }, []);
-
-  // This useEffect handles starting the scanner once the instance is ready.
-  useEffect(() => {
-    if (!html5QrCode) return;
-
-    const startScanner = async () => {
-        try {
-            await Html5Qrcode.getCameras();
-            setHasCameraPermission(true);
-            const config = { fps: 10, qrbox: 250 };
-            
-            await html5QrCode.start(
-                { facingMode: 'environment' },
-                config,
-                (decodedText, decodedResult) => {
-                    if (html5QrCode.isScanning) {
-                        html5QrCode.stop();
-                    }
-                    processDecodedText(decodedText);
-                },
-                (errorMessage) => { /* ignore */ }
-            );
-        } catch (err) {
-            setHasCameraPermission(false);
-            setError("Gagal memulai kamera. Mohon berikan izin pada browser Anda.");
-        }
-    }
-    
-    startScanner();
-
-  }, [html5QrCode, processDecodedText]);
+  }, [processDecodedText]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && !isProcessing && html5QrCode) {
-       if (html5QrCode.isScanning) {
-          await html5QrCode.stop();
-      }
-       try {
-        const decodedText = await html5QrCode.scanFile(file, false);
+    const scanner = html5QrCodeRef.current;
+    if (file && !isProcessing && scanner) {
+      try {
+        if (scanner.isScanning) {
+          await scanner.stop();
+        }
+        const decodedText = await scanner.scanFile(file, false);
         if (decodedText) {
           processDecodedText(decodedText);
         }
