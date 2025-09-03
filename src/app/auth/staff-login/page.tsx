@@ -25,14 +25,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert, User, Mail, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import type { Staff } from "@/lib/types";
 
 
 const staffLoginSchema = z.object({
@@ -41,10 +42,27 @@ const staffLoginSchema = z.object({
 
 type StaffLoginFormValues = z.infer<typeof staffLoginSchema>;
 
+type SuspensionInfo = {
+    user: Staff;
+    reason: string;
+    endDate: Date | null;
+};
+
+const formatDuration = (start: Date, end: Date) => {
+    const duration = intervalToDuration({ start, end });
+    const parts = [];
+    if (duration.days) parts.push(`${duration.days} hari`);
+    if (duration.hours) parts.push(`${duration.hours} jam`);
+    if (duration.minutes) parts.push(`${duration.minutes} menit`);
+    if (duration.seconds) parts.push(`${duration.seconds} detik`);
+    return parts.join(' ');
+};
+
 export default function StaffLoginPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [suspensionInfo, setSuspensionInfo] = useState<{ reason: string; endDate: string } | null>(null);
+  const [suspensionInfo, setSuspensionInfo] = useState<SuspensionInfo | null>(null);
+  const [countdown, setCountdown] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -55,6 +73,22 @@ export default function StaffLoginPage() {
       router.replace('/petugas');
     }
   }, [router]);
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (suspensionInfo && suspensionInfo.endDate) {
+        timer = setInterval(() => {
+            const now = new Date();
+            if (now > suspensionInfo.endDate!) {
+                setCountdown("Selesai");
+                clearInterval(timer);
+            } else {
+                setCountdown(formatDuration(now, suspensionInfo.endDate!));
+            }
+        }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [suspensionInfo]);
 
   const form = useForm<StaffLoginFormValues>({
     resolver: zodResolver(staffLoginSchema),
@@ -90,7 +124,7 @@ export default function StaffLoginPage() {
         }
         
         const staffDoc = staffSnapshot.docs[0];
-        const staffData = staffDoc.data();
+        const staffData = {id: staffDoc.id, ...staffDoc.data()} as Staff;
         
         if (staffData.status === 'pending') {
              throw new Error("Akun Anda masih menunggu persetujuan dari admin.");
@@ -98,8 +132,7 @@ export default function StaffLoginPage() {
         
         if (staffData.status === 'suspended') {
             const endDate = staffData.suspensionEndDate ? (staffData.suspensionEndDate as Timestamp).toDate() : null;
-            const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
-            setSuspensionInfo({ reason: staffData.suspensionReason || 'Tidak ada alasan yang diberikan.', endDate: endDateString });
+            setSuspensionInfo({ user: staffData, reason: staffData.suspensionReason || 'Tidak ada alasan yang diberikan.', endDate });
             setIsSubmitting(false);
             return;
         }
@@ -171,21 +204,50 @@ export default function StaffLoginPage() {
       </Card>
 
       <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-destructive">Akun Ditangguhkan</DialogTitle>
-            <DialogDescription>
-              {suspensionInfo?.reason}
-            </DialogDescription>
-          </DialogHeader>
-           {suspensionInfo?.endDate !== 'permanen' && (
-             <div className="text-sm text-center text-muted-foreground">
-                Penangguhan berakhir {suspensionInfo?.endDate}.
+        <DialogContent className="sm:max-w-md">
+           <DialogHeader>
+                <DialogTitle className="text-2xl text-destructive flex items-center gap-2">
+                    <ShieldAlert className="h-7 w-7" />
+                    Akun Ditangguhkan
+                </DialogTitle>
+                <DialogDescription>
+                    Akses Anda ke aplikasi telah ditangguhkan sementara oleh admin.
+                </DialogDescription>
+            </DialogHeader>
+             <div className="space-y-4 py-4 text-sm">
+                <div className="space-y-2 rounded-md border p-4">
+                    <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{suspensionInfo?.user.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{suspensionInfo?.user.email}</span>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{suspensionInfo?.user.phone || 'No. HP tidak tersedia'}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="font-semibold">Alasan:</h4>
+                    <p className="text-destructive font-bold">{suspensionInfo?.reason}</p>
+                </div>
+                
+                {suspensionInfo?.endDate && (
+                     <div>
+                        <h4 className="font-semibold">Penangguhan Berakhir:</h4>
+                        <p className="text-primary font-mono font-semibold text-lg">{countdown || 'Menghitung...'}</p>
+                    </div>
+                )}
+                 <p className="text-xs text-muted-foreground pt-4">
+                    Jika Anda merasa ini adalah sebuah kesalahan, silakan hubungi admin untuk bantuan lebih lanjut.
+                </p>
             </div>
-           )}
-          <DialogFooter>
-            <Button onClick={() => setSuspensionInfo(null)}>OK</Button>
-          </DialogFooter>
+            <DialogFooter>
+                <Button onClick={() => setSuspensionInfo(null)} className="w-full">Saya Mengerti</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

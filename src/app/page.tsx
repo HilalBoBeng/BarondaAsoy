@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2, ShieldAlert, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -28,12 +28,29 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Notification, AppUser, PatrolLog } from "@/lib/types";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const NOTIFICATIONS_PER_PAGE = 5;
+
+type SuspensionInfo = {
+    user: AppUser;
+    reason: string;
+    endDate: Date | null;
+    isBlocked: boolean;
+};
+
+const formatDuration = (start: Date, end: Date) => {
+    const duration = intervalToDuration({ start, end });
+    const parts = [];
+    if (duration.days) parts.push(`${duration.days} hari`);
+    if (duration.hours) parts.push(`${duration.hours} jam`);
+    if (duration.minutes) parts.push(`${duration.minutes} menit`);
+    if (duration.seconds) parts.push(`${duration.seconds} detik`);
+    return parts.join(' ');
+};
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -49,10 +66,28 @@ export default function Home() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [patrolLogs, setPatrolLogs] = useState<PatrolLog[]>([]);
   const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
+  const [suspensionInfo, setSuspensionInfo] = useState<SuspensionInfo | null>(null);
+  const [countdown, setCountdown] = useState('');
 
   const auth = getAuth(app);
   const { toast } = useToast();
   const router = useRouter();
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (suspensionInfo && suspensionInfo.endDate) {
+        timer = setInterval(() => {
+            const now = new Date();
+            if (now > suspensionInfo.endDate!) {
+                setCountdown("Selesai");
+                clearInterval(timer);
+            } else {
+                setCountdown(formatDuration(now, suspensionInfo.endDate!));
+            }
+        }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [suspensionInfo]);
 
   useEffect(() => {
     const getGreeting = () => {
@@ -105,22 +140,17 @@ export default function Home() {
         const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as AppUser;
+            const fullUserData = { uid: currentUser.uid, ...userData };
+
              if (userData.isBlocked) {
-                const dialog = document.createElement('div');
-                document.body.appendChild(dialog);
-                alert(`Akun Diblokir. Alasan: Anda tidak dapat mengakses aplikasi.`);
+                setSuspensionInfo({ user: fullUserData, reason: userData.suspensionReason || 'Akun Anda telah diblokir oleh admin.', endDate: null, isBlocked: true });
                 auth.signOut();
-                router.push('/auth/login');
                 return;
             }
              if (userData.isSuspended) {
-                 const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
-                 const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
-                const dialog = document.createElement('div');
-                document.body.appendChild(dialog);
-                alert(`Akun Ditangguhkan. Alasan: ${userData.suspensionReason || 'Tidak ada alasan'}. Penangguhan berakhir ${endDateString}.`);
+                 const endDate = (userData.suspensionEndDate as Timestamp)?.toDate() || null;
+                 setSuspensionInfo({ user: fullUserData, reason: userData.suspensionReason || 'Tidak ada alasan yang diberikan.', endDate, isBlocked: false });
                  auth.signOut();
-                 router.push('/auth/login');
                  return;
              }
             setUserInfo(userData);
@@ -224,18 +254,68 @@ export default function Home() {
     return doc.body.textContent || "";
   }
 
-  if (loading || isLoggingOut) {
+  if (loading || isLoggingOut || suspensionInfo) {
     return (
       <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
-        <Image 
-            src="https://iili.io/KJ4aGxp.png" 
-            alt="Loading Logo" 
-            width={120} 
-            height={120} 
-            className="animate-logo-pulse"
-            priority
-        />
-        {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
+        {!suspensionInfo ? (
+          <>
+            <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Loading Logo" 
+                width={120} 
+                height={120} 
+                className="animate-logo-pulse"
+                priority
+            />
+            {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
+          </>
+        ) : (
+             <Dialog open={!!suspensionInfo} onOpenChange={() => { setSuspensionInfo(null); router.push('/auth/login'); }}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl text-destructive flex items-center gap-2">
+                            <ShieldAlert className="h-7 w-7" />
+                            Akun {suspensionInfo?.isBlocked ? 'Diblokir' : 'Ditangguhkan'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir' : 'ditangguhkan sementara'} oleh admin.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4 text-sm">
+                        <div className="space-y-2 rounded-md border p-4">
+                             <div className="flex items-center gap-2">
+                                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{suspensionInfo?.user.displayName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span>{suspensionInfo?.user.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span>{suspensionInfo?.user.phone || 'No. HP tidak tersedia'}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold">Alasan:</h4>
+                            <p className="text-destructive font-bold">{suspensionInfo?.reason}</p>
+                        </div>
+                        {!suspensionInfo?.isBlocked && suspensionInfo?.endDate && (
+                            <div>
+                                <h4 className="font-semibold">Penangguhan Berakhir dalam:</h4>
+                                <p className="text-primary font-mono font-semibold text-lg">{countdown || 'Menghitung...'}</p>
+                            </div>
+                        )}
+                        <p className="text-xs text-muted-foreground pt-4">
+                            Jika Anda merasa ini adalah sebuah kesalahan, silakan hubungi admin untuk bantuan lebih lanjut.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => { setSuspensionInfo(null); router.push('/auth/login'); }} className="w-full">Saya Mengerti</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        )}
       </div>
     );
   }
