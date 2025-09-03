@@ -127,11 +127,6 @@ export default function LoginPage() {
                       Daftar di sini
                   </Link>
               </div>
-              <div className="text-center text-sm">
-                <Link href="/auth/forgot-password" className="underline">
-                  Lupa Kata Sandi?
-                </Link>
-              </div>
             </CardFooter>
           </form>
         </Form>
