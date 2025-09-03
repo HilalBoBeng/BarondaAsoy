@@ -48,11 +48,11 @@ function ScanPageContent() {
   };
 
   useEffect(() => {
-    if (scanType && !scannerRef.current) {
-        const html5Qrcode = new Html5Qrcode(qrReaderContainerId);
-        scannerRef.current = html5Qrcode;
+    if (scanType && status === 'idle' && !scannerRef.current) {
+        const html5QrcodeScanner = new Html5Qrcode(qrReaderContainerId);
+        scannerRef.current = html5QrcodeScanner;
 
-        html5Qrcode.start(
+        html5QrcodeScanner.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           onScanSuccess,
@@ -69,10 +69,11 @@ function ScanPageContent() {
     return () => {
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop().catch(err => console.error("Failed to stop scanner:", err));
+        scannerRef.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanType]);
+  }, [scanType, status]);
 
   useEffect(() => {
     if (scanResult) {
@@ -83,27 +84,29 @@ function ScanPageContent() {
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !scannerRef.current) return;
-    
+    if (!file) return;
+
     setStatus('processing');
+    setErrorMessage(null);
+
+    // Stop the camera scanner if it's running
+    if (scannerRef.current && scannerRef.current.isScanning) {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+    }
+    
+    // Use a new instance for file scanning
+    const fileScanner = new Html5Qrcode(qrReaderContainerId, { verbose: false });
 
     try {
-        const decodedText = await scannerRef.current.scanFile(file, true);
-        onScanSuccess(decodedText, {
-            decodedText: decodedText,
-            result: {
-                text: decodedText,
-                format: {
-                    formatName: 'QR_CODE'
-                }
-            }
-        });
+        const decodedText = await fileScanner.scanFile(file, false); // showImage = false
+        onScanSuccess(decodedText, {} as Html5QrcodeResult);
     } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Gagal memproses gambar. Tidak ada QR code ditemukan.';
+        const msg = 'Gagal memproses gambar. Pastikan gambar jelas dan berisi QR code yang valid.';
         setErrorMessage(msg);
         setStatus('error');
         // Reset to allow re-scanning
-        setTimeout(() => setStatus('scanning'), 2000);
+        setTimeout(() => setStatus('idle'), 3000);
     }
   };
 
@@ -172,6 +175,7 @@ function ScanPageContent() {
       const msg = err instanceof Error ? err.message : 'Gagal memproses QR code.';
       setErrorMessage(msg);
       setStatus('error');
+      setTimeout(() => setStatus('idle'), 3000);
     }
   };
 
@@ -206,6 +210,12 @@ function ScanPageContent() {
                                 <p>Memvalidasi...</p>
                             </div>
                         )}
+                         {status === 'idle' && (
+                             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
+                                <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                                <p>Menyiapkan kamera...</p>
+                            </div>
+                         )}
                     </div>
                     <div className="flex justify-center gap-2">
                         <Button
