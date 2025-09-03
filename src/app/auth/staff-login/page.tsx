@@ -136,8 +136,10 @@ export default function StaffLoginPage() {
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Masuk
                     </Button>
-                    <div className="text-center text-sm text-muted-foreground w-full flex justify-center">
+                    <div className="text-center text-sm text-muted-foreground w-full flex flex-col sm:flex-row justify-center items-center gap-2">
                         <Link href="/auth/staff-register" className="underline text-primary">Daftar sebagai Petugas</Link>
+                        <span className="hidden sm:inline text-gray-400">•</span>
+                        <Link href="/auth/staff-forgot-password" className="underline text-primary">Lupa Kode Akses?</Link>
                     </div>
                 </CardFooter>
             </form>

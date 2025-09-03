@@ -29,6 +29,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Format email tidak valid."),
@@ -101,6 +103,20 @@ export default function StaffForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsSubmitting(true);
     try {
+      // Check if staff email exists
+      const staffQuery = query(collection(db, "staff"), where("email", "==", data.email));
+      const staffSnapshot = await getDocs(staffQuery);
+
+      if (staffSnapshot.empty) {
+        toast({
+          variant: "destructive",
+          title: "Gagal",
+          description: "Email tidak terdaftar sebagai petugas.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const result = await sendOtp({ email: data.email, context: 'staffResetPassword' });
       if (result.success) {
         toast({

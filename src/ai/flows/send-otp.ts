@@ -4,7 +4,7 @@
  * @fileOverview A Genkit flow for sending a one-time password (OTP) via email using Nodemailer with Gmail.
  */
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import nodemailer from 'nodemailer';
@@ -25,6 +25,52 @@ export type SendOtpOutput = z.infer<typeof SendOtpOutputSchema>;
 export async function sendOtp(input: SendOtpInput): Promise<SendOtpOutput> {
   return sendOtpFlow(input);
 }
+
+const emailTemplates = {
+  userRegistration: (otp: string) => ({
+    subject: 'Kode Verifikasi Akun Baronda Anda',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #FF7426; color: white; padding: 20px; text-align: center;">
+          <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
+          <h1 style="margin: 0; font-size: 24px;">Verifikasi Akun Anda</h1>
+        </div>
+        <div style="padding: 30px; text-align: center; color: #333;">
+          <p style="font-size: 16px;">Gunakan kode berikut untuk menyelesaikan proses pendaftaran Anda. Kode ini berlaku selama 5 menit.</p>
+          <div style="background-color: #f2f2f2; border-radius: 5px; margin: 20px 0; padding: 15px;">
+            <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">${otp}</p>
+          </div>
+          <p style="font-size: 14px; color: #666;">Jika Anda tidak merasa meminta kode ini, mohon abaikan email ini.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #888;">
+          <p style="margin: 0;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
+        </div>
+      </div>
+    `,
+  }),
+  staffResetPassword: (otp: string) => ({
+    subject: 'Permintaan Atur Ulang Kode Akses Petugas Baronda',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #FF7426; color: white; padding: 20px; text-align: center;">
+          <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
+          <h1 style="margin: 0; font-size: 24px;">Atur Ulang Kode Akses</h1>
+        </div>
+        <div style="padding: 30px; text-align: center; color: #333;">
+          <p style="font-size: 16px;">Kami menerima permintaan untuk mengirim ulang kode akses Anda. Gunakan kode OTP di bawah ini untuk verifikasi. Kode ini berlaku 5 menit.</p>
+          <div style="background-color: #f2f2f2; border-radius: 5px; margin: 20px 0; padding: 15px;">
+            <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">${otp}</p>
+          </div>
+          <p style="font-size: 14px; color: #666;">Jika Anda tidak merasa meminta ini, mohon abaikan email ini.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #888;">
+          <p style="margin: 0;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
+        </div>
+      </div>
+    `,
+  }),
+};
+
 
 const sendOtpFlow = ai.defineFlow(
   {
@@ -62,21 +108,13 @@ const sendOtpFlow = ai.defineFlow(
           pass: 'hrll wccf slpw shmt',
         },
       });
+      
+      const template = emailTemplates[context](otp);
 
       const mailOptions = {
         from: '"Baronda" <bobeng.icu@gmail.com>',
         to: email,
-        subject: 'Kode Verifikasi Anda',
-        html: `
-            <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
-                <h2>Verifikasi Akun Baronda Anda</h2>
-                <p>Gunakan kode berikut untuk menyelesaikan proses pendaftaran Anda. Kode ini berlaku selama 5 menit.</p>
-                <p style="font-size: 32px; font-weight: bold; letter-spacing: 4px; margin: 20px; padding: 10px; background-color: #f2f2f2; border-radius: 5px;">${otp}</p>
-                <p>Jika Anda tidak merasa meminta kode ini, mohon abaikan email ini.</p>
-                <hr style="border: none; border-top: 1px solid #eee;" />
-                <p style="font-size: 12px; color: #888;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
-            </div>
-        `,
+        ...template
       };
 
       await transporter.sendMail(mailOptions);
@@ -96,3 +134,4 @@ const sendOtpFlow = ai.defineFlow(
     }
   }
 );
+

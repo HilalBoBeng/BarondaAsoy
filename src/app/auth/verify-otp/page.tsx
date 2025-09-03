@@ -25,7 +25,6 @@ import {
 import {
   InputOTP,
   InputOTPGroup,
-  InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { verifyOtp } from "@/ai/flows/verify-otp";
@@ -45,7 +44,7 @@ export default function VerifyOtpPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [registrationData, setRegistrationData] = useState<any>(null);
+  const [contextData, setContextData] = useState<any>(null);
   const [cooldown, setCooldown] = useState(0);
   const [resendAttempts, setResendAttempts] = useState(0);
   const router = useRouter();
@@ -58,27 +57,33 @@ export default function VerifyOtpPage() {
   const getCooldownKey = (email: string) => `otpCooldown_${email}`;
 
   const getCooldownData = useCallback(() => {
-    if (typeof window === 'undefined' || !registrationData?.email) return null;
-    const data = localStorage.getItem(getCooldownKey(registrationData.email));
+    if (typeof window === 'undefined' || !contextData?.email) return null;
+    const data = localStorage.getItem(getCooldownKey(contextData.email));
     if (!data) return null;
     try {
       return JSON.parse(data);
     } catch (e) {
       return null;
     }
-  }, [registrationData?.email]);
+  }, [contextData?.email]);
 
   useEffect(() => {
-    const dataStr = localStorage.getItem('registrationData');
+    let dataStr = localStorage.getItem('registrationData');
+    let context = 'userRegistration';
+    if (!dataStr) {
+      dataStr = localStorage.getItem('verificationContext');
+      context = 'staffResetPassword';
+    }
+
     if (!dataStr) {
       toast({
         variant: "destructive",
         title: "Data Tidak Ditemukan",
-        description: "Silakan mulai proses pendaftaran dari awal.",
+        description: "Silakan mulai proses dari awal.",
       });
-      router.push('/auth/register');
+      router.push('/auth/login');
     } else {
-      setRegistrationData(JSON.parse(dataStr));
+      setContextData(JSON.parse(dataStr));
     }
   }, [router, toast]);
   
@@ -91,10 +96,10 @@ export default function VerifyOtpPage() {
         setCooldown(remaining);
         setResendAttempts(savedCooldown.attempts);
       } else {
-        if (registrationData?.email) localStorage.removeItem(getCooldownKey(registrationData.email));
+        if (contextData?.email) localStorage.removeItem(getCooldownKey(contextData.email));
       }
     }
-  }, [registrationData, getCooldownData]);
+  }, [contextData, getCooldownData]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -102,7 +107,7 @@ export default function VerifyOtpPage() {
       timer = setInterval(() => {
         setCooldown((prev) => {
             if(prev - 1 <= 0) {
-                if (registrationData?.email) localStorage.removeItem(getCooldownKey(registrationData.email));
+                if (contextData?.email) localStorage.removeItem(getCooldownKey(contextData.email));
                 return 0;
             }
             return prev - 1;
@@ -110,16 +115,16 @@ export default function VerifyOtpPage() {
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [cooldown, registrationData]);
+  }, [cooldown, contextData]);
 
   const handleResendOtp = async () => {
-    if (!registrationData) return;
+    if (!contextData) return;
     setIsResending(true);
     try {
       const response = await fetch('/api/send-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: registrationData.email }),
+          body: JSON.stringify({ email: contextData.email, context: contextData.flow }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
@@ -135,7 +140,7 @@ export default function VerifyOtpPage() {
 
       setCooldown(newCooldown);
       const expiry = new Date().getTime() + newCooldown * 1000;
-      localStorage.setItem(getCooldownKey(registrationData.email), JSON.stringify({ expiry, attempts: newAttempts }));
+      localStorage.setItem(getCooldownKey(contextData.email), JSON.stringify({ expiry, attempts: newAttempts }));
 
     } catch (error) {
       toast({ variant: "destructive", title: "Gagal Mengirim Ulang", description: error instanceof Error ? error.message : "Terjadi kesalahan." });
@@ -145,27 +150,34 @@ export default function VerifyOtpPage() {
   };
 
   const onSubmit = async (data: VerifyOtpFormValues) => {
-    if (!registrationData) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Sesi registrasi tidak valid.'});
+    if (!contextData) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Sesi verifikasi tidak valid.'});
         return;
     }
     setIsSubmitting(true);
     try {
       const result = await verifyOtp({ 
         otp: data.otp,
-        email: registrationData.email,
-        name: registrationData.name,
-        password: registrationData.password,
+        email: contextData.email,
+        name: contextData.name,
+        password: contextData.password,
+        flow: contextData.flow,
       });
 
       if (result.success) {
         toast({
           title: "Verifikasi Berhasil",
-          description: "Akun Anda telah berhasil dibuat. Silakan masuk.",
+          description: result.message,
         });
         localStorage.removeItem('registrationData');
-        if (registrationData?.email) localStorage.removeItem(getCooldownKey(registrationData.email));
-        router.push('/auth/login');
+        localStorage.removeItem('verificationContext');
+        if (contextData?.email) localStorage.removeItem(getCooldownKey(contextData.email));
+        
+        if (contextData.flow === 'userRegistration') {
+            router.push('/auth/login');
+        } else {
+            router.push('/auth/staff-login');
+        }
       } else {
         throw new Error(result.message);
       }
@@ -191,27 +203,24 @@ export default function VerifyOtpPage() {
         <CardHeader>
           <CardTitle>Verifikasi Email Anda</CardTitle>
           <CardDescription>
-            Kami telah mengirimkan kode 6 digit ke email <strong>{registrationData?.email}</strong>. Masukkan kode tersebut di bawah ini.
+            Kami telah mengirimkan kode 6 digit ke email <strong>{contextData?.email}</strong>. Masukkan kode tersebut di bawah ini.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 flex flex-col items-center">
               <FormField
                 control={form.control}
                 name="otp"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kode OTP</FormLabel>
+                    <FormLabel className="sr-only">Kode OTP</FormLabel>
                     <FormControl>
                         <InputOTP maxLength={6} {...field}>
                             <InputOTPGroup>
                                 <InputOTPSlot index={0} />
                                 <InputOTPSlot index={1} />
                                 <InputOTPSlot index={2} />
-                            </InputOTPGroup>
-                            <InputOTPSeparator />
-                            <InputOTPGroup>
                                 <InputOTPSlot index={3} />
                                 <InputOTPSlot index={4} />
                                 <InputOTPSlot index={5} />
@@ -239,13 +248,15 @@ export default function VerifyOtpPage() {
                  {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Verifikasi & Daftar
+                Verifikasi & Lanjutkan
               </Button>
-              <div className="text-center text-sm">
-                <Link href="/auth/register" className="underline">
-                  Kembali untuk mengubah email
-                </Link>
-              </div>
+               {contextData?.flow === 'userRegistration' && (
+                  <div className="text-center text-sm">
+                    <Link href="/auth/register" className="underline">
+                      Kembali untuk mengubah email
+                    </Link>
+                  </div>
+               )}
             </CardFooter>
           </form>
         </Form>

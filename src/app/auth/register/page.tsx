@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getAuth, fetchSignInMethodsForEmail } from "firebase/auth";
+import { app } from "@/lib/firebase/client";
 
 const registerSchema = z
   .object({
@@ -49,6 +51,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const auth = getAuth(app);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -58,10 +61,22 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsSubmitting(true);
     try {
+      // Check if email already exists
+      const signInMethods = await fetchSignInMethodsForEmail(auth, data.email);
+      if (signInMethods.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Pendaftaran Gagal",
+          description: "Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const response = await fetch('/api/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email }),
+        body: JSON.stringify({ email: data.email, context: 'userRegistration' }),
       });
 
       const result = await response.json();
@@ -76,7 +91,7 @@ export default function RegisterPage() {
       });
 
       // Store form data to be used after OTP verification
-      localStorage.setItem('registrationData', JSON.stringify(data));
+      localStorage.setItem('registrationData', JSON.stringify({ ...data, flow: 'userRegistration'}));
       
       router.push('/auth/verify-otp');
 
