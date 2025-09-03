@@ -27,14 +27,9 @@ const statusDisplay: Record<string, { text: string; className: string }> = {
 const ReplyCard = ({ reply }: { reply: Reply }) => (
     <Card className="mt-2 bg-muted/50">
         <CardContent className="p-3">
-            <div className="flex justify-between items-start">
-                 <p className="text-sm text-foreground/80 break-word flex-grow pr-2">
-                    {reply.message}
-                </p>
-                <div className="flex-shrink-0">
-                    <Badge variant={reply.replierRole === 'Admin' ? 'default' : 'secondary'}>{reply.replierRole}</Badge>
-                </div>
-            </div>
+            <p className="text-sm text-foreground/80 break-word flex-grow pr-2">
+                {reply.message}
+            </p>
             <p className="text-xs text-muted-foreground mt-2">
                 {formatDistanceToNow( (reply.timestamp as Timestamp)?.toDate() || new Date(), { addSuffix: true, locale: id })}
             </p>
@@ -102,7 +97,7 @@ export default function ReportHistory() {
 
     const goToPrevPage = () => {
         if (currentPage > 1) {
-            setCurrentPage(prev => prev + 1);
+            setCurrentPage(prev => prev - 1);
         }
     };
 

@@ -10,7 +10,7 @@ import { doc, getDoc, updateDoc, collection, query, where, Timestamp, orderBy, s
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +24,7 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription as DialogDescriptionComponent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -114,7 +114,15 @@ export default function ProfilePage() {
                  return;
             }
              if (userData.isSuspended) {
-                 toast({ variant: 'destructive', title: 'Akun Ditangguhkan', description: 'Akun Anda telah ditangguhkan. Anda tidak dapat mengakses aplikasi saat ini.' });
+                const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
+                const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
+                 
+                const dialog = document.createElement('div');
+                document.body.appendChild(dialog);
+                
+                // Simple dialog, replace with your component library if available
+                alert(`Akun Ditangguhkan. Alasan: ${userData.suspensionReason || 'Tidak ada alasan'}. Penangguhan berakhir ${endDateString}.`);
+                 
                  auth.signOut();
                  router.push('/auth/login');
                  return;
@@ -169,8 +177,7 @@ export default function ProfilePage() {
       await signOut(auth);
       setTimeout(() => {
           router.push('/');
-          setIsLoggingOut(false);
-      }, 2000);
+      }, 1500);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -247,13 +254,11 @@ export default function ProfilePage() {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            // 1. Validate file size
-            if (file.size > 256 * 1024) { // 256 KB
+            if (file.size > 256 * 1024) { 
                 toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 256 KB." });
                 return;
             }
 
-            // 2. Validate aspect ratio
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
@@ -265,7 +270,6 @@ export default function ProfilePage() {
                         return;
                     }
                     
-                    // 3. Compress and set preview
                     const compressedDataUrl = await compressImage(file, 64);
                     form.setValue('photoURL', compressedDataUrl);
                 };
@@ -545,7 +549,7 @@ export default function ProfilePage() {
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Tindakan ini akan menghapus foto profil Anda. Anda dapat mengunggah yang baru nanti.</AlertDialogDescription>
+                                                        <AlertDialogDescription>Tindakan ini akan menghapus foto profil Anda secara permanen. Anda dapat mengunggah yang baru nanti.</AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Batal</AlertDialogCancel>
