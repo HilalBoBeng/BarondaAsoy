@@ -235,6 +235,9 @@ export default function ScheduleAdminPage() {
                 </CardContent>
                 <CardFooter>
                   <div className="flex gap-2 justify-end items-center w-full">
+                      <Button asChild variant="outline" size="icon">
+                        <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
+                      </Button>
                       <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
                           <Edit className="h-4 w-4" />
                       </Button>
