@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '../ui/dialog';
 
 export default function Announcements({ userInfo }: { userInfo: AppUser | null }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -123,18 +123,18 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
     <div>
         {renderAnnouncements()}
         <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0 flex flex-col gap-0">
+            <DialogContent className="w-[90%] sm:max-w-lg rounded-lg p-0">
                 {selectedAnnouncement && (
                     <>
-                        <DialogHeader className="p-6 pb-4">
+                        <DialogHeader>
                           <DialogTitle className="text-left text-lg">Pengumuman</DialogTitle>
                         </DialogHeader>
-                        <div className="p-6 pt-0 whitespace-pre-wrap break-words min-h-[150px] flex-grow">
+                        <DialogBody>
                             <p className="font-semibold text-lg mb-2">{selectedAnnouncement.title}</p>
-                            <p className="text-foreground">{selectedAnnouncement.content}</p>
-                        </div>
-                        <DialogFooter className="p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center w-full pt-4 border-t">
-                             <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setSelectedAnnouncement(null)}>Ok</Button>
+                            <p className="text-foreground whitespace-pre-wrap break-words">{selectedAnnouncement.content}</p>
+                        </DialogBody>
+                        <DialogFooter>
+                             <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" onClick={() => setSelectedAnnouncement(null)}>Ok</Button>
                         </DialogFooter>
                     </>
                 )}
