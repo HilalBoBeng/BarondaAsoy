@@ -23,8 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Loader2, KeyRound, Sun, Moon, Paintbrush, AlertTriangle, Upload, Copy, Pencil } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -34,14 +33,14 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 
-const settingsSchema = z.object({
-  appName: z.string().min(1, "Nama aplikasi tidak boleh kosong."),
-  appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")),
-  appDownloadLink: z.string().url("URL tidak valid.").optional().or(z.literal('')),
-  maintenanceMode: z.boolean(),
-});
+const appNameSchema = z.object({ appName: z.string().min(1, "Nama aplikasi tidak boleh kosong.") });
+const appLogoSchema = z.object({ appLogoUrl: z.string().url("URL logo tidak valid.").or(z.literal("")) });
+const maintenanceSchema = z.object({ maintenanceMode: z.boolean() });
+const appDownloadLinkSchema = z.object({ appDownloadLink: z.string().optional() });
 
-type SettingsFormValues = z.infer<typeof settingsSchema>;
+type AppNameValues = z.infer<typeof appNameSchema>;
+type AppLogoValues = z.infer<typeof appLogoSchema>;
+type MaintenanceValues = z.infer<typeof maintenanceSchema>;
 
 export default function AdminSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,48 +51,53 @@ export default function AdminSettingsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsSchema),
-    defaultValues: {
-      appName: "Baronda",
-      appLogoUrl: "https://iili.io/KJ4aGxp.png",
-      appDownloadLink: "",
-      maintenanceMode: false,
-    },
-  });
-  
+  const [appDownloadLink, setAppDownloadLink] = useState('');
+
+  const appNameForm = useForm<AppNameValues>({ resolver: zodResolver(appNameSchema) });
+  const appLogoForm = useForm<AppLogoValues>({ resolver: zodResolver(appLogoSchema) });
+  const maintenanceForm = useForm<MaintenanceValues>({ resolver: zodResolver(maintenanceSchema) });
+
   useEffect(() => {
     const fetchSettings = async () => {
         setLoading(true);
-        const settingsRef = doc(db, 'app_settings', 'config');
-        const docSnap = await getDoc(settingsRef);
-        if (docSnap.exists()) {
-            form.reset(docSnap.data() as SettingsFormValues);
+        try {
+            const settingsRef = doc(db, 'app_settings', 'config');
+            const docSnap = await getDoc(settingsRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                appNameForm.reset({ appName: data.appName || "Baronda" });
+                appLogoForm.reset({ appLogoUrl: data.appLogoUrl || "https://iili.io/KJ4aGxp.png" });
+                maintenanceForm.reset({ maintenanceMode: data.maintenanceMode || false });
+                setAppDownloadLink(data.appDownloadLink || '');
+            } else {
+                 // Set default values if doc doesn't exist
+                appNameForm.reset({ appName: "Baronda" });
+                appLogoForm.reset({ appLogoUrl: "https://iili.io/KJ4aGxp.png" });
+                maintenanceForm.reset({ maintenanceMode: false });
+                setAppDownloadLink('');
+            }
+        } catch(error) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memuat pengaturan awal.'});
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
     fetchSettings();
-  }, [form]);
-
-  const onSubmit = async (data: SettingsFormValues) => {
-    setIsSubmitting(true);
-    try {
+  }, [appNameForm, appLogoForm, maintenanceForm, toast]);
+  
+  const handleSave = async (field: keyof (AppNameValues & AppLogoValues & MaintenanceValues), data: any) => {
+      setIsSubmitting(true);
+      try {
         const settingsRef = doc(db, 'app_settings', 'config');
-        await setDoc(settingsRef, data, { merge: true });
-        toast({
-            title: "Berhasil",
-            description: "Pengaturan tampilan berhasil disimpan.",
-        });
-    } catch (error) {
-         toast({
-            variant: "destructive",
-            title: "Gagal",
-            description: "Gagal menyimpan pengaturan.",
-        });
-    } finally {
+        await setDoc(settingsRef, { [field]: data[field] }, { merge: true });
+        toast({ title: "Berhasil", description: "Pengaturan berhasil diperbarui." });
+      } catch (error) {
+        toast({ variant: "destructive", title: "Gagal", description: "Gagal menyimpan pengaturan." });
+      } finally {
         setIsSubmitting(false);
-    }
-  };
+      }
+  }
+
 
   const handleApkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -125,8 +129,8 @@ export default function AdminSettingsPage() {
         async () => {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             const settingsRef = doc(db, 'app_settings', 'config');
-            await updateDoc(settingsRef, { appDownloadLink: downloadURL });
-            form.setValue('appDownloadLink', downloadURL);
+            await setDoc(settingsRef, { appDownloadLink: downloadURL }, { merge: true });
+            setAppDownloadLink(downloadURL);
             toast({ title: 'Unggah Berhasil', description: 'File APK berhasil diunggah dan tautan telah diperbarui.' });
             setIsUploading(false);
         }
@@ -134,9 +138,8 @@ export default function AdminSettingsPage() {
   };
 
   const copyToClipboard = () => {
-    const link = form.getValues('appDownloadLink');
-    if (link) {
-      navigator.clipboard.writeText(link);
+    if (appDownloadLink) {
+      navigator.clipboard.writeText(appDownloadLink);
       toast({ title: 'Tautan disalin!' });
     }
   };
@@ -167,53 +170,62 @@ export default function AdminSettingsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-                <h3 className="text-lg font-medium flex items-center gap-2"><Paintbrush className="h-5 w-5" />Tampilan Umum</h3>
-                <p className="text-sm text-muted-foreground">
-                   Ubah judul dan logo yang muncul di seluruh aplikasi.
-                </p>
+        <div>
+            <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><Paintbrush className="h-5 w-5" />Tampilan Umum</h3>
+            <div className="space-y-4">
+                <Form {...appNameForm}>
+                    <form onSubmit={appNameForm.handleSubmit((data) => handleSave('appName', data))} className="flex items-end gap-2">
+                        <FormField
+                        control={appNameForm.control}
+                        name="appName"
+                        render={({ field }) => (
+                            <FormItem className="flex-grow">
+                            <FormLabel>Judul Aplikasi</FormLabel>
+                            <FormControl>
+                                <Input {...field} placeholder="e.g. Baronda App" />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <Button type="submit" size="sm" disabled={isSubmitting}><Pencil className="h-4 w-4" /></Button>
+                    </form>
+                </Form>
+
+                <Form {...appLogoForm}>
+                    <form onSubmit={appLogoForm.handleSubmit((data) => handleSave('appLogoUrl', data))} className="flex items-end gap-2">
+                        <FormField
+                        control={appLogoForm.control}
+                        name="appLogoUrl"
+                        render={({ field }) => (
+                            <FormItem className="flex-grow">
+                            <FormLabel>URL Logo Aplikasi</FormLabel>
+                            <FormControl>
+                                <Input {...field} placeholder="https://example.com/logo.png" />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                         <Button type="submit" size="sm" disabled={isSubmitting}><Pencil className="h-4 w-4" /></Button>
+                    </form>
+                </Form>
             </div>
-             <FormField
-              control={form.control}
-              name="appName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Judul Aplikasi</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g. Baronda App" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="appLogoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL Logo Aplikasi</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="https://example.com/logo.png" />
-                  </FormControl>
-                   <p className="text-sm text-muted-foreground">
-                    Pastikan URL gambar dapat diakses secara publik.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        </div>
+        <Separator />
+        
+        <div>
+            <h3 className="text-lg font-medium flex items-center gap-2 mb-4"><Download className="h-5 w-5" />File Aplikasi</h3>
              <FormItem>
                 <FormLabel>File APK Aplikasi</FormLabel>
                  <div className="flex items-center gap-2">
                     <Input 
-                        value={form.watch('appDownloadLink') || ''}
+                        value={appDownloadLink || ''}
                         readOnly
                         placeholder="Tidak ada file APK yang diunggah"
                         className="bg-muted/50"
                     />
-                     {form.watch('appDownloadLink') && (
+                     {appDownloadLink && (
                         <Button type="button" variant="outline" size="icon" onClick={copyToClipboard}>
                            <Copy className="h-4 w-4" />
                         </Button>
@@ -240,51 +252,52 @@ export default function AdminSettingsPage() {
                     Unggah file APK untuk disebarkan melalui halaman unduhan.
                 </p>
              </FormItem>
+        </div>
 
-             <Separator />
+        <Separator />
 
-            <div>
-                <h3 className="text-lg font-medium flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
-                 <p className="text-sm text-muted-foreground">
-                   Saat diaktifkan, hanya admin yang dapat mengakses aplikasi.
-                </p>
-            </div>
-             <FormField
-              control={form.control}
-              name="maintenanceMode"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Aktifkan Mode Pemeliharaan
-                    </FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
-                    </p>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <Button type="submit" disabled={isSubmitting || loading || isUploading}>
-                {(isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Perubahan
-            </Button>
-          </form>
+        <div>
+            <h3 className="text-lg font-medium flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Mode Pemeliharaan</h3>
+            <p className="text-sm text-muted-foreground">
+                Saat diaktifkan, hanya admin yang dapat mengakses aplikasi.
+            </p>
+        </div>
+        <Form {...maintenanceForm}>
+            <form onSubmit={maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))}>
+                <FormField
+                control={maintenanceForm.control}
+                name="maintenanceMode"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                        Aktifkan Mode Pemeliharaan
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                        Jika aktif, pengguna dan staf akan melihat halaman pemeliharaan.
+                        </p>
+                    </div>
+                    <FormControl>
+                        <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            maintenanceForm.handleSubmit((data) => handleSave('maintenanceMode', data))();
+                        }}
+                        />
+                    </FormControl>
+                    </FormItem>
+                )}
+                />
+            </form>
         </Form>
         
         <Separator />
 
         <div>
-            <h3 className="text-lg font-medium mb-2">Tema Aplikasi</h3>
+            <h3 className="text-lg font-medium mb-2">Tema Dasbor Admin</h3>
             <p className="text-sm text-muted-foreground mb-4">
-                Pilih antara mode terang atau gelap untuk dasbor Anda.
+                Pilih antara mode terang atau gelap untuk dasbor Anda. Ini tidak akan memengaruhi tampilan pengguna.
             </p>
             <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
