@@ -16,7 +16,8 @@ import {
   Settings,
   Landmark,
   ArrowLeft,
-  QrCode
+  QrCode,
+  Banknote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -54,6 +55,7 @@ export default function AdminLayout({
         { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
         { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
         { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
+        { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
         { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
@@ -91,8 +93,10 @@ export default function AdminLayout({
   useEffect(() => {
     const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
     const scheduleDetailRegex = /^\/admin\/schedule\/(.+)$/;
+    const honorDetailRegex = /^\/admin\/honor\/(.+)$/;
     const duesDetailMatch = pathname.match(duesDetailRegex);
     const scheduleDetailMatch = pathname.match(scheduleDetailRegex);
+    const honorDetailMatch = pathname.match(honorDetailRegex);
 
     if (duesDetailMatch) {
       setIsDetailPage(true);
@@ -100,7 +104,11 @@ export default function AdminLayout({
     } else if (scheduleDetailMatch) {
       setIsDetailPage(true);
       setPageTitle('Detail Jadwal & QR Code');
-    } else {
+    } else if (honorDetailMatch) {
+        setIsDetailPage(true);
+        setPageTitle('Detail Honorarium');
+    }
+     else {
       setIsDetailPage(false);
       const activeItem = navItems.find(item => pathname.startsWith(item.href));
       setPageTitle(activeItem?.label || 'Dasbor Admin');

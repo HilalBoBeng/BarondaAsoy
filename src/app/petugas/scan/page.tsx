@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client';
@@ -19,13 +19,29 @@ function ScanPageContent() {
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // In a real application, you would request camera permissions here.
-    // For this prototype, we'll simulate it.
-    setTimeout(() => setCameraPermission(true), 500); 
-  }, []);
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Akses Kamera Ditolak',
+          description: 'Mohon izinkan akses kamera di browser Anda untuk menggunakan fitur ini.',
+        });
+      }
+    };
+    getCameraPermission();
+  }, [toast]);
 
   const handleScan = async () => {
     if (!scheduleId) {
@@ -71,8 +87,11 @@ function ScanPageContent() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="aspect-square w-full bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-            {cameraPermission === null && <Loader2 className="h-8 w-8 animate-spin text-white" />}
-            {cameraPermission === false && (
+            {hasCameraPermission === null && <Loader2 className="h-8 w-8 animate-spin text-white" />}
+            
+            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+
+            {hasCameraPermission === false && (
                 <Alert variant="destructive" className="m-4">
                     <AlertTitle>Kamera Tidak Diizinkan</AlertTitle>
                     <AlertDescription>
@@ -80,11 +99,8 @@ function ScanPageContent() {
                     </AlertDescription>
                 </Alert>
             )}
-            {cameraPermission && (
-                 <video className="w-full h-full object-cover" playsInline autoPlay muted />
-            )}
           </div>
-          <Button onClick={handleScan} className="w-full" disabled={isSubmitting || !cameraPermission}>
+          <Button onClick={handleScan} className="w-full" disabled={isSubmitting || !hasCameraPermission}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
             {isSubmitting ? 'Memindai...' : 'Mulai Patroli'}
           </Button>

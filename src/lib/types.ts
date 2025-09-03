@@ -138,3 +138,14 @@ export interface DuesPayment {
     recordedBy: string; // Staff name
     recordedById: string; // Staff ID
 }
+
+export interface Honorarium {
+    id: string;
+    staffId: string;
+    staffName: string;
+    amount: number;
+    period: string; // e.g., "Juli 2024"
+    issueDate: Timestamp | Date;
+    status: 'Dibayarkan' | 'Tertunda' | 'Dipotong' | 'Batal';
+    notes?: string; // For 'Dipotong' or 'Batal'
+}

@@ -14,7 +14,8 @@ import {
   Phone,
   ArrowLeft,
   Bell,
-  Megaphone
+  Megaphone,
+  Banknote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +49,7 @@ export default function PetugasLayout({
     { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
     { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
     { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
+    { href: "/petugas/honor", icon: Banknote, label: "Honor Saya" },
     { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
     { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
