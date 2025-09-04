@@ -39,9 +39,9 @@ import type { Staff } from "@/lib/types";
 const navItemsList = [
     { href: "/admin", icon: Home, label: "Dasbor" },
     { href: "/admin/profile", icon: UserIcon, label: "Profil Saya" },
-    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
+    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badgeKey: 'newReports' },
     { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna" },
+    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badgeKey: 'pendingStaff' },
     { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
     { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
     { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
@@ -72,9 +72,14 @@ export default function AdminLayout({
   const [isDetailPage, setIsDetailPage] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
+    const getBadgeCount = (badgeKey?: string) => {
+        if (!badgeKey) return 0;
+        return badgeCounts[badgeKey as keyof typeof badgeCounts] || 0;
+    };
+    
     const navItems = navItemsList.map(item => ({
       ...item,
-      badge: item.href === '/admin/reports' ? badgeCounts.newReports : item.href === '/admin/users' ? badgeCounts.pendingStaff : 0
+      badge: getBadgeCount(item.badgeKey)
     }))
 
   useEffect(() => {

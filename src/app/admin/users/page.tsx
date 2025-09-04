@@ -470,9 +470,9 @@ export default function UsersAdminPage() {
           {selectedUserForDetail && (
               <Card className="border-0 shadow-none">
                   <CardContent className="p-6 text-center">
-                      <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)} className="mx-auto">
+                      <button onClick={() => handleImageZoom('photoURL' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)} className="mx-auto">
                           <Avatar className="h-24 w-24 border-4 border-muted">
-                              <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
+                              <AvatarImage src={'photoURL' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
                               <AvatarFallback className="text-4xl">
                                   {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
                               </AvatarFallback>

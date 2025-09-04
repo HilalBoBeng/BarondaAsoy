@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function StaffRegistrationSuccessPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function StaffRegistrationSuccessPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background text-center px-4">
+        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto mb-4" />
         <CheckCircle className="h-16 w-16 text-green-500 mb-6" />
         <h1 className="text-2xl font-bold text-foreground">Pendaftaran Terkirim!</h1>
         <p className="mt-2 max-w-md text-muted-foreground">
