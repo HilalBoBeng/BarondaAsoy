@@ -435,30 +435,28 @@ export default function UsersAdminPage() {
         <DialogContent>
             {selectedUserForDetail && (
                 <>
-                <DialogHeader className="text-center items-center">
-                    <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)}>
-                        <Avatar className="h-24 w-24 border-4 border-muted">
-                            <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
-                            <AvatarFallback className="text-4xl">
-                                {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
-                    </button>
-                    <div className="pt-2">
-                        <DialogTitle className="text-xl">
-                            {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {selectedUserForDetail.email}
-                        </DialogDescription>
-                    </div>
+                <DialogHeader>
+                    <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
                 </DialogHeader>
                 <DialogBody>
-                   <div className="space-y-3 text-sm border-t border-b py-4">
+                   <div className="flex flex-col items-center text-center">
+                       <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)}>
+                            <Avatar className="h-24 w-24 border-4 border-muted">
+                                <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
+                                <AvatarFallback className="text-4xl">
+                                    {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                        </button>
+                        <h2 className="text-xl font-bold mt-2">
+                            {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">{selectedUserForDetail.email}</p>
+                   </div>
+                   <div className="space-y-3 text-sm border-t border-b py-4 mt-4">
                        <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
                        <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
                    </div>
-                   <p className="text-xs text-muted-foreground text-center pt-4">Terdaftar: {format(selectedUserForDetail.createdAt as Date, 'PPP, p', { locale: id })}</p>
                 </DialogBody>
                 <DialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch">
                    {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (

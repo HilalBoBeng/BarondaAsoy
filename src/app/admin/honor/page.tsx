@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Banknote, Eye } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Banknote, Eye, Search, MoreVertical } from 'lucide-react';
 import type { Honorarium, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -57,8 +58,9 @@ export default function HonorariumAdminPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentHonorarium, setCurrentHonorarium] = useState<Honorarium | null>(null);
-  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
-  const [noteToShow, setNoteToShow] = useState('');
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedHonorarium, setSelectedHonorarium] = useState<Honorarium | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   const form = useForm<HonorariumFormValues>({
@@ -109,7 +111,10 @@ export default function HonorariumAdminPage() {
         const [monthB, yearB] = b.period.split(' ');
         const dateA = new Date(parseInt(yearA), months.indexOf(monthA));
         const dateB = new Date(parseInt(yearB), months.indexOf(monthB));
-        return dateB.getTime() - dateA.getTime();
+        if (dateB.getTime() !== dateA.getTime()) {
+            return dateB.getTime() - dateA.getTime();
+        }
+        return a.staffName.localeCompare(b.staffName);
       });
 
       setHonorariums(honorData);
@@ -121,10 +126,14 @@ export default function HonorariumAdminPage() {
       unsubHonor();
     };
   }, []);
+  
+  const filteredHonorariums = useMemo(() => 
+    honorariums.filter(h => h.staffName?.toLowerCase().includes(searchTerm.toLowerCase())),
+  [honorariums, searchTerm]);
+
 
   useEffect(() => {
-    if (isDialogOpen) {
-      if (currentHonorarium) {
+    if (isDialogOpen && currentHonorarium) {
         const [month, year] = currentHonorarium.period.split(' ');
         form.reset({
           staffId: currentHonorarium.staffId,
@@ -134,9 +143,8 @@ export default function HonorariumAdminPage() {
           status: currentHonorarium.status,
           notes: currentHonorarium.notes || '',
         });
-      } else {
+    } else if (isDialogOpen) {
         form.reset({ staffId: '', month: months[new Date().getMonth()], year: currentYear.toString(), amount: 0, status: 'Tertunda', notes: '' });
-      }
     }
   }, [isDialogOpen, currentHonorarium, form]);
 
@@ -187,14 +195,15 @@ export default function HonorariumAdminPage() {
     try {
       await deleteDoc(doc(db, 'honorariums', id));
       toast({ title: "Berhasil", description: "Data honorarium berhasil dihapus." });
+      setIsDetailOpen(false); // Close detail dialog on delete
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus data." });
     }
   };
   
-  const showNote = (note: string) => {
-    setNoteToShow(note);
-    setIsNoteDialogOpen(true);
+  const showDetail = (honor: Honorarium) => {
+    setSelectedHonorarium(honor);
+    setIsDetailOpen(true);
   }
 
   return (
@@ -210,15 +219,21 @@ export default function HonorariumAdminPage() {
         </Button>
       </CardHeader>
       <CardContent>
+        <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama petugas..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
         <div className="rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Periode</TableHead>
                 <TableHead>Nama Petugas</TableHead>
-                <TableHead>Jumlah</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Catatan</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -226,45 +241,32 @@ export default function HonorariumAdminPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell colSpan={3}><Skeleton className="h-5 w-full" /></TableCell>
                   </TableRow>
                 ))
-              ) : honorariums.length > 0 ? (
-                honorariums.map((h) => (
+              ) : filteredHonorariums.length > 0 ? (
+                filteredHonorariums.map((h) => (
                   <TableRow key={h.id}>
-                    <TableCell>{h.period}</TableCell>
-                    <TableCell>{h.staffName}</TableCell>
-                    <TableCell>{formatCurrency(h.amount)}</TableCell>
-                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge></TableCell>
                     <TableCell>
-                        {h.notes ? (
-                            <Button variant="ghost" size="icon" onClick={() => showNote(h.notes || '')}>
-                                <Eye className="h-4 w-4" />
-                            </Button>
-                        ) : '-'}
+                        <div className="flex items-center gap-2">
+                           <Avatar className="h-8 w-8">
+                             <AvatarImage src={undefined} />
+                             <AvatarFallback>{h.staffName.charAt(0).toUpperCase()}</AvatarFallback>
+                           </Avatar>
+                           {h.staffName}
+                        </div>
                     </TableCell>
+                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild><Button variant="destructive" size="icon"><Trash /></Button></AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus Data Ini?</AlertDialogTitle>
-                              <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(h.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => showDetail(h)}>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">Belum ada data honorarium.</TableCell>
+                  <TableCell colSpan={3} className="h-24 text-center">Belum ada data honorarium.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -372,17 +374,65 @@ export default function HonorariumAdminPage() {
       </DialogContent>
     </Dialog>
 
-    <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+    <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Catatan Honorarium</DialogTitle>
-            </DialogHeader>
-            <DialogBody>
-              <div className="whitespace-pre-wrap">{noteToShow}</div>
-            </DialogBody>
-            <DialogFooter>
-                <Button onClick={() => setIsNoteDialogOpen(false)}>Tutup</Button>
-            </DialogFooter>
+            {selectedHonorarium && (
+                <>
+                <DialogHeader>
+                    <DialogTitle className="sr-only">Detail Honorarium</DialogTitle>
+                    <div className="flex flex-col items-center text-center">
+                        <Avatar className="h-20 w-20 mb-2">
+                           <AvatarImage src={undefined} />
+                           <AvatarFallback className="text-3xl">{selectedHonorarium.staffName.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <h2 className="text-xl font-bold">{selectedHonorarium.staffName}</h2>
+                        <p className="text-muted-foreground">{selectedHonorarium.period}</p>
+                    </div>
+                </DialogHeader>
+                <DialogBody>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b pb-2">
+                       <span className="text-muted-foreground">Jumlah</span>
+                       <span className="font-semibold">{formatCurrency(selectedHonorarium.amount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b pb-2">
+                       <span className="text-muted-foreground">Status</span>
+                       <Badge variant="secondary" className={cn(statusConfig[selectedHonorarium.status]?.className)}>{selectedHonorarium.status}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center border-b pb-2">
+                       <span className="text-muted-foreground">Tanggal Dibuat</span>
+                       <span className="font-semibold">{format(selectedHonorarium.issueDate, "PPP", { locale: id })}</span>
+                    </div>
+                    {selectedHonorarium.notes && (
+                        <div>
+                            <span className="text-muted-foreground text-sm">Catatan:</span>
+                            <p className="font-semibold text-sm">{selectedHonorarium.notes}</p>
+                        </div>
+                    )}
+                  </div>
+                </DialogBody>
+                <DialogFooter className="flex-col items-stretch gap-2">
+                    <Button variant="outline" onClick={() => { setIsDetailOpen(false); setCurrentHonorarium(selectedHonorarium); setIsDialogOpen(true); }}>
+                        <Edit className="mr-2 h-4 w-4" /> Edit Data
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive"><Trash className="mr-2 h-4 w-4"/> Hapus Data</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus Data Honorarium Ini?</AlertDialogTitle>
+                                <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(selectedHonorarium.id)}>Ya, Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </DialogFooter>
+                </>
+            )}
         </DialogContent>
     </Dialog>
     </>

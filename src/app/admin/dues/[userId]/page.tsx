@@ -15,7 +15,7 @@ import { Loader2, ArrowLeft, Eye, Edit, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,8 +41,9 @@ const getAmountColor = (amount: number) => {
     return 'transparent'; // default
 };
 
-export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
-  const { userId } = params;
+export default function UserDuesHistoryPage() {
+  const params = useParams();
+  const userId = params.userId as string;
   const [user, setUser] = useState<AppUser | null>(null);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,12 +181,12 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                   ))
                 ) : userPaymentHistory.length > 0 ? (
                   userPaymentHistory.map(due => (
-                    <TableRow key={due.id} style={{ backgroundColor: `${getAmountColor(due.amount)}20` }}>
+                    <TableRow key={due.id}>
                       <TableCell>{due.paymentDate instanceof Timestamp ? format(due.paymentDate.toDate(), "PPP", { locale: id }) : 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                       </TableCell>
-                      <TableCell>{formatCurrency(due.amount)}</TableCell>
+                      <TableCell style={{ backgroundColor: `${getAmountColor(due.amount)}20` }}>{formatCurrency(due.amount)}</TableCell>
                       <TableCell className="text-right">
                          <div className="flex gap-2 justify-end">
                             <Button variant="outline" size="sm" onClick={() => handleEditOpen(due)}>
