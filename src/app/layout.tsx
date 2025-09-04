@@ -1,19 +1,16 @@
 
 "use client";
 
-import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/theme-provider";
 import { PT_Sans } from 'next/font/google';
-import { useEffect, useState, type ReactNode, Suspense } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import MaintenancePage from "./maintenance/page";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAuth } from "firebase/auth";
 
 
 const ptSans = PT_Sans({
@@ -90,15 +87,8 @@ export default function RootLayout({
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" />
       </head>
       <body className={`${ptSans.className} antialiased bg-background`}>
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-        >
-           {children}
-           <Toaster />
-        </ThemeProvider>
+        {children}
+        <Toaster />
       </body>
     </html>
   );

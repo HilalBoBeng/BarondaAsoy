@@ -22,12 +22,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 const editDuesSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
 });
 
 type EditDuesFormValues = z.infer<typeof editDuesSchema>;
+
+const getAmountColor = (amount: number) => {
+    if (amount <= 1000) return '#B3B6BB'; // abu-abu
+    if (amount <= 2000) return '#8F9E91'; // abu-abu kehijauan
+    if (amount <= 5000) return '#A47A45'; // cokelat
+    if (amount <= 10000) return '#7B53A6'; // ungu
+    if (amount <= 20000) return '#3AAA6D'; // hijau
+    if (amount <= 50000) return '#2E78BC'; // biru
+    if (amount <= 100000) return '#C62828';// merah
+    return 'transparent'; // default
+};
 
 export default function UserDuesHistoryPage({ params }: { params: { userId: string } }) {
   const { userId } = params;
@@ -168,7 +180,7 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
                   ))
                 ) : userPaymentHistory.length > 0 ? (
                   userPaymentHistory.map(due => (
-                    <TableRow key={due.id}>
+                    <TableRow key={due.id} style={{ backgroundColor: `${getAmountColor(due.amount)}20` }}>
                       <TableCell>{due.paymentDate instanceof Timestamp ? format(due.paymentDate.toDate(), "PPP", { locale: id }) : 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{due.month} {due.year}</Badge>

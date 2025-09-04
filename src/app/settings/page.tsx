@@ -1,7 +1,6 @@
 
 "use client"
 
-import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -10,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Moon, Sun, Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2 } from "lucide-react"
+import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -48,7 +47,6 @@ type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
 
 export default function SettingsPage() {
-  const { setTheme, theme } = useTheme();
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [captcha, setCaptcha] = useState('');
@@ -155,7 +153,7 @@ export default function SettingsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Pengaturan</CardTitle>
-                        <CardDescription>Kelola akun Anda, tampilan, dan lainnya.</CardDescription>
+                        <CardDescription>Kelola akun Anda.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
                       {user ? (
@@ -203,28 +201,7 @@ export default function SettingsPage() {
                               </form>
                           </Form>
                           <Separator />
-
-                          <div className="flex items-center justify-between">
-                              <div className="space-y-0.5">
-                                  <h3 className="font-medium">Tema Aplikasi</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                      Pilih antara mode terang atau gelap.
-                                  </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                  <Button variant={theme === 'light' ? 'secondary' : 'ghost'} size="icon" onClick={() => setTheme("light")}>
-                                      <Sun className="h-5 w-5" />
-                                      <span className="sr-only">Light</span>
-                                  </Button>
-                                  <Button variant={theme === 'dark' ? 'secondary' : 'ghost'} size="icon" onClick={() => setTheme("dark")}>
-                                      <Moon className="h-5 w-5" />
-                                      <span className="sr-only">Dark</span>
-                                  </Button>
-                              </div>
-                          </div>
                           
-                          <Separator />
-
                            <div>
                             <h3 className="font-semibold text-destructive flex items-center gap-2 mb-2"><Trash2 className="h-5 w-5" />Hapus Akun</h3>
                              <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
