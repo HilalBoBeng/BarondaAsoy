@@ -12,7 +12,7 @@ import { TopLevelError } from '@/lib/exceptions/top-level-error';
 
 const SendOtpInputSchema = z.object({
   email: z.string().email().describe('The email address to send the OTP to.'),
-  context: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword']).describe('The context for which the OTP is being sent.'),
+  context: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'adminCreation']).describe('The context for which the OTP is being sent.'),
 });
 export type SendOtpInput = z.infer<typeof SendOtpInputSchema>;
 
@@ -83,6 +83,27 @@ const emailTemplates = {
             <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">${otp}</p>
           </div>
           <p style="font-size: 14px; color: #666;">Jika Anda tidak merasa mendaftar, mohon abaikan email ini.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #888;">
+          <p style="margin: 0;">Baronda - Siskamling Digital Kelurahan Kilongan</p>
+        </div>
+      </div>
+    `,
+  }),
+    adminCreation: (otp: string) => ({
+    subject: 'Kode Konfirmasi Pembuatan Admin Baronda',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #FF7426; color: white; padding: 20px; text-align: center;">
+          <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
+          <h1 style="margin: 0; font-size: 24px;">Konfirmasi Pembuatan Admin</h1>
+        </div>
+        <div style="padding: 30px; text-align: center; color: #333;">
+          <p style="font-size: 16px;">Anda (Super Admin) mencoba untuk membuat akun admin baru. Gunakan kode berikut untuk mengonfirmasi tindakan ini. Kode berlaku 5 menit.</p>
+          <div style="background-color: #f2f2f2; border-radius: 5px; margin: 20px 0; padding: 15px;">
+            <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">${otp}</p>
+          </div>
+          <p style="font-size: 14px; color: #666;">Jika Anda tidak merasa melakukan ini, mohon abaikan email ini.</p>
         </div>
         <div style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #888;">
           <p style="margin: 0;">Baronda - Siskamling Digital Kelurahan Kilongan</p>

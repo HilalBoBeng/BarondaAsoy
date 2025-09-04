@@ -18,7 +18,7 @@ const VerifyOtpInputSchema = z.object({
   phone: z.string().optional().describe("The user's phone number (for registration)."),
   addressType: z.enum(['kilongan', 'luar_kilongan']).optional().describe('The type of address.'),
   addressDetail: z.string().optional().describe('The detailed address if outside Kilongan.'),
-  flow: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
+  flow: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'userPasswordReset', 'adminCreation']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
 
@@ -82,8 +82,6 @@ const verifyOtpFlow = ai.defineFlow(
       let contextToCheck: string = flow;
       if (flow === 'userPasswordReset') {
         contextToCheck = 'userRegistration';
-      } else if (flow === 'staffRegistration') {
-        contextToCheck = 'staffRegistration';
       }
       
       const q = adminDb.collection('otps')
@@ -107,7 +105,7 @@ const verifyOtpFlow = ai.defineFlow(
       
       const batch = adminDb.batch();
       batch.delete(otpDoc.ref); // OTP is valid, clean up the OTP document
-      
+
       if (flow === 'userRegistration') {
         if (!name || !password) {
             return { success: false, message: 'Informasi nama atau password tidak lengkap untuk registrasi.' };
@@ -133,8 +131,6 @@ const verifyOtpFlow = ai.defineFlow(
             isBlocked: false,
         });
 
-        // Welcome notification is removed from admin history.
-        
         await batch.commit();
         return { success: true, message: 'Registrasi berhasil!', userId: userRecord.uid };
       }
@@ -175,9 +171,9 @@ const verifyOtpFlow = ai.defineFlow(
           return { success: true, message: 'Verifikasi berhasil. Kode akses Anda telah dikirim ke email.' };
       }
       
-      if (flow === 'userPasswordReset') {
+      if (flow === 'userPasswordReset' || flow === 'adminCreation') {
          await batch.commit();
-         return { success: true, message: 'Verifikasi berhasil. Anda akan diarahkan untuk mengatur ulang kata sandi.' };
+         return { success: true, message: 'Verifikasi berhasil. Anda dapat melanjutkan.' };
       }
 
       await batch.commit();

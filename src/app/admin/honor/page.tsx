@@ -67,7 +67,7 @@ export default function HonorariumAdminPage() {
 
   const form = useForm<HonorariumFormValues>({
     resolver: zodResolver(honorariumSchema),
-    defaultValues: { month: months[new Date().getMonth()], year: currentYear.toString() }
+    defaultValues: { month: months[new Date().getMonth()], year: currentYear.toString(), notes: '' }
   });
 
   const watchedMonth = form.watch('month');
