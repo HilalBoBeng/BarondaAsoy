@@ -6,12 +6,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { PT_Sans } from 'next/font/google';
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import MaintenancePage from "./maintenance/page";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -33,7 +32,6 @@ function LoadingSkeleton() {
   )
 }
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,30 +42,32 @@ export default function RootLayout({
   const router = useRouter();
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const settingsRef = doc(db, 'app_settings', 'config');
-        const docSnap = await getDoc(settingsRef);
-        setMaintenanceMode(docSnap.exists() && docSnap.data().maintenanceMode);
-      } catch (error) {
+    const settingsRef = doc(db, 'app_settings', 'config');
+    const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setMaintenanceMode(docSnap.data().maintenanceMode);
+        } else {
+            setMaintenanceMode(false);
+        }
+    }, (error) => {
         console.error("Error fetching maintenance status:", error);
         setMaintenanceMode(false);
-      }
-    };
-    fetchSettings();
+    });
+
+    return () => unsubscribe();
   }, []);
   
   useEffect(() => {
     if (maintenanceMode === null) return;
 
-    const bypassRoutes = ['/auth/staff-login', '/admin', '/petugas'];
+    const bypassRoutes = ['/auth', '/admin', '/petugas', '/go'];
     const isBypassRoute = bypassRoutes.some(route => pathname.startsWith(route));
+    const isMaintenancePage = pathname === '/maintenance';
 
-    if (maintenanceMode && !isBypassRoute && pathname !== '/') {
-        router.push('/');
+    if (maintenanceMode && !isBypassRoute && !isMaintenancePage) {
+        router.replace('/maintenance');
     }
   }, [maintenanceMode, pathname, router]);
-  
   
   if (maintenanceMode === null) {
       return (
@@ -77,6 +77,16 @@ export default function RootLayout({
            </body>
         </html>
       )
+  }
+
+  if (maintenanceMode && !['/auth', '/admin', '/petugas', '/go', '/maintenance'].some(route => pathname.startsWith(route))) {
+    return (
+      <html lang="id">
+        <body className={`${ptSans.className} antialiased bg-background`}>
+          <MaintenancePage />
+        </body>
+      </html>
+    );
   }
 
   return (

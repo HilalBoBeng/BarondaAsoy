@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Banknote, Eye, Search, MoreVertical } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Banknote, Eye, Search } from 'lucide-react';
 import type { Honorarium, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +59,7 @@ export default function HonorariumAdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentHonorarium, setCurrentHonorarium] = useState<Honorarium | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [selectedHonorarium, setSelectedHonorarium] = useState<Honorarium | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -67,11 +67,11 @@ export default function HonorariumAdminPage() {
     resolver: zodResolver(honorariumSchema),
     defaultValues: { month: months[new Date().getMonth()], year: currentYear.toString() }
   });
-  
+
   const watchedMonth = form.watch('month');
   const watchedYear = form.watch('year');
 
-  const availableStaff = useMemo(() => {
+  const availableStaffForForm = useMemo(() => {
     if (!watchedMonth || !watchedYear) {
         return staff;
     }
@@ -85,52 +85,43 @@ export default function HonorariumAdminPage() {
         (currentHonorarium && s.id === currentHonorarium.staffId)
     );
   }, [staff, honorariums, watchedMonth, watchedYear, currentHonorarium]);
-
+  
   useEffect(() => {
-    const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'));
-    
+    const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'), orderBy('name', 'asc'));
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
-      const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
-      staffData.sort((a, b) => a.name.localeCompare(b.name));
-      setStaff(staffData);
+        setStaff(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff)));
     });
 
     const honorQuery = query(collection(db, 'honorariums'));
     const unsubHonor = onSnapshot(honorQuery, (snapshot) => {
-      let honorData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            issueDate: data.issueDate ? (data.issueDate as Timestamp).toDate() : new Date(),
-          } as Honorarium;
-      });
-
-      honorData = honorData.sort((a, b) => {
-        const [monthA, yearA] = a.period.split(' ');
-        const [monthB, yearB] = b.period.split(' ');
-        const dateA = new Date(parseInt(yearA), months.indexOf(monthA));
-        const dateB = new Date(parseInt(yearB), months.indexOf(monthB));
-        if (dateB.getTime() !== dateA.getTime()) {
-            return dateB.getTime() - dateA.getTime();
-        }
-        return a.staffName.localeCompare(b.staffName);
-      });
-
-      setHonorariums(honorData);
-      setLoading(false);
+        setHonorariums(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), issueDate: (doc.data().issueDate as Timestamp)?.toDate() } as Honorarium)));
+        setLoading(false);
     });
 
-    return () => {
-      unsubStaff();
-      unsubHonor();
-    };
+    return () => { unsubStaff(); unsubHonor(); };
   }, []);
   
-  const filteredHonorariums = useMemo(() => 
-    honorariums.filter(h => h.staffName?.toLowerCase().includes(searchTerm.toLowerCase())),
-  [honorariums, searchTerm]);
+  const staffWithHonor = useMemo(() => {
+    const staffMap = new Map<string, { staff: Staff, honorCount: number, totalAmount: number }>();
+    honorariums.forEach(h => {
+        const staffMember = staff.find(s => s.id === h.staffId);
+        if (staffMember) {
+            if (!staffMap.has(h.staffId)) {
+                staffMap.set(h.staffId, { staff: staffMember, honorCount: 0, totalAmount: 0 });
+            }
+            const existing = staffMap.get(h.staffId)!;
+            existing.honorCount += 1;
+            existing.totalAmount += h.amount;
+        }
+    });
+    const result = Array.from(staffMap.values());
+    result.sort((a,b) => a.staff.name.localeCompare(b.staff.name));
+    return result;
+  }, [honorariums, staff]);
 
+  const filteredStaffWithHonor = useMemo(() => 
+    staffWithHonor.filter(item => item.staff.name.toLowerCase().includes(searchTerm.toLowerCase())),
+  [staffWithHonor, searchTerm]);
 
   useEffect(() => {
     if (isDialogOpen && currentHonorarium) {
@@ -156,11 +147,10 @@ export default function HonorariumAdminPage() {
     return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
   };
 
-
   const onSubmit = async (values: HonorariumFormValues) => {
     setIsSubmitting(true);
-    const selectedStaff = staff.find(s => s.id === values.staffId);
-    if (!selectedStaff) {
+    const selectedStaffForSubmit = staff.find(s => s.id === values.staffId);
+    if (!selectedStaffForSubmit) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Petugas tidak ditemukan.' });
       setIsSubmitting(false);
       return;
@@ -169,7 +159,7 @@ export default function HonorariumAdminPage() {
     try {
       const payload = { 
           ...values, 
-          staffName: selectedStaff.name,
+          staffName: selectedStaffForSubmit.name,
           period: `${values.month} ${values.year}`,
        };
       const { month, year, ...finalPayload } = payload;
@@ -195,16 +185,22 @@ export default function HonorariumAdminPage() {
     try {
       await deleteDoc(doc(db, 'honorariums', id));
       toast({ title: "Berhasil", description: "Data honorarium berhasil dihapus." });
-      setIsDetailOpen(false); // Close detail dialog on delete
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus data." });
     }
   };
   
-  const showDetail = (honor: Honorarium) => {
-    setSelectedHonorarium(honor);
+  const showDetail = (staffMember: Staff) => {
+    setSelectedStaff(staffMember);
     setIsDetailOpen(true);
   }
+  
+  const staffHonorHistory = useMemo(() => {
+    if (!selectedStaff) return [];
+    return honorariums
+        .filter(h => h.staffId === selectedStaff.id)
+        .sort((a, b) => (b.issueDate as Date).getTime() - (a.issueDate as Date).getTime());
+  }, [honorariums, selectedStaff]);
 
   return (
     <>
@@ -233,7 +229,7 @@ export default function HonorariumAdminPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nama Petugas</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Total Diterima</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -241,25 +237,27 @@ export default function HonorariumAdminPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={3}><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : filteredHonorariums.length > 0 ? (
-                filteredHonorariums.map((h) => (
-                  <TableRow key={h.id}>
+              ) : filteredStaffWithHonor.length > 0 ? (
+                filteredStaffWithHonor.map((item) => (
+                  <TableRow key={item.staff.id}>
                     <TableCell>
                         <div className="flex items-center gap-2">
                            <Avatar className="h-8 w-8">
                              <AvatarImage src={undefined} />
-                             <AvatarFallback>{h.staffName.charAt(0).toUpperCase()}</AvatarFallback>
+                             <AvatarFallback>{item.staff.name.charAt(0).toUpperCase()}</AvatarFallback>
                            </Avatar>
-                           {h.staffName}
+                           {item.staff.name}
                         </div>
                     </TableCell>
-                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge></TableCell>
+                    <TableCell>{formatCurrency(item.totalAmount)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => showDetail(h)}>
-                        <MoreVertical className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" onClick={() => showDetail(item.staff)}>
+                        <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -315,7 +313,7 @@ export default function HonorariumAdminPage() {
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger disabled={!watchedMonth || !watchedYear}><SelectValue placeholder={!watchedMonth || !watchedYear ? "Pilih periode dulu" : "Pilih petugas"} /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {availableStaff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      {availableStaffForForm.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -375,62 +373,53 @@ export default function HonorariumAdminPage() {
     </Dialog>
 
     <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent>
-            {selectedHonorarium && (
+        <DialogContent className="max-w-2xl">
+            {selectedStaff && (
                 <>
                 <DialogHeader>
-                    <DialogTitle className="sr-only">Detail Honorarium</DialogTitle>
-                    <div className="flex flex-col items-center text-center">
-                        <Avatar className="h-20 w-20 mb-2">
-                           <AvatarImage src={undefined} />
-                           <AvatarFallback className="text-3xl">{selectedHonorarium.staffName.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <h2 className="text-xl font-bold">{selectedHonorarium.staffName}</h2>
-                        <p className="text-muted-foreground">{selectedHonorarium.period}</p>
-                    </div>
+                    <DialogTitle>Riwayat Honor: {selectedStaff.name}</DialogTitle>
                 </DialogHeader>
                 <DialogBody>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b pb-2">
-                       <span className="text-muted-foreground">Jumlah</span>
-                       <span className="font-semibold">{formatCurrency(selectedHonorarium.amount)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b pb-2">
-                       <span className="text-muted-foreground">Status</span>
-                       <Badge variant="secondary" className={cn(statusConfig[selectedHonorarium.status]?.className)}>{selectedHonorarium.status}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center border-b pb-2">
-                       <span className="text-muted-foreground">Tanggal Dibuat</span>
-                       <span className="font-semibold">{format(selectedHonorarium.issueDate, "PPP", { locale: id })}</span>
-                    </div>
-                    {selectedHonorarium.notes && (
-                        <div>
-                            <span className="text-muted-foreground text-sm">Catatan:</span>
-                            <p className="font-semibold text-sm">{selectedHonorarium.notes}</p>
-                        </div>
-                    )}
+                  <div className="rounded-lg border max-h-[60vh] overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Periode</TableHead>
+                                <TableHead>Jumlah</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Aksi</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {staffHonorHistory.map(h => (
+                                <TableRow key={h.id}>
+                                    <TableCell>{h.period}</TableCell>
+                                    <TableCell>{formatCurrency(h.amount)}</TableCell>
+                                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
+                                    <TableCell>
+                                        <div className="flex gap-1">
+                                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setIsDetailOpen(false); setCurrentHonorarium(h); setIsDialogOpen(true); }}><Edit className="h-4 w-4"/></Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-7 w-7"><Trash className="h-4 w-4"/></Button></AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Hapus Data Honor Ini?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(h.id)}>Ya, Hapus</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                   </div>
                 </DialogBody>
-                <DialogFooter className="flex-col items-stretch gap-2">
-                    <Button variant="outline" onClick={() => { setIsDetailOpen(false); setCurrentHonorarium(selectedHonorarium); setIsDialogOpen(true); }}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit Data
-                    </Button>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive"><Trash className="mr-2 h-4 w-4"/> Hapus Data</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Hapus Data Honorarium Ini?</AlertDialogTitle>
-                                <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(selectedHonorarium.id)}>Ya, Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </DialogFooter>
                 </>
             )}
         </DialogContent>
