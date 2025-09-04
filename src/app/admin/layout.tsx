@@ -44,7 +44,7 @@ export default function AdminLayout({
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [adminName, setAdminName] = useState("Admin");
-  const [adminEmail, setAdminEmail] = useState("admin@baronda.app");
+  const [adminEmail, setAdminEmail] = useState("admin@baronda.or.id");
   const [badgeCounts, setBadgeCounts] = useState({
     newReports: 0,
     pendingStaff: 0,

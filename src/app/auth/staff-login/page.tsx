@@ -103,7 +103,7 @@ export default function StaffLoginPage() {
     // Admin login check
     if (data.accessCode === "Admin123") {
         localStorage.setItem('userRole', 'admin');
-        const adminInfo = { name: "Admin Utama", email: "admin@baronda.app" };
+        const adminInfo = { name: "Admin Utama", email: "admin@baronda.or.id" };
         localStorage.setItem('staffInfo', JSON.stringify(adminInfo));
         toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
         router.push("/admin");

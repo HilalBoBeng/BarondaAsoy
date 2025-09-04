@@ -292,7 +292,7 @@ export default function ToolsAdminPage() {
       }
   }
 
-  const isSuperAdmin = currentAdmin?.email === 'admin@baronda.app';
+  const isSuperAdmin = currentAdmin?.email === 'admin@baronda.or.id';
 
 
   return (
@@ -360,6 +360,20 @@ export default function ToolsAdminPage() {
                     )}
                 </CardContent>
             </Card>
+            {isSuperAdmin && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Manajemen Admin</CardTitle>
+                        <CardDescription>Tambah admin baru untuk membantu mengelola aplikasi.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={() => setIsAddAdminOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Tambah Admin
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
         </div>
 
         <div className="lg:col-span-2 space-y-6">
@@ -378,20 +392,6 @@ export default function ToolsAdminPage() {
                         </div>
                         {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                     </div>
-                     {isSuperAdmin && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">Manajemen Admin</CardTitle>
-                                <CardDescription>Tambah admin baru untuk membantu mengelola aplikasi.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button onClick={() => setIsAddAdminOpen(true)}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Tambah Admin
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
                 </CardContent>
             </Card>
             <Card>

@@ -78,11 +78,11 @@ export default function AdminProfilePage() {
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-        if (info.email === 'admin@baronda.app' && info.name === 'Admin Utama') {
+        if (info.email === 'admin@baronda.or.id' && info.name === 'Admin Utama') {
             const mainAdminInfo = {
                 id: 'admin_utama',
                 name: 'Admin Utama',
-                email: 'admin@baronda.app',
+                email: 'admin@baronda.or.id',
                 status: 'active',
                 phone: 'N/A',
                 addressDetail: 'Kantor Pusat Baronda',
