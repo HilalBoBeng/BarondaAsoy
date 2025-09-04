@@ -93,6 +93,10 @@ export interface Staff {
   expiresAt?: Timestamp;
   role?: 'petugas' | 'admin' | 'super_admin';
   photoURL?: string | null;
+  lastUpdated_name?: Timestamp;
+  lastUpdated_phone?: Timestamp;
+  lastUpdated_addressDetail?: Timestamp;
+  lastUpdated_photoURL?: Timestamp;
 }
 
 export interface Notification {

@@ -58,10 +58,11 @@ export default function AdminProfilePage() {
     const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAccessCodeSubmitting, setIsAccessCodeSubmitting] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName | 'accessCode']?: Date | null }>({});
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+    const [zoomedImageUrl, setZoomedImageUrl] = useState('');
 
     const router = useRouter();
     const { toast } = useToast();
@@ -71,11 +72,20 @@ export default function AdminProfilePage() {
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
         if (!adminInfo || adminInfo.id === 'admin_utama') return false;
-        const lastUpdateDate = lastUpdated[field];
+        
+        let lastUpdateDate: Date | null = null;
+        if (field === 'accessCode' && adminInfo.lastCodeChangeTimestamp) {
+            lastUpdateDate = (adminInfo.lastCodeChangeTimestamp as Timestamp).toDate();
+        } else if (field === 'phone' && adminInfo.lastUpdated_phone) {
+            lastUpdateDate = (adminInfo.lastUpdated_phone as Timestamp).toDate();
+        } else if (field === 'addressDetail' && adminInfo.lastUpdated_addressDetail) {
+            lastUpdateDate = (adminInfo.lastUpdated_addressDetail as Timestamp).toDate();
+        }
+
         if (!lastUpdateDate) return true;
         const cooldownDays = field === 'photoURL' ? 1 : 7;
         return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
-    }, [lastUpdated, adminInfo]);
+    }, [adminInfo]);
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -95,9 +105,6 @@ export default function AdminProfilePage() {
                 if (docSnap.exists()) {
                     const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                     setAdminInfo(staffData);
-                    const newLastUpdated: { [key in FieldName | 'accessCode']?: Date | null } = {};
-                    if(staffData.lastCodeChangeTimestamp) newLastUpdated.accessCode = (staffData.lastCodeChangeTimestamp as Timestamp).toDate();
-                    setLastUpdated(newLastUpdated);
                 } else {
                      router.push('/auth/staff-login');
                 }
@@ -191,15 +198,16 @@ export default function AdminProfilePage() {
             const valueToUpdate = data[editingField];
             
             const updateData: { [key: string]: any } = {};
-            updateData[editingField === 'displayName' ? 'name' : editingField] = valueToUpdate;
+            const fieldKey = editingField === 'displayName' ? 'name' : editingField;
+            updateData[fieldKey] = valueToUpdate;
+            updateData[`lastUpdated_${fieldKey}`] = serverTimestamp();
             
             await updateDoc(staffRef, updateData);
             
             toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
             
-            const updatedAdminInfo = { ...adminInfo, [editingField === 'displayName' ? 'name' : editingField]: valueToUpdate };
+            const updatedAdminInfo = { ...adminInfo, [fieldKey]: valueToUpdate };
             setAdminInfo(updatedAdminInfo);
-            setLastUpdated(prev => ({ ...prev, [editingField!]: new Date() }));
             localStorage.setItem('staffInfo', JSON.stringify(updatedAdminInfo));
 
             setIsEditDialogOpen(false);
@@ -226,7 +234,6 @@ export default function AdminProfilePage() {
             if (result.success) {
                 toast({ title: 'Berhasil', description: result.message });
                 accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
-                setLastUpdated(prev => ({...prev, accessCode: new Date() }));
             } else {
                 throw new Error(result.message);
             }
@@ -287,6 +294,13 @@ export default function AdminProfilePage() {
         addressDetail: "Alamat",
         photoURL: "Foto Profil"
     };
+    
+    const handleImageZoom = (url?: string | null) => {
+        if (url) {
+            setZoomedImageUrl(url);
+            setIsZoomModalOpen(true);
+        }
+    };
 
     const dataRows = [
         { field: 'phone' as FieldName, value: adminInfo.phone },
@@ -299,12 +313,14 @@ export default function AdminProfilePage() {
                 <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                     <div className="flex items-center gap-4">
                         <div className="relative">
-                            <Avatar className="h-20 w-20 border-4 border-background/50">
-                                <AvatarImage src={adminInfo.photoURL || undefined} />
-                                <AvatarFallback className="text-3xl bg-background text-primary">
-                                    {adminInfo.name?.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
+                             <button onClick={() => handleImageZoom(adminInfo.photoURL)}>
+                                <Avatar className="h-20 w-20 border-4 border-background/50">
+                                    <AvatarImage src={adminInfo.photoURL || undefined} />
+                                    <AvatarFallback className="text-3xl bg-background text-primary">
+                                        {adminInfo.name?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                             </button>
                              <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
                                 {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
                             </Button>
@@ -363,7 +379,7 @@ export default function AdminProfilePage() {
                                 <FormItem>
                                     <FormLabel>Kode Akses</FormLabel>
                                     <FormControl><Input readOnly value="••••••••" className="bg-muted" /></FormControl>
-                                    {lastUpdated.accessCode && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.accessCode, 7), { addSuffix: true, locale: id })}.</p>}
+                                    {adminInfo.lastCodeChangeTimestamp && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays((adminInfo.lastCodeChangeTimestamp as Timestamp).toDate(), 7), { addSuffix: true, locale: id })}.</p>}
                                 </FormItem>
                             )}
 
@@ -412,7 +428,7 @@ export default function AdminProfilePage() {
                                <div></div>
                                <div className="flex gap-2 justify-end">
                                     <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                                    <Button type="submit" disabled={isSubmitting}>
+                                    <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Simpan
                                     </Button>
@@ -420,6 +436,13 @@ export default function AdminProfilePage() {
                             </DialogFooter>
                         </form>
                     </Form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
+                    <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
+                    <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
                 </DialogContent>
             </Dialog>
         </div>

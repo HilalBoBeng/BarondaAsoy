@@ -293,7 +293,7 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 p-1.5 gap-1">
             <TabsTrigger value="users">Warga</TabsTrigger>
             <TabsTrigger value="staff">Staf</TabsTrigger>
             <TabsTrigger value="pending-staff">
