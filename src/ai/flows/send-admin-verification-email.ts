@@ -56,7 +56,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
         },
       });
 
-      const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/verify-admin-registration?token=${token}`;
+      const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/verify-admin-registration?token=${token}`;
 
       const mailOptions = {
         from: '"Baronda" <bobeng.icu@gmail.com>',
