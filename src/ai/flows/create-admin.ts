@@ -73,6 +73,11 @@ const createAdminFlow = ai.defineFlow(
   },
   async ({ name, email, phone, addressType, addressDetail }) => {
     try {
+      const existingUser = await adminDb.collection('staff').where('email', '==', email).limit(1).get();
+      if (!existingUser.empty) {
+        return { success: false, message: 'Admin dengan email ini sudah ada.' };
+      }
+
       const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
       const newAdminData = {
@@ -100,5 +105,3 @@ const createAdminFlow = ai.defineFlow(
     }
   }
 );
-
-    

@@ -12,4 +12,5 @@ import '@/ai/flows/approve-reject-staff.ts';
 import '@/ai/flows/generate-schedule-token.ts';
 import '@/ai/flows/reset-staff-access-code.ts';
 import '@/ai/flows/create-admin.ts';
-
+import '@/ai/flows/send-admin-verification-email.ts';
+import '@/ai/flows/verify-admin-token.ts';

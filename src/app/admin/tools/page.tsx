@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound, CheckCircle } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,10 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { createAdmin } from '@/ai/flows/create-admin';
-import { sendOtp } from '@/ai/flows/send-otp';
-import { verifyOtp } from '@/ai/flows/verify-otp';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { sendAdminVerificationEmail } from '@/ai/flows/send-admin-verification-email';
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -80,20 +77,15 @@ const addAdminSchema = z.object({
 });
 type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
-const otpSchema = z.object({
-    otp: z.string().length(6, "Kode OTP harus 6 digit."),
-});
-type OtpFormValues = z.infer<typeof otpSchema>;
-
 
 const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
     { id: 'dashboard', label: 'Dasbor' },
     { id: 'profile', label: 'Profil Saya' },
     { id: 'reports', label: 'Laporan Warga' },
-    { id: 'schedule', label: 'Jadwal Saya' },
+    { id: 'schedule', label: 'Jadwal Patroli' },
     { id: 'patrol-log', label: 'Patroli & Log' },
     { id: 'dues', label: 'Iuran Warga' },
-    { id: 'honor', label: 'Honor Saya' },
+    { id: 'honor', label: 'Honorarium' },
     { id: 'announcements', label: 'Pengumuman' },
     { id: 'notifications', label: 'Notifikasi' },
     { id: 'tools', label: 'Lainnya' },
@@ -117,12 +109,8 @@ export default function ToolsAdminPage() {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
-  const [otpStep, setOtpStep] = useState(false);
-  const [newAdminData, setNewAdminData] = useState<AddAdminFormValues | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   
-  const [cooldown, setCooldown] = useState(0);
-  const [resendAttempts, setResendAttempts] = useState(0);
-
   const { toast } = useToast();
 
   const form = useForm<ShortLinkFormValues>({
@@ -134,51 +122,7 @@ export default function ToolsAdminPage() {
     resolver: zodResolver(addAdminSchema),
     defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
   });
-  const otpForm = useForm<OtpFormValues>({ resolver: zodResolver(otpSchema), defaultValues: { otp: '' } });
   const addressType = addAdminForm.watch('addressType');
-
-  const getCooldownKey = (email: string) => `adminCreationCooldown_${email}`;
-
-  const getCooldownData = useCallback(() => {
-    if (typeof window === 'undefined' || !newAdminData?.email) return null;
-    const data = localStorage.getItem(getCooldownKey(newAdminData.email));
-    if (!data) return null;
-    try {
-      return JSON.parse(data);
-    } catch (e) {
-      return null;
-    }
-  }, [newAdminData?.email]);
-
-  useEffect(() => {
-    const savedCooldown = getCooldownData();
-    if (savedCooldown) {
-      const now = new Date().getTime();
-      const remaining = Math.ceil((savedCooldown.expiry - now) / 1000);
-      if (remaining > 0) {
-        setCooldown(remaining);
-        setResendAttempts(savedCooldown.attempts);
-      } else {
-        if (newAdminData?.email) localStorage.removeItem(getCooldownKey(newAdminData.email));
-      }
-    }
-  }, [newAdminData, getCooldownData]);
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (cooldown > 0) {
-      timer = setInterval(() => {
-        setCooldown((prev) => {
-            if(prev - 1 <= 0) {
-                if (newAdminData?.email) localStorage.removeItem(getCooldownKey(newAdminData.email));
-                return 0;
-            }
-            return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [cooldown, newAdminData]);
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -248,6 +192,15 @@ export default function ToolsAdminPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAddAdminOpen) {
+      setTimeout(() => {
+        addAdminForm.reset();
+        setSubmissionStatus('idle');
+      }, 300);
+    }
+  }, [isAddAdminOpen, addAdminForm]);
+
   const handleMaintenanceToggle = async (checked: boolean) => {
     setLoadingMaintenance(true);
     try {
@@ -263,7 +216,7 @@ export default function ToolsAdminPage() {
   }
   
   const handleAddAdmin = async (values: AddAdminFormValues) => {
-    setIsSubmitting(true);
+    setSubmissionStatus('sending');
     try {
         const emailQuery = query(collection(db, 'staff'), where('email', '==', values.email));
         const phoneQuery = query(collection(db, 'staff'), where('phone', '==', values.phone));
@@ -281,76 +234,23 @@ export default function ToolsAdminPage() {
             addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' }); return;
         }
         
-        const otpResult = await sendOtp({ email: values.email, context: 'adminCreation' });
-        if (!otpResult.success) throw new Error(otpResult.message);
+        const result = await sendAdminVerificationEmail({
+            name: toTitleCase(values.name),
+            email: values.email,
+            phone: values.phone,
+            addressType: values.addressType,
+            addressDetail: values.addressType === 'kilongan' ? 'Kilongan' : values.addressDetail || ''
+        });
         
-        toast({ title: 'OTP Terkirim', description: `Kode OTP telah dikirim ke email calon admin: ${values.email}.` });
-        setNewAdminData(values);
-        setOtpStep(true);
-        otpForm.reset();
+        if (!result.success) throw new Error(result.message);
+        
+        setSubmissionStatus('sent');
 
     } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman OTP gagal. ${error instanceof Error ? error.message : ''}`});
-    } finally {
-        setIsSubmitting(false);
+        toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman verifikasi gagal. ${error instanceof Error ? error.message : ''}`});
+        setSubmissionStatus('idle');
     }
   };
-
-  const handleResendOtp = async () => {
-    if (!newAdminData?.email) return;
-    try {
-      const otpResult = await sendOtp({ email: newAdminData.email, context: 'adminCreation' });
-      if (!otpResult.success) throw new Error(otpResult.message);
-      
-      toast({ title: "Berhasil", description: "Kode OTP baru telah dikirim." });
-      
-      const newAttempts = resendAttempts + 1;
-      setResendAttempts(newAttempts);
-
-      let newCooldown = 60; // 1 minute
-      if (newAttempts === 2) newCooldown = 180; // 3 minutes
-      else if (newAttempts > 2) newCooldown = 300; // 5 minutes
-
-      setCooldown(newCooldown);
-      const expiry = new Date().getTime() + newCooldown * 1000;
-      localStorage.setItem(getCooldownKey(newAdminData.email), JSON.stringify({ expiry, attempts: newAttempts }));
-
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal Mengirim Ulang', description: error instanceof Error ? error.message : "Terjadi kesalahan." });
-    }
-  }
-
-  const handleOtpSubmit = async (values: OtpFormValues) => {
-      if (!newAdminData) return;
-      setIsSubmitting(true);
-      try {
-          const verifyResult = await verifyOtp({ email: newAdminData.email, otp: values.otp, flow: 'adminCreation' });
-          if (!verifyResult.success) throw new Error(verifyResult.message);
-          
-          const createResult = await createAdmin({
-            name: toTitleCase(newAdminData.name),
-            email: newAdminData.email,
-            phone: newAdminData.phone,
-            addressType: newAdminData.addressType,
-            addressDetail: newAdminData.addressDetail
-          });
-
-          if (!createResult.success) throw new Error(createResult.message);
-          
-          toast({ title: 'Admin Berhasil Dibuat', description: createResult.message });
-          setIsAddAdminOpen(false);
-          setOtpStep(false);
-          addAdminForm.reset();
-          otpForm.reset();
-          if (newAdminData.email) localStorage.removeItem(getCooldownKey(newAdminData.email));
-
-      } catch (error) {
-          toast({ variant: "destructive", title: "Gagal", description: `Proses pembuatan admin gagal. ${error instanceof Error ? error.message : ''}`});
-          otpForm.reset();
-      } finally {
-          setIsSubmitting(false);
-      }
-  }
 
   const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
       const newConfig = menuConfig.map(item => 
@@ -737,16 +637,14 @@ export default function ToolsAdminPage() {
     </Dialog>
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {
-             if (otpStep) { e.preventDefault(); }
-        }}>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
-                <DialogTitle>{otpStep ? 'Verifikasi OTP' : 'Tambah Admin Baru'}</DialogTitle>
+                <DialogTitle>Tambah Admin Baru</DialogTitle>
                 <DialogDescription>
-                   {otpStep ? `Masukkan kode 6 digit yang dikirim ke ${newAdminData?.email}.` : 'Isi detail di bawah ini. Kode verifikasi akan dikirim ke email calon admin.'}
+                   {submissionStatus === 'sent' ? 'Verifikasi Terkirim!' : 'Isi detail di bawah ini. Tautan verifikasi akan dikirim ke email calon admin.'}
                 </DialogDescription>
             </DialogHeader>
-            {!otpStep ? (
+            {submissionStatus !== 'sent' ? (
                 <Form {...addAdminForm}>
                     <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
                         <DialogBody className="space-y-4">
@@ -798,61 +696,21 @@ export default function ToolsAdminPage() {
                             )}
                         </DialogBody>
                         <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                                Kirim OTP
+                            <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)} disabled={submissionStatus === 'sending'}>Batal</Button>
+                            <Button type="submit" disabled={submissionStatus === 'sending'}>
+                                {submissionStatus === 'sending' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                                Kirim Tautan Verifikasi
                             </Button>
                         </DialogFooter>
                     </form>
                 </Form>
             ) : (
-                 <Form {...otpForm}>
-                    <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)}>
-                        <DialogBody className="flex flex-col items-center justify-center space-y-4">
-                            <FormField
-                                control={otpForm.control}
-                                name="otp"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="sr-only">Kode OTP</FormLabel>
-                                    <FormControl>
-                                        <InputOTP maxLength={6} {...field}>
-                                            <InputOTPGroup>
-                                                <InputOTPSlot index={0} />
-                                                <InputOTPSlot index={1} />
-                                                <InputOTPSlot index={2} />
-                                                <InputOTPSlot index={3} />
-                                                <InputOTPSlot index={4} />
-                                                <InputOTPSlot index={5} />
-                                            </InputOTPGroup>
-                                        </InputOTP>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                             <div className="w-full text-right">
-                                <Button 
-                                    type="button" 
-                                    variant="link" 
-                                    className="p-0 h-auto text-primary hover:text-primary/80 text-xs"
-                                    onClick={handleResendOtp}
-                                    disabled={cooldown > 0 || isSubmitting}
-                                >
-                                    {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Tidak menerima kode? Kirim ulang."}
-                                </Button>
-                             </div>
-                        </DialogBody>
-                        <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setOtpStep(false)} disabled={isSubmitting}>Kembali</Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Verifikasi & Buat Akun
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                <DialogBody className="text-center py-8">
+                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                        Tautan verifikasi telah berhasil dikirim ke email calon admin. Mereka harus mengklik tautan tersebut untuk menyelesaikan pembuatan akun.
+                    </p>
+                </DialogBody>
             )}
         </DialogContent>
     </Dialog>

@@ -18,7 +18,7 @@ const VerifyOtpInputSchema = z.object({
   phone: z.string().optional().describe("The user's phone number (for registration)."),
   addressType: z.enum(['kilongan', 'luar_kilongan']).optional().describe('The type of address.'),
   addressDetail: z.string().optional().describe('The detailed address if outside Kilongan.'),
-  flow: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'userPasswordReset', 'adminCreation']).describe('The flow context for OTP verification.'),
+  flow: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
 
@@ -173,7 +173,7 @@ const verifyOtpFlow = ai.defineFlow(
           return { success: true, message: 'Verifikasi berhasil. Kode akses Anda telah dikirim ke email.' };
       }
       
-      if (flow === 'userPasswordReset' || flow === 'adminCreation') {
+      if (flow === 'userPasswordReset') {
          await batch.commit();
          return { success: true, message: 'Verifikasi berhasil. Anda dapat melanjutkan.' };
       }
