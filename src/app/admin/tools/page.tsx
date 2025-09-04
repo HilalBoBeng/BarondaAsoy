@@ -278,7 +278,7 @@ export default function ToolsAdminPage() {
         }
         
         const verificationId = nanoid();
-        const expiryTime = Date.now() + 15 * 60 * 1000;
+        const expiryTime = Date.now() + 5 * 60 * 1000;
         localStorage.setItem('verificationId', verificationId);
         localStorage.setItem('verificationExpiry', expiryTime.toString());
 
@@ -295,7 +295,7 @@ export default function ToolsAdminPage() {
         if (!result.success) throw new Error(result.message);
         
         setSubmissionStatus('waiting');
-        setCountdown(900); // 15 minutes
+        setCountdown(300); // 5 minutes
 
     } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman verifikasi gagal. ${error instanceof Error ? error.message : ''}`});
@@ -550,12 +550,14 @@ export default function ToolsAdminPage() {
                                     ) : allAdmins.length > 0 ? (
                                         allAdmins.map((admin) => (
                                         <TableRow key={admin.id}>
-                                            <TableCell className="flex items-center gap-2">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={admin.photoURL || undefined}/>
-                                                    <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                {admin.name}
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={admin.photoURL || undefined}/>
+                                                        <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    {admin.name}
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                  <div className="flex items-center justify-end gap-1">

@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { DuesPayment, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Loader2, ArrowLeft, Eye, Edit, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -221,30 +221,32 @@ export default function UserDuesHistoryPage({ params }: { params: { userId: stri
             <DialogTitle>Edit Jumlah Iuran</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jumlah (Rp)</FormLabel>
-                    <FormControl>
-                       <Input 
-                          type="text"
-                          inputMode="numeric"
-                          value={field.value ? formatNumberInput(field.value.toString()) : ''}
-                          onChange={(e) => {
-                              const formattedValue = formatNumberInput(e.target.value);
-                              const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
-                              field.onChange(numericValue);
-                          }}
-                          placeholder="20.000"
-                        />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <form onSubmit={form.handleSubmit(onEditSubmit)}>
+               <DialogBody className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Jumlah (Rp)</FormLabel>
+                        <FormControl>
+                          <Input 
+                              type="text"
+                              inputMode="numeric"
+                              value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                              onChange={(e) => {
+                                  const formattedValue = formatNumberInput(e.target.value);
+                                  const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
+                                  field.onChange(numericValue);
+                              }}
+                              placeholder="20.000"
+                            />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+               </DialogBody>
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                 <Button type="submit" disabled={isSubmitting}>
