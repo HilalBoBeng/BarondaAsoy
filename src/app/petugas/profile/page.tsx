@@ -66,10 +66,13 @@ export default function PetugasProfilePage() {
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
-        if (field === 'photoURL') return true;
         if (!staffInfo) return false;
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
+        
+        // No cooldown for photoURL
+        if (field === 'photoURL') return true;
+
         return isBefore(lastUpdateDate, subDays(new Date(), 7));
     }, [lastUpdated, staffInfo]);
 
@@ -114,54 +117,22 @@ export default function PetugasProfilePage() {
         }
     };
     
-    const compressImage = (file: File, maxSizeKB: number): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = document.createElement('img');
-                img.src = event.target?.result as string;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let { width, height } = img;
-                    
-                    const size = Math.min(width, height);
-                    const x = (width - size) / 2;
-                    const y = (height - size) / 2;
-
-                    canvas.width = size;
-                    canvas.height = size;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, x, y, size, size, 0, 0, size, size);
-
-                    let quality = 0.9;
-                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    const getKB = (str: string) => new Blob([str]).size / 1024;
-                    
-                    while (getKB(dataUrl) > maxSizeKB && quality > 0.1) {
-                        quality -= 0.1;
-                        dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    }
-                    resolve(dataUrl);
-                };
-                img.onerror = reject;
-            };
-            reader.onerror = reject;
-        });
-    };
-
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 2 * 1024 * 1024) { 
-                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
+            if (file.size > 800 * 1024) { // 800KB limit
+                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 800 KB." });
                 return;
             }
             try {
-                const compressedDataUrl = await compressImage(file, 64);
-                form.setValue('photoURL', compressedDataUrl);
-                setEditingField('photoURL');
-                setIsEditDialogOpen(true);
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const dataUrl = event.target?.result as string;
+                    form.setValue('photoURL', dataUrl);
+                    setEditingField('photoURL');
+                    setIsEditDialogOpen(true);
+                }
             } catch(err) {
                  toast({ variant: "destructive", title: "Gagal Memproses Gambar", description: "Terjadi kesalahan saat memproses gambar Anda." });
             }
@@ -265,7 +236,7 @@ export default function PetugasProfilePage() {
                                 </AvatarFallback>
                             </Avatar>
                              <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
-                                {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
+                                <Camera className="h-4 w-4"/>
                             </Button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
                         </div>
@@ -371,7 +342,7 @@ export default function PetugasProfilePage() {
                                             </FormControl>
                                             {field.value && (
                                             <div className="flex flex-col items-center gap-4">
-                                                    <Avatar className="h-32 w-32 mt-2">
+                                                    <Avatar className="h-40 w-40 mt-2">
                                                         <AvatarImage src={field.value} alt="Preview" />
                                                         <AvatarFallback>
                                                             <Loader2 className="animate-spin" />

@@ -609,7 +609,7 @@ export default function ToolsAdminPage() {
                                                     <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
-                                                    {isSuperAdmin && currentAdmin?.id !== admin.id && (
+                                                     {isSuperAdmin && currentAdmin?.id !== admin.id && (
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
                                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -738,9 +738,7 @@ export default function ToolsAdminPage() {
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {
-            if (otpStep) {
-                e.preventDefault();
-            }
+             if (otpStep) { e.preventDefault(); }
         }}>
             <DialogHeader>
                 <DialogTitle>{otpStep ? 'Verifikasi OTP' : 'Tambah Admin Baru'}</DialogTitle>
@@ -834,15 +832,17 @@ export default function ToolsAdminPage() {
                                 </FormItem>
                                 )}
                             />
-                            <Button 
-                                type="button" 
-                                variant="link" 
-                                className="p-0 h-auto text-primary hover:text-primary/80 text-xs"
-                                onClick={handleResendOtp}
-                                disabled={cooldown > 0 || isSubmitting}
-                            >
-                                {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Tidak menerima kode? Kirim ulang."}
-                            </Button>
+                             <div className="w-full text-right">
+                                <Button 
+                                    type="button" 
+                                    variant="link" 
+                                    className="p-0 h-auto text-primary hover:text-primary/80 text-xs"
+                                    onClick={handleResendOtp}
+                                    disabled={cooldown > 0 || isSubmitting}
+                                >
+                                    {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Tidak menerima kode? Kirim ulang."}
+                                </Button>
+                             </div>
                         </DialogBody>
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setOtpStep(false)} disabled={isSubmitting}>Kembali</Button>

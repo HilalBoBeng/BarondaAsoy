@@ -66,7 +66,8 @@ export default function ProfilePage() {
   }
 
   const canEditField = useCallback((field: FieldName) => {
-    if (field === 'photoURL') return true; // Always allow photo change
+    // Always allow photo change
+    if (field === 'photoURL') return true;
     const lastUpdateDate = lastUpdated[field];
     if (!lastUpdateDate) return true;
     return isBefore(lastUpdateDate, subDays(new Date(), 7));
@@ -173,7 +174,7 @@ export default function ProfilePage() {
   }, [auth, router, toast]);
 
   const handleEditClick = (field: FieldName) => {
-    if (field === 'displayName') return;
+    if (field === 'displayName') return; // Nama tidak bisa diganti
     if (!canEditField(field)) {
         toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.` });
         return;
@@ -192,58 +193,22 @@ export default function ProfilePage() {
     }
   };
 
-    const compressImage = (file: File, maxSizeKB: number): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = document.createElement('img');
-                img.src = event.target?.result as string;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let { width, height } = img;
-                    
-                    const size = Math.min(width, height);
-                    const x = (width - size) / 2;
-                    const y = (height - size) / 2;
-
-                    canvas.width = size;
-                    canvas.height = size;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, x, y, size, size, 0, 0, size, size);
-
-                    let quality = 0.9;
-                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    const getKB = (str: string) => new Blob([str]).size / 1024;
-                    
-                    while (getKB(dataUrl) > maxSizeKB && quality > 0.1) {
-                        quality -= 0.1;
-                        dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    }
-                    resolve(dataUrl);
-                };
-                img.onerror = reject;
-            };
-            reader.onerror = reject;
-        });
-    };
-
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!canEditField('photoURL')) {
-            toast({ variant: 'destructive', title: 'Foto Profil Dikunci', description: `Anda baru bisa mengubah foto profil lagi setelah 24 jam.` });
-            return;
-        }
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 2 * 1024 * 1024) { 
-                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
+            if (file.size > 800 * 1024) { // 800KB limit
+                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 800 KB." });
                 return;
             }
             try {
-                const compressedDataUrl = await compressImage(file, 64);
-                form.setValue('photoURL', compressedDataUrl);
-                setEditingField('photoURL');
-                setIsEditDialogOpen(true);
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const dataUrl = event.target?.result as string;
+                    form.setValue('photoURL', dataUrl);
+                    setEditingField('photoURL');
+                    setIsEditDialogOpen(true);
+                }
             } catch(err) {
                  toast({ variant: "destructive", title: "Gagal Memproses Gambar", description: "Terjadi kesalahan saat memproses gambar Anda." });
             }
@@ -334,6 +299,7 @@ export default function ProfilePage() {
     const Icon = fieldIcons[field];
     const canEdit = canEditField(field);
     const lastUpdateDate = lastUpdated[field];
+    const isNameField = field === 'displayName';
 
     return (
         <div className="flex items-start justify-between gap-4 p-4 border-b last:border-b-0">
@@ -342,16 +308,18 @@ export default function ProfilePage() {
                 <div className="flex-1">
                     <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
                     <p className="font-medium">{value || 'Belum diisi'}</p>
-                     {!canEdit && lastUpdateDate && (
+                     {!canEdit && lastUpdateDate && !isNameField && (
                         <p className="text-xs text-muted-foreground italic mt-1">
                             Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdateDate, 7), { addSuffix: true, locale: id })}
                         </p>
                     )}
                 </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)} disabled={!canEdit}>
-                {canEdit ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-            </Button>
+            {!isNameField && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(field)} disabled={!canEdit}>
+                  {canEdit ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              </Button>
+            )}
         </div>
     );
   };
@@ -395,7 +363,7 @@ export default function ProfilePage() {
                                     </AvatarFallback>
                                 </Avatar>
                                 <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
-                                   {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
+                                   <Camera className="h-4 w-4"/>
                                 </Button>
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
                             </div>
@@ -501,7 +469,7 @@ export default function ProfilePage() {
                                     </FormControl>
                                     {field.value && (
                                        <div className="flex flex-col items-center gap-4">
-                                            <Avatar className="h-32 w-32 mt-2">
+                                            <Avatar className="h-40 w-40 mt-2">
                                                 <AvatarImage src={field.value} alt="Preview" />
                                                 <AvatarFallback>
                                                     <Loader2 className="animate-spin" />
