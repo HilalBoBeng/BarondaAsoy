@@ -62,9 +62,8 @@ export default function LettersPage() {
     
     const doc = new jsPDF({
         orientation: 'p',
-        unit: 'px',
+        unit: 'pt',
         format: 'a4',
-        hotfixes: ['px_scaling'],
     });
     
     doc.html(letterRef.current, {
@@ -73,12 +72,12 @@ export default function LettersPage() {
             setIsGenerating(false);
         },
         html2canvas: {
-            scale: 0.26, // Adjust scale to fit A4
+            scale: 0.75, 
         },
-        x: 0,
-        y: 0,
-        width: 190, // A4 width in mm, jsPDF will handle conversion with px_scaling hotfix
-        windowWidth: 750 // Width of the virtual window
+        autoPaging: 'text',
+        margin: [20, 20, 20, 20],
+        width: 595, // A4 width in points
+        windowWidth: letterRef.current.scrollWidth
     });
   };
 
