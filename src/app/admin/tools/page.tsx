@@ -473,19 +473,6 @@ export default function ToolsAdminPage() {
                         </div>
                         {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                     </div>
-                     {isSuperAdmin && (
-                        <Link href="/admin/editor" className="block">
-                            <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                <div className="flex items-center space-x-3">
-                                    <Edit className="h-5 w-5 text-muted-foreground" />
-                                    <div className="space-y-0.5">
-                                        <Label>Live Editor</Label>
-                                        <p className="text-xs text-muted-foreground">Ubah nama aplikasi, logo, dan label menu.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </Link>
-                    )}
                 </CardContent>
             </Card>
             <Card>
