@@ -56,7 +56,7 @@ export default function AdminPage() {
         } else {
             setAdminName("Admin");
         }
-        setLoadingName(false);
+        setTimeout(() => setLoadingName(false), 3000);
 
 
         return () => clearInterval(timer);
@@ -82,7 +82,7 @@ export default function AdminPage() {
                 setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
             }
         }).finally(() => {
-            if(mounted) setLoadingStats(false);
+            if(mounted) setTimeout(() => setLoadingStats(false), 3000);
         });
 
         // Fetch recent reports
@@ -95,7 +95,7 @@ export default function AdminPage() {
                     createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID')
                 })) as Report[];
                 setRecentReports(reports);
-                setLoadingReports(false);
+                setTimeout(() => setLoadingReports(false), 3000);
             }
         });
         
@@ -109,7 +109,7 @@ export default function AdminPage() {
                     createdAt: doc.data().createdAt?.toDate().toLocaleString('id-ID', {dateStyle: 'medium', timeStyle: 'short'})
                 })) as PatrolLog[];
                 setRecentPatrolLogs(logs);
-                setLoadingPatrolLogs(false);
+                setTimeout(() => setLoadingPatrolLogs(false), 3000);
             }
         });
         
@@ -119,7 +119,7 @@ export default function AdminPage() {
             if(mounted) {
                 const notifsData = snapshot.docs.map(doc => doc.data() as Notification);
                 setNotifications(notifsData);
-                setLoadingNotifications(false);
+                setTimeout(() => setLoadingNotifications(false), 3000);
             }
         });
 
@@ -152,22 +152,28 @@ export default function AdminPage() {
 
     return (
         <div className="space-y-6">
-            <div>
+            <div className="animate-fade-in-up">
                  {loadingName ? (
-                    <Skeleton className="h-8 w-64" />
+                    <>
+                        <Skeleton className="h-8 w-64 mb-2" />
+                        <Skeleton className="h-5 w-72" />
+                        <Skeleton className="h-5 w-80 mt-1" />
+                    </>
                  ) : (
+                    <>
                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                         {greeting}, {adminName}!
                     </h1>
+                    <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                        Selamat datang di Dasbor Admin Baronda.
+                    </p>
+                    <p className="text-muted-foreground text-sm sm:text-base">
+                        {currentDate} | {currentTime}
+                    </p>
+                    </>
                  )}
-                <p className="text-muted-foreground text-sm sm:text-base mt-1">
-                    Selamat datang di Dasbor Admin Baronda.
-                </p>
-                <p className="text-muted-foreground text-sm sm:text-base">
-                    {currentDate} | {currentTime}
-                </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{animationDelay: '200ms'}}>
                 {loadingStats ? (
                     Array.from({ length: 4 }).map((_, i) => (
                         <Card key={i}>
@@ -190,7 +196,7 @@ export default function AdminPage() {
                 )}
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-start">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-start animate-fade-in-up" style={{animationDelay: '400ms'}}>
                 <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle>Laporan Warga Terbaru</CardTitle>

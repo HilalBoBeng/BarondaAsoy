@@ -79,7 +79,7 @@ export default function PetugasPage() {
     if (staffInfo.id && staffInfo.name) {
       setPetugasId(staffInfo.id);
       setPetugasName(staffInfo.name);
-      setLoadingName(false);
+      setTimeout(() => setLoadingName(false), 3000);
 
       // Fetch schedule
       const scheduleQuery = query(collection(db, "schedules"), where("officer", "==", staffInfo.name));
@@ -89,7 +89,7 @@ export default function PetugasPage() {
           .sort((a, b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
         const todaySchedule = allSchedules.find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
         setScheduleToday(todaySchedule || null);
-        setLoading(false);
+        setTimeout(() => setLoading(false), 3000);
       }, (error) => {
           console.error("Error fetching schedule:", error);
           toast({variant: "destructive", title: "Gagal", description: "Tidak dapat memuat jadwal."})
@@ -117,7 +117,7 @@ export default function PetugasPage() {
         notifs.sort((a, b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis());
         const unreadNotifs = notifs.filter(n => !n.read);
         setNotifications(unreadNotifs);
-        setLoadingNotifications(false);
+        setTimeout(() => setLoadingNotifications(false), 3000);
       });
 
       return () => {
@@ -151,30 +151,36 @@ export default function PetugasPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="animate-fade-in-up">
             {loadingName ? (
-                <Skeleton className="h-8 w-64" />
+                <>
+                    <Skeleton className="h-8 w-64 mb-2" />
+                    <Skeleton className="h-5 w-72" />
+                    <Skeleton className="h-5 w-80 mt-1" />
+                </>
             ) : (
+                <>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                     {greeting}, {petugasName}!
                 </h1>
+                <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                    Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.
+                </p>
+                <p className="text-muted-foreground text-sm sm:text-base">
+                    {currentDate} | {currentTime}
+                </p>
+                </>
             )}
-            <p className="text-muted-foreground text-sm sm:text-base mt-1">
-                Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.
-            </p>
-            <p className="text-muted-foreground text-sm sm:text-base">
-                {currentDate} | {currentTime}
-            </p>
       </div>
       
-        {loading ? <Skeleton className="h-56 w-full" /> :
+        {loading ? <Skeleton className="h-56 w-full animate-fade-in-up" style={{animationDelay: '200ms'}} /> :
           !scheduleToday ? (
-            <Card>
+            <Card className="animate-fade-in-up" style={{animationDelay: '200ms'}}>
               <CardHeader><CardTitle>Tidak Ada Jadwal Hari Ini</CardTitle></CardHeader>
               <CardContent><p className="text-muted-foreground">Anda tidak memiliki jadwal patroli untuk hari ini.</p></CardContent>
             </Card>
           ) : (
-            <Card className="w-full">
+            <Card className="w-full animate-fade-in-up" style={{animationDelay: '200ms'}}>
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <div>
@@ -198,7 +204,7 @@ export default function PetugasPage() {
             </Card>
         )}
 
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in-up" style={{animationDelay: '400ms'}}>
           {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                   <Card key={i}><CardHeader><Skeleton className="h-5 w-2/3" /></CardHeader><CardContent><Skeleton className="h-8 w-1/3" /></CardContent></Card>
@@ -218,7 +224,7 @@ export default function PetugasPage() {
           )}
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 items-start">
+      <div className="grid gap-6 md:grid-cols-2 items-start animate-fade-in-up" style={{animationDelay: '600ms'}}>
         {/* Notifications Card */}
         <Card className="w-full">
             <CardHeader><CardTitle>Pemberitahuan Terbaru</CardTitle></CardHeader>
