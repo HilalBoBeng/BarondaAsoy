@@ -296,15 +296,21 @@ export default function ToolsAdminPage() {
                                 <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                                     <span className="font-medium text-sm">{item.label}</span>
                                     <div className="flex items-center gap-4">
-                                        <div className="flex items-center space-x-2">
-                                            <Switch id={`visible-${item.id}`} checked={item.visible} onCheckedChange={() => handleMenuConfigChange(item.id, 'visible')} disabled={item.id === 'dashboard'}/>
-                                            <Label htmlFor={`visible-${item.id}`} className="text-xs">Tampil</Label>
-                                        </div>
-                                         <div className="flex items-center space-x-2">
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMenuConfigChange(item.id, 'locked')} disabled={!item.visible || item.id === 'dashboard'}>
-                                                {item.locked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
-                                            </Button>
-                                         </div>
+                                      {item.id !== 'dashboard' ? (
+                                        <>
+                                          <div className="flex items-center space-x-2">
+                                              <Switch id={`visible-${item.id}`} checked={item.visible} onCheckedChange={() => handleMenuConfigChange(item.id, 'visible')} />
+                                              <Label htmlFor={`visible-${item.id}`} className="text-xs">Tampil</Label>
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMenuConfigChange(item.id, 'locked')} disabled={!item.visible}>
+                                                  {item.locked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
+                                              </Button>
+                                          </div>
+                                        </>
+                                      ) : (
+                                          <Badge variant="outline">Selalu Aktif</Badge>
+                                      )}
                                     </div>
                                 </div>
                             ))}

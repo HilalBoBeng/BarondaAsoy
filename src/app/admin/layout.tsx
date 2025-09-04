@@ -56,7 +56,7 @@ export default function AdminLayout({
 
     const navItems = [
         { href: "/admin", icon: Home, label: "Dasbor" },
-        { href: "/admin/settings", icon: UserIcon, label: "Profil Saya" },
+        { href: "/admin/profile", icon: UserIcon, label: "Profil Saya" },
         { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: badgeCounts.newReports },
         { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
         { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
@@ -117,7 +117,7 @@ export default function AdminLayout({
     }
      else {
       setIsDetailPage(false);
-      const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
+      const activeItem = navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin'));
       setPageTitle(activeItem?.label || 'Dasbor Admin');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,9 +173,7 @@ export default function AdminLayout({
             onClick={onLinkClick}
             className={cn(
               "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              (pathname === item.href && item.href !== '/admin/settings') || (pathname.startsWith(item.href) && item.href !== '/admin' && item.href !== '/admin/settings') && "bg-muted text-primary",
-              pathname === '/admin/settings' && item.href === '/admin/settings' && "bg-muted text-primary",
-              pathname === '/admin' && item.href === '/admin' && 'bg-muted text-primary'
+              (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin')) && "bg-muted text-primary"
             )}
           >
             <div className="flex items-center gap-3">

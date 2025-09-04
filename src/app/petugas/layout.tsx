@@ -62,7 +62,7 @@ export default function PetugasLayout({
 
   const initialNavItems = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
-    { id: 'profile', href: "/petugas/settings", icon: UserIcon, label: "Profil Saya" },
+    { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil Saya" },
     { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
     { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
     { id: 'patrol-log', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
@@ -223,9 +223,7 @@ export default function PetugasLayout({
               onClick={onLinkClick}
               className={cn(
                 "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                 (pathname === item.href && item.href !== '/petugas/settings') || (pathname.startsWith(item.href) && item.href !== '/petugas') && "bg-muted text-primary",
-                 pathname === '/petugas/settings' && item.href === '/petugas/settings' && "bg-muted text-primary",
-                 pathname === '/petugas' && item.href === '/petugas' && 'bg-muted text-primary'
+                 (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/petugas')) && "bg-muted text-primary"
               )}
             >
               {linkContent}

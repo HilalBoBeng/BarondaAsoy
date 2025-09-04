@@ -45,7 +45,7 @@ type AdminProfileFormValues = z.infer<typeof adminProfileSchema>;
 type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 type FieldName = keyof AdminProfileFormValues;
 
-export default function AdminSettingsPage() {
+export default function AdminProfilePage() {
     const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
     
@@ -91,7 +91,19 @@ export default function AdminSettingsPage() {
             });
             return () => unsub();
         } else {
-             router.push('/auth/staff-login');
+             // Fallback for the main admin
+            const mainAdminInfo = {
+                id: 'admin_utama',
+                name: 'Admin Utama',
+                email: 'admin@baronda.app',
+                phone: 'N/A',
+                addressDetail: 'Kantor Pusat',
+                status: 'active',
+            } as Staff;
+             setAdminInfo(mainAdminInfo);
+              profileForm.reset({
+                displayName: mainAdminInfo.name
+             });
         }
     }, [profileForm, router]);
 

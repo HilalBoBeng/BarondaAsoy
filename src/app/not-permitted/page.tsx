@@ -26,24 +26,18 @@ export default function NotPermittedPage() {
   }, [router]);
 
   return (
-    <div className="flex h-full items-center justify-center">
-      <Card className="max-w-md text-center">
-        <CardHeader>
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 mb-4">
-            <ShieldAlert className="h-7 w-7 text-destructive" />
-          </div>
-          <CardTitle>Akses Ditolak</CardTitle>
-          <CardDescription>
+    <div className="flex h-full items-center justify-center p-4">
+      <div className="text-center space-y-4">
+        <ShieldAlert className="h-16 w-16 text-destructive mx-auto" />
+        <h1 className="text-2xl font-bold">Akses Ditolak</h1>
+        <p className="text-muted-foreground max-w-md">
             Menu ini tidak dapat Anda akses karena telah dikunci atau disembunyikan oleh Administrator.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center text-sm text-muted-foreground">
+        </p>
+        <div className="flex items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Mengalihkan Anda kembali ke dasbor dalam {countdown} detik...
-          </div>
-        </CardContent>
-      </Card>
+            Anda akan dialihkan ke dasbor dalam {countdown} detik...
+        </div>
+      </div>
     </div>
   );
 }

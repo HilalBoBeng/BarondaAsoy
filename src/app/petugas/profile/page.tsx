@@ -33,7 +33,7 @@ const accessCodeSchema = z.object({
 
 type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 
-export default function PetugasSettingsPage() {
+export default function PetugasProfilePage() {
     const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<{ accessCode?: Date | null }>({});
