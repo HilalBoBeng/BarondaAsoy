@@ -293,7 +293,7 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="h-auto flex-wrap justify-start gap-1 p-1.5">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">Warga</TabsTrigger>
             <TabsTrigger value="staff">Staf</TabsTrigger>
             <TabsTrigger value="pending-staff">
@@ -618,7 +618,3 @@ export default function UsersAdminPage() {
     </>
   );
 }
-
-    
-
-    
