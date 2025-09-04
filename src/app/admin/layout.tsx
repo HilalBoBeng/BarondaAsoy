@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, truncateName } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -195,8 +195,8 @@ export default function AdminLayout({
             <AvatarImage src={adminInfo?.photoURL || undefined} />
             <AvatarFallback className="text-xl bg-primary text-primary-foreground">{adminInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
-        <div className="flex flex-col">
-            <p className="font-bold text-base truncate">{adminInfo.name}</p>
+        <div className="flex flex-col min-w-0">
+            <p className="font-bold text-base truncate">{truncateName(adminInfo.name)}</p>
             <p className="text-sm text-muted-foreground truncate">{adminInfo.email}</p>
             <Badge variant="secondary" className={cn(
                 "mt-2 w-fit", 
@@ -261,7 +261,7 @@ export default function AdminLayout({
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0">
+            <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
                <SheetHeader className="p-4 border-b">
                    <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                    <NavHeader />

@@ -155,8 +155,7 @@ export interface Honorarium {
     amount: number;
     period: string; // e.g., "Juli 2024"
     issueDate: Timestamp | Date;
-    status: 'Dibayarkan' | 'Tertunda' | 'Dipotong' | 'Batal';
-    notes?: string; // For 'Dipotong' or 'Batal'
+    status: 'Dibayarkan' | 'Belum Dibayar';
 }
 
 export interface AdminLog {

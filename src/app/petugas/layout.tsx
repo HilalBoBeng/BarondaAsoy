@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, truncateName } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -225,8 +225,8 @@ export default function PetugasLayout({
             <AvatarImage src={staffInfo?.photoURL || undefined} />
             <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
-        <div className="flex flex-col">
-            <p className="font-bold text-base truncate">{staffInfo.name}</p>
+        <div className="flex flex-col min-w-0">
+            <p className="font-bold text-base truncate">{truncateName(staffInfo.name)}</p>
             <p className="text-sm text-muted-foreground truncate">{staffInfo.email}</p>
             <Badge variant="secondary" className="mt-2 w-fit">Petugas</Badge>
         </div>
@@ -310,7 +310,7 @@ export default function PetugasLayout({
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0">
+            <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
                 <SheetHeader className="p-4 border-b">
                    <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                    <NavHeader />
