@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, Key } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -413,13 +413,11 @@ export default function UsersAdminPage() {
     </Card>
 
     <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-           <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-md p-0">
+        <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
           {selectedUserForDetail && (
               <Card className="border-0 shadow-none">
-                  <CardContent className="p-0">
+                  <CardContent className="p-6">
                       <div className="flex flex-col items-center text-center">
                           <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)}>
                               <Avatar className="h-24 w-24 border-4 border-muted">
@@ -445,7 +443,7 @@ export default function UsersAdminPage() {
                           )}
                       </div>
                   </CardContent>
-                  <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4">
+                  <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4 border-t bg-muted/50 p-6">
                       {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
                           <div className="flex gap-2">
                               <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
@@ -460,14 +458,14 @@ export default function UsersAdminPage() {
                                       </Button>
                                   ) : (
                                       <>
-                                          <Button variant="outline" className="bg-yellow-500 border-yellow-500 text-white hover:bg-yellow-600" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
+                                          <Button className="bg-yellow-500 border-yellow-500 text-white hover:bg-yellow-600" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
                                           <Button variant="destructive" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
                                       </>
                                   )}
                               </div>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="destructive" className="w-full mt-2"><Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini</Button>
+                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"><Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini</Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                       <AlertDialogHeader>
@@ -567,6 +565,7 @@ export default function UsersAdminPage() {
     
     <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
         <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
+             <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
              <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
         </DialogContent>
     </Dialog>

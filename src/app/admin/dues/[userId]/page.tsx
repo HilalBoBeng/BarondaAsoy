@@ -15,7 +15,7 @@ import { Loader2, ArrowLeft, Eye, Edit, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { notFound, useParams } from 'next/navigation';
+import { useParams, notFound } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,17 +29,6 @@ const editDuesSchema = z.object({
 });
 
 type EditDuesFormValues = z.infer<typeof editDuesSchema>;
-
-const getAmountColor = (amount: number) => {
-    if (amount <= 1000) return '#B3B6BB'; // abu-abu
-    if (amount <= 2000) return '#8F9E91'; // abu-abu kehijauan
-    if (amount <= 5000) return '#A47A45'; // cokelat
-    if (amount <= 10000) return '#7B53A6'; // ungu
-    if (amount <= 20000) return '#3AAA6D'; // hijau
-    if (amount <= 50000) return '#2E78BC'; // biru
-    if (amount <= 100000) return '#C62828';// merah
-    return 'transparent'; // default
-};
 
 export default function UserDuesHistoryPage() {
   const params = useParams();
@@ -186,7 +175,7 @@ export default function UserDuesHistoryPage() {
                       <TableCell>
                         <Badge variant="secondary">{due.month} {due.year}</Badge>
                       </TableCell>
-                      <TableCell style={{ backgroundColor: `${getAmountColor(due.amount)}20` }}>{formatCurrency(due.amount)}</TableCell>
+                      <TableCell>{formatCurrency(due.amount)}</TableCell>
                       <TableCell className="text-right">
                          <div className="flex gap-2 justify-end">
                             <Button variant="outline" size="sm" onClick={() => handleEditOpen(due)}>
