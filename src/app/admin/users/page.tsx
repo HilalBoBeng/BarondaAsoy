@@ -37,11 +37,6 @@ const toTitleCase = (str: string) => {
   );
 };
 
-const rejectionSchema = z.object({
-    rejectionReason: z.string().min(10, 'Alasan penolakan minimal 10 karakter.'),
-});
-type RejectionFormValues = z.infer<typeof rejectionSchema>;
-
 const actionReasonSchema = z.object({
   reason: z.string().min(10, 'Alasan minimal 10 karakter.'),
   duration: z.string().optional(),
@@ -53,7 +48,6 @@ export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [pendingStaff, setPendingStaff] = useState<Staff[]>([]);
-  const [admins, setAdmins] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -62,7 +56,7 @@ export default function UsersAdminPage() {
 
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [selectedUserForAction, setSelectedUserForAction] = useState<AppUser | Staff | null>(null);
-  const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | 'approve' | 'reject' | 'addAdmin' | null>(null);
+  const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | 'reject' | null>(null);
 
   const actionReasonForm = useForm<ActionReasonFormValues>({ resolver: zodResolver(actionReasonSchema) });
   
@@ -101,10 +95,8 @@ export default function UsersAdminPage() {
         
         const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
         const regularStaff = activeStaff.filter(s => s.role !== 'admin' && s.role !== 'super_admin');
-        const adminUsers = allStaff.filter(s => s.role === 'admin' || s.role === 'super_admin');
         
         setStaff(regularStaff);
-        setAdmins(adminUsers);
         setPendingStaff(allStaff.filter(s => s.status === 'pending'));
         setLoading(false);
     }, (error) => {
@@ -149,10 +141,11 @@ export default function UsersAdminPage() {
     } finally {
         setIsSubmitting(false);
         setIsActionDialogOpen(false);
+        if (isUserDetailOpen) setIsUserDetailOpen(false);
     }
   };
 
-  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete' | 'approve' | 'reject') => {
+  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete' | 'reject') => {
       setSelectedUserForAction(user);
       setActionType(type);
       actionReasonForm.reset();
@@ -174,8 +167,6 @@ export default function UsersAdminPage() {
             await deleteDoc(userRef);
             toast({ title: 'Berhasil', description: `Data pengguna berhasil dihapus.` });
             await createLog(`Menghapus ${isUserType ? 'Warga' : 'Staf'}`, userName || docId);
-        } else if (actionType === 'approve' && !isUserType) {
-            handleStaffApproval(selectedUserForAction as Staff, true);
         } else if (actionType === 'reject' && !isUserType) {
             handleStaffApproval(selectedUserForAction as Staff, false, values.reason);
         } else {
@@ -278,10 +269,6 @@ export default function UsersAdminPage() {
   const filteredPendingStaff = useMemo(() =>
     pendingStaff.filter(s => s.name?.toLowerCase().includes(searchTerm.toLowerCase())),
   [pendingStaff, searchTerm]);
-  
-  const filteredAdmins = useMemo(() =>
-    admins.filter(a => a.name?.toLowerCase().includes(searchTerm.toLowerCase())),
-  [admins, searchTerm]);
 
   return (
     <>
@@ -497,7 +484,7 @@ export default function UsersAdminPage() {
                       {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
                           <div className="flex gap-2">
                               <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
-                              <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'approve')}>Setujui</Button>
+                              <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => handleStaffApproval(selectedUserForDetail, true)}>Setujui</Button>
                           </div>
                       ) : (
                           <>
@@ -550,12 +537,10 @@ export default function UsersAdminPage() {
                     {actionType === 'block' ? 'Blokir' :
                      actionType === 'suspend' ? 'Tangguhkan' :
                      actionType === 'reject' ? 'Tolak Pendaftaran' :
-                     actionType === 'approve' ? 'Setujui Pendaftaran' :
                      'Hapus'} Pengguna
                 </DialogTitle>
                 <DialogDescription>
                   {actionType === 'delete' ? 'Tindakan ini akan menghapus akun secara permanen. Mohon jelaskan alasannya.' :
-                   actionType === 'approve' ? 'Anda yakin ingin menyetujui pendaftaran staf ini? Mereka akan mendapatkan email notifikasi berisi kode akses.' :
                    actionType === 'reject' ? 'Tuliskan alasan penolakan untuk dikirimkan ke email pendaftar.' :
                    `Pengguna yang di${actionType === 'block' ? 'blokir' : 'tangguhkan'} tidak akan bisa masuk ke aplikasi. Mohon jelaskan alasannya.`
                   }
@@ -564,7 +549,6 @@ export default function UsersAdminPage() {
              <Form {...actionReasonForm}>
                 <form onSubmit={actionReasonForm.handleSubmit(onActionSubmit)}>
                     <DialogBody className="space-y-4">
-                        { (actionType !== 'approve') &&
                         <FormField
                         control={actionReasonForm.control}
                         name="reason"
@@ -578,7 +562,6 @@ export default function UsersAdminPage() {
                             </FormItem>
                         )}
                         />
-                        }
                         {actionType === 'suspend' && (
                             <FormField
                             control={actionReasonForm.control}
@@ -605,12 +588,11 @@ export default function UsersAdminPage() {
                     </DialogBody>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsActionDialogOpen(false)}>Batal</Button>
-                        <Button type="submit" variant={actionType === 'approve' ? 'default' : 'destructive'} disabled={isSubmitting}>
+                        <Button type="submit" variant={'destructive'} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {actionType === 'block' ? 'Blokir Pengguna' :
                               actionType === 'suspend' ? 'Tangguhkan' :
                               actionType === 'reject' ? 'Tolak Pendaftaran' :
-                              actionType === 'approve' ? 'Ya, Setujui' :
                               'Hapus Permanen'}
                         </Button>
                     </DialogFooter>
