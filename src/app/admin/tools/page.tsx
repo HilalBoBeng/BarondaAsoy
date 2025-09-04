@@ -30,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sendOtp } from '@/ai/flows/send-otp';
 import { createAdmin } from '@/ai/flows/create-admin';
 import { verifyOtp } from '@/ai/flows/verify-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 
 const shortLinkSchema = z.object({
@@ -730,7 +731,14 @@ export default function ToolsAdminPage() {
                                 <FormLabel className="sr-only">Kode OTP</FormLabel>
                                 <FormControl>
                                     <InputOTP maxLength={6} {...field}>
-                                    {/* ... InputOTPSlot ... */}
+                                        <InputOTPGroup>
+                                            <InputOTPSlot index={0} />
+                                            <InputOTPSlot index={1} />
+                                            <InputOTPSlot index={2} />
+                                            <InputOTPSlot index={3} />
+                                            <InputOTPSlot index={4} />
+                                            <InputOTPSlot index={5} />
+                                        </InputOTPGroup>
                                     </InputOTP>
                                 </FormControl>
                                 <FormMessage />
@@ -770,8 +778,8 @@ export default function ToolsAdminPage() {
                           <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/><span>{selectedUserForDetail.email}</span></div>
                           <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
                           <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail}</span></div>
-                           {selectedUserForDetail.createdAt && (
-                             <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format(selectedUserForDetail.createdAt as Date, "d MMMM yyyy", { locale: id })}</span></div>
+                           {selectedUserForDetail.createdAt && 'toDate' in selectedUserForDetail.createdAt && (
+                             <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format((selectedUserForDetail.createdAt as Timestamp).toDate(), "d MMMM yyyy", { locale: id })}</span></div>
                           )}
                       </div>
                   </CardContent>
@@ -785,7 +793,3 @@ export default function ToolsAdminPage() {
     </>
   );
 }
-
-    
-
-    
