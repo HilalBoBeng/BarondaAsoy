@@ -20,6 +20,7 @@ import {
   Banknote,
   ClipboardList,
   User as UserIcon,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -63,7 +64,7 @@ export default function AdminLayout({
         { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
         { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
-        { href: "/admin/settings", icon: Settings, label: "Lainnya" },
+        { href: "/admin/tools", icon: Wrench, label: "Lainnya" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     ];
@@ -219,7 +220,7 @@ export default function AdminLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                <SheetHeader className="p-0 border-b">
-                   <SheetTitle className="sr-only">Profil & Navigasi</SheetTitle>
+                   <SheetTitle>Menu Navigasi</SheetTitle>
                    <NavHeader />
                </SheetHeader>
               <div className="flex-1 overflow-auto py-2">

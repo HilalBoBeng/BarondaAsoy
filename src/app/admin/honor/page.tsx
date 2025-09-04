@@ -87,12 +87,16 @@ export default function HonorariumAdminPage() {
   }, [staff, honorariums, watchedMonth, watchedYear, currentHonorarium]);
   
   useEffect(() => {
-    const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'), orderBy('name', 'asc'));
+    // Simplified query to avoid composite index requirement
+    const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'));
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
-        setStaff(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff)));
+        const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
+        // Sort client-side
+        staffData.sort((a, b) => a.name.localeCompare(b.name));
+        setStaff(staffData);
     });
 
-    const honorQuery = query(collection(db, 'honorariums'));
+    const honorQuery = query(collection(db, 'honorariums'), orderBy("issueDate", "desc"));
     const unsubHonor = onSnapshot(honorQuery, (snapshot) => {
         setHonorariums(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), issueDate: (doc.data().issueDate as Timestamp)?.toDate() } as Honorarium)));
         setLoading(false);
@@ -373,54 +377,50 @@ export default function HonorariumAdminPage() {
 
     <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl">
-            {selectedStaff && (
-                <>
-                <DialogHeader>
-                    <DialogTitle>Riwayat Honor: {selectedStaff.name}</DialogTitle>
-                </DialogHeader>
-                <DialogBody>
-                  <div className="rounded-lg border max-h-[60vh] overflow-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Periode</TableHead>
-                                <TableHead>Jumlah</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Aksi</TableHead>
+            <DialogHeader>
+                <DialogTitle>Riwayat Honor: {selectedStaff?.name}</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+                <div className="rounded-lg border max-h-[60vh] overflow-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Periode</TableHead>
+                            <TableHead>Jumlah</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {staffHonorHistory.map(h => (
+                            <TableRow key={h.id}>
+                                <TableCell>{h.period}</TableCell>
+                                <TableCell>{formatCurrency(h.amount)}</TableCell>
+                                <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
+                                <TableCell>
+                                    <div className="flex gap-1">
+                                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setIsDetailOpen(false); setCurrentHonorarium(h); setIsDialogOpen(true); }}><Edit className="h-4 w-4"/></Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-7 w-7"><Trash className="h-4 w-4"/></Button></AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Hapus Data Honor Ini?</AlertDialogTitle>
+                                                    <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(h.id)}>Ya, Hapus</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {staffHonorHistory.map(h => (
-                                <TableRow key={h.id}>
-                                    <TableCell>{h.period}</TableCell>
-                                    <TableCell>{formatCurrency(h.amount)}</TableCell>
-                                    <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-1">
-                                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setIsDetailOpen(false); setCurrentHonorarium(h); setIsDialogOpen(true); }}><Edit className="h-4 w-4"/></Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-7 w-7"><Trash className="h-4 w-4"/></Button></AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Hapus Data Honor Ini?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(h.id)}>Ya, Hapus</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  </div>
-                </DialogBody>
-                </>
-            )}
+                        ))}
+                    </TableBody>
+                </Table>
+                </div>
+            </DialogBody>
         </DialogContent>
     </Dialog>
     </>
