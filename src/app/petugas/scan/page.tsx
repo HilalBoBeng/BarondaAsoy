@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, QrCode, CheckCircle, ShieldAlert, Image as ImageIcon, CameraOff, Camera } from 'lucide-react';
+import { Loader2, ArrowLeft, QrCode, CheckCircle, ShieldAlert, CameraOff } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Html5Qrcode, Html5QrcodeResult } from 'html5-qrcode';
@@ -19,7 +19,6 @@ function ScanPageContent() {
   const { toast } = useToast();
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const qrReaderContainerId = "qr-reader-container";
   
   const [scanResult, setScanResult] = useState<string | null>(null);
@@ -81,35 +80,6 @@ function ScanPageContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanResult]);
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setStatus('processing');
-    setErrorMessage(null);
-
-    // Stop the camera scanner if it's running
-    if (scannerRef.current && scannerRef.current.isScanning) {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-    }
-    
-    // Use a new instance for file scanning
-    const fileScanner = new Html5Qrcode(qrReaderContainerId, { verbose: false });
-
-    try {
-        const decodedText = await fileScanner.scanFile(file, false); // showImage = false
-        onScanSuccess(decodedText, {} as Html5QrcodeResult);
-    } catch (err) {
-        const msg = 'Gagal memproses gambar. Pastikan gambar jelas dan berisi QR code yang valid.';
-        setErrorMessage(msg);
-        setStatus('error');
-        // Reset to allow re-scanning
-        setTimeout(() => setStatus('idle'), 3000);
-    }
-  };
-
 
   const processDecodedText = async (decodedText: string | null | undefined) => {
     if (!decodedText || status === 'processing' || status === 'success') return;
@@ -216,16 +186,6 @@ function ScanPageContent() {
                                 <p>Menyiapkan kamera...</p>
                             </div>
                          )}
-                    </div>
-                    <div className="flex justify-center gap-2">
-                        <Button
-                            variant="secondary"
-                            onClick={() => fileInputRef.current?.click()}
-                            title="Unggah dari Galeri"
-                        >
-                            <ImageIcon className="mr-2 h-5 w-5" /> Unggah Gambar
-                        </Button>
-                        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileSelect} />
                     </div>
                     {status === 'error' && errorMessage && (
                          <Alert variant="destructive">
