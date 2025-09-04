@@ -154,7 +154,7 @@ export default function PetugasLayout({
     if (loadingConfig) return;
 
     // Check if current route is locked or hidden
-    const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
+    const currentNavItem = navItems.find(item => pathname === item.href);
     if (currentNavItem && (currentNavItem.locked || !currentNavItem.visible)) {
       setIsAccessDenied(true);
     } else {
@@ -291,6 +291,7 @@ export default function PetugasLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="p-4 border-b">
+                   <DialogTitle className="sr-only">Menu Navigasi</DialogTitle>
                    <NavHeader />
                 </SheetHeader>
                 <div className="flex-1 overflow-auto py-2">
