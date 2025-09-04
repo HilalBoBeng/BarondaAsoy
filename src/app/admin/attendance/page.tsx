@@ -159,58 +159,6 @@ export default function AttendancePage() {
     document.body.removeChild(link);
   }
 
-  const handleExportPdf = () => {
-    if (filteredSchedules.length === 0) {
-      toast({ variant: 'destructive', title: 'Tidak Ada Data', description: 'Tidak ada data untuk diekspor.' });
-      return;
-    }
-
-    const doc = new jsPDF();
-    const logoImg = new Image();
-    logoImg.src = 'https://iili.io/KJ4aGxp.png'; // Make sure this is accessible, or use a base64 string.
-    
-    logoImg.onload = () => {
-        doc.addImage(logoImg, 'PNG', 14, 10, 20, 20);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Laporan Kehadiran Petugas Baronda', 40, 20);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Periode: ${selectedMonth} ${selectedYear}`, 40, 26);
-
-        (doc as any).autoTable({
-            startY: 40,
-            head: [['Tanggal Patroli', 'Nama Petugas', 'Area Tugas', 'Jam Tugas', 'Status Kehadiran', 'Keterangan']],
-            body: filteredSchedules.map(s => [
-                format(s.startDate as Date, "d MMMM yyyy", { locale: id }),
-                s.officer,
-                s.area,
-                s.time,
-                statusConfig[s.status]?.label || s.status,
-                s.reason || '-',
-            ]),
-            theme: 'grid',
-            headStyles: { fillColor: [255, 116, 38] }, // Orange color for header
-            styles: { font: 'helvetica', fontSize: 9 },
-        });
-
-        const pageCount = (doc as any).internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`Dicetak pada: ${format(new Date(), 'PPP p', { locale: id })}`, 14, doc.internal.pageSize.height - 10);
-            doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 10);
-        }
-
-        doc.save(`daftar_hadir_${selectedMonth}_${selectedYear}.pdf`);
-    };
-
-    logoImg.onerror = () => {
-        toast({ variant: 'destructive', title: 'Gagal Memuat Logo', description: 'Tidak dapat memuat logo untuk PDF.' });
-    };
-  };
-
   const renderPunctuality = (schedule: ScheduleEntry) => {
     if (schedule.status === 'Izin' || schedule.status === 'Sakit') {
         return (
@@ -308,9 +256,6 @@ export default function AttendancePage() {
              <div className="flex flex-wrap gap-2">
                 <Button onClick={handleExportCsv} variant="outline">
                     <FileDown className="mr-2" /> Ekspor CSV
-                </Button>
-                <Button onClick={handleExportPdf} variant="outline">
-                    <FileDown className="mr-2" /> Ekspor PDF
                 </Button>
              </div>
         </div>

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
@@ -15,12 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Banknote, Search, CheckCircle } from 'lucide-react';
+import { Loader2, Banknote, Search, CheckCircle, RefreshCw } from 'lucide-react';
 import type { Honorarium, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -106,6 +108,16 @@ export default function HonorariumAdminPage() {
       paymentForm.reset();
       setIsPayDialogOpen(true);
   }
+
+  const handleCancelPayment = async (honorRecordId?: string) => {
+    if (!honorRecordId) return;
+    try {
+        await deleteDoc(doc(db, 'honorariums', honorRecordId));
+        toast({ title: "Berhasil", description: "Pembayaran telah dibatalkan." });
+    } catch (error) {
+        toast({ variant: 'destructive', title: "Gagal", description: "Gagal membatalkan pembayaran." });
+    }
+  };
 
   const onPaymentSubmit = async (values: PaymentFormValues) => {
     if (!selectedStaffForPayment) return;
@@ -225,9 +237,25 @@ export default function HonorariumAdminPage() {
                             </Button>
                           )}
                            {s.honorStatus === 'Dibayarkan' && (
-                             <div className="flex items-center justify-end text-green-600 gap-2 text-sm">
-                                <CheckCircle className="h-4 w-4"/> Lunas
-                             </div>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <RefreshCw className="mr-2 h-4 w-4"/> Batalkan
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Batalkan Pembayaran?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini akan mengembalikan status pembayaran menjadi "Belum Dibayar". Yakin?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Tidak</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleCancelPayment(s.honorRecordId)}>Ya, Batalkan</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                             </AlertDialog>
                            )}
                         </TableCell>
                       </TableRow>
