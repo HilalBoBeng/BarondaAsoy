@@ -21,6 +21,8 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -126,7 +128,13 @@ export default function FinancePage() {
       });
       toast({ title: 'Berhasil', description: 'Transaksi berhasil dicatat.' });
       setIsDialogOpen(false);
-      form.reset();
+      form.reset({
+        type: undefined,
+        description: '',
+        amount: 0,
+        category: '',
+        otherCategory: ''
+    });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencatat transaksi.' });
     } finally {
@@ -279,7 +287,7 @@ export default function FinancePage() {
                             <FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name="amount" render={({ field }) => (
-                            <FormItem><FormLabel>Jumlah (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Jumlah (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormMessage>
                           )} />
                           {transactionType === 'expense' && (
                               <FormField control={form.control} name="category" render={({ field }) => (
