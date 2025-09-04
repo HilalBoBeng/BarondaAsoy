@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, updateDoc, orderBy, Timestamp, deleteDoc, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2, ShieldAlert, Phone, Download } from "lucide-react";
+import { LogIn, LogOut, UserPlus, UserCircle, Settings, Bell, X, Mail, Trash, ShieldBan, FileText, User as UserIcon, ArrowLeft, ArrowRight, Loader2, ShieldAlert, Phone, Download, HardHat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from "@/components/ui/dialog";
@@ -591,3 +591,5 @@ export default function MainDashboardView() {
     </>
   );
 }
+
+    

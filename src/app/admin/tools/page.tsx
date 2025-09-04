@@ -242,6 +242,7 @@ export default function ToolsAdminPage() {
         toast({ title: 'OTP Terkirim', description: `Kode OTP telah dikirim ke email calon admin: ${values.email}.` });
         setNewAdminData(values);
         setOtpStep(true);
+        otpForm.reset();
 
     } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman OTP gagal. ${error instanceof Error ? error.message : ''}`});
@@ -666,7 +667,11 @@ export default function ToolsAdminPage() {
     </Dialog>
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => otpStep && e.preventDefault()}>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {
+            if (otpStep) {
+                e.preventDefault();
+            }
+        }}>
             <DialogHeader>
                 <DialogTitle>{otpStep ? 'Verifikasi OTP' : 'Tambah Admin Baru'}</DialogTitle>
                 <DialogDescription>
@@ -808,3 +813,5 @@ export default function ToolsAdminPage() {
     </>
   );
 }
+
+    
