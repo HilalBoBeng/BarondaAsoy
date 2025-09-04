@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { HardHat, Info } from 'lucide-react';
+import { HardHat } from 'lucide-react';
 
 export default function MaintenancePage() {
   return (

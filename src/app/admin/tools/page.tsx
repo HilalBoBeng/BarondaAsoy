@@ -361,6 +361,16 @@ export default function ToolsAdminPage() {
       }
   }
 
+  const handleDeleteAdmin = async (adminId: string) => {
+      if (!isSuperAdmin) return;
+      try {
+          await deleteDoc(doc(db, 'staff', adminId));
+          toast({ title: 'Berhasil', description: 'Admin telah dihapus.' });
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus admin.' });
+      }
+  }
+
   const isSuperAdmin = currentAdmin?.email === 'admin@baronda.or.id';
 
   const showUserDetail = (user: Staff) => {
@@ -530,7 +540,13 @@ export default function ToolsAdminPage() {
                                     ) : allAdmins.length > 0 ? (
                                         allAdmins.map((admin) => (
                                         <TableRow key={admin.id}>
-                                            <TableCell>{admin.name}</TableCell>
+                                            <TableCell className="flex items-center gap-2">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={admin.photoURL || undefined}/>
+                                                    <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                {admin.name}
+                                            </TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
                                                     <MoreVertical className="h-4 w-4" />
@@ -783,8 +799,31 @@ export default function ToolsAdminPage() {
                           )}
                       </div>
                   </CardContent>
-                   <DialogFooter className="p-4 border-t bg-muted/50">
+                   <DialogFooter className="p-4 border-t bg-muted/50 flex justify-between">
                         <Button type="button" variant="secondary" onClick={() => setIsUserDetailOpen(false)}>Tutup</Button>
+                        {isSuperAdmin && currentAdmin?.id !== selectedUserForDetail.id && (
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Trash className="mr-2 h-4 w-4" /> Hapus Admin
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Hapus Admin Ini?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini akan menghapus akun admin secara permanen. Anda yakin?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteAdmin(selectedUserForDetail.id)}>
+                                            Ya, Hapus
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
                   </DialogFooter>
               </Card>
           )}
