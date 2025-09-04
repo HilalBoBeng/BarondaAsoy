@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { FileDown, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileDown, CheckCircle, Clock, AlertCircle, Info } from 'lucide-react';
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -133,7 +133,7 @@ export default function AttendancePage() {
         return;
     }
     
-    const headers = ["Tanggal Patroli", "Nama Petugas", "Area Tugas", "Jam Tugas", "Status Kehadiran"];
+    const headers = ["Tanggal Patroli", "Nama Petugas", "Area Tugas", "Jam Tugas", "Status Kehadiran", "Keterangan"];
     const csvRows = [
         headers.join(','),
         ...filteredSchedules.map(s => {
@@ -142,7 +142,8 @@ export default function AttendancePage() {
                 `"${s.officer}"`,
                 `"${s.area}"`,
                 `"${s.time}"`,
-                `"${statusConfig[s.status]?.label || s.status}"`
+                `"${statusConfig[s.status]?.label || s.status}"`,
+                `"${s.reason || ''}"`,
             ];
             return row.join(',');
         })
@@ -179,13 +180,14 @@ export default function AttendancePage() {
 
         (doc as any).autoTable({
             startY: 40,
-            head: [['Tanggal Patroli', 'Nama Petugas', 'Area Tugas', 'Jam Tugas', 'Status Kehadiran']],
+            head: [['Tanggal Patroli', 'Nama Petugas', 'Area Tugas', 'Jam Tugas', 'Status Kehadiran', 'Keterangan']],
             body: filteredSchedules.map(s => [
                 format(s.startDate as Date, "d MMMM yyyy", { locale: id }),
                 s.officer,
                 s.area,
                 s.time,
-                statusConfig[s.status]?.label || s.status
+                statusConfig[s.status]?.label || s.status,
+                s.reason || '-',
             ]),
             theme: 'grid',
             headStyles: { fillColor: [255, 116, 38] }, // Orange color for header
@@ -210,6 +212,17 @@ export default function AttendancePage() {
   };
 
   const renderPunctuality = (schedule: ScheduleEntry) => {
+    if (schedule.status === 'Izin' || schedule.status === 'Sakit') {
+        return (
+            <TableCell>
+                 <div className="flex items-start gap-1 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                    <span className="italic truncate" title={schedule.reason}>"{schedule.reason}"</span>
+                </div>
+            </TableCell>
+        )
+    }
+
     const { start, end } = calculatePunctuality(schedule);
     return (
         <TableCell>
@@ -309,7 +322,7 @@ export default function AttendancePage() {
                 <TableRow>
                   <TableHead>Tanggal Patroli</TableHead>
                   <TableHead>Nama Petugas</TableHead>
-                  <TableHead>Absensi & Ketepatan</TableHead>
+                  <TableHead>Absensi & Keterangan</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>

@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check, QrCode, CheckCircle, AlertCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check, QrCode, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -336,6 +336,9 @@ export default function ScheduleAdminPage() {
                         <span>{punctuality.text}</span>
                      </div>
                    )}
+                   {(item.status === 'Izin' || item.status === 'Sakit') && item.reason && (
+                      <p className="flex items-start gap-2 pt-2 text-muted-foreground"><Info className="h-4 w-4 mt-0.5 shrink-0" /> <span className="text-foreground italic">"{item.reason}"</span></p>
+                   )}
                 </CardContent>
                 <CardFooter>
                   <div className="flex gap-2 justify-end items-center w-full">
@@ -382,7 +385,7 @@ export default function ScheduleAdminPage() {
                   <TableHead>Area</TableHead>
                   <TableHead>Waktu</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Ketepatan Waktu</TableHead>
+                  <TableHead>Keterangan</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -412,12 +415,16 @@ export default function ScheduleAdminPage() {
                       <TableCell>{item.time}</TableCell>
                       <TableCell><StatusBadge status={item.status} /></TableCell>
                       <TableCell>
-                          {punctuality ? (
+                          {punctuality && (
                             <div className={cn("flex items-center gap-1 text-xs", punctuality.color)}>
                                 <Icon className="h-3 w-3"/>
                                 <span>{punctuality.text}</span>
                             </div>
-                          ) : '-'}
+                          )}
+                          {(item.status === 'Izin' || item.status === 'Sakit') && item.reason && (
+                              <p className="text-xs text-muted-foreground italic truncate" title={item.reason}>"{item.reason}"</p>
+                          )}
+                          {(!punctuality && item.status !== 'Izin' && item.status !== 'Sakit') && '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end items-center">
