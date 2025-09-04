@@ -69,11 +69,12 @@ export default function AdminProfilePage() {
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
+        if (!adminInfo || adminInfo.id === 'admin_utama') return false;
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
         const cooldownDays = field === 'photoURL' ? 1 : 7;
         return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
-    }, [lastUpdated]);
+    }, [lastUpdated, adminInfo]);
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -108,15 +109,11 @@ export default function AdminProfilePage() {
     
     const handleEditClick = (field: FieldName) => {
         if (!adminInfo) return;
-        if (adminInfo.id === 'admin_utama') {
-            toast({ variant: 'destructive', title: 'Aksi Ditolak', description: 'Profil Admin Utama tidak dapat diubah.' });
-            return;
+        if (!canEditField(field)) {
+             toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi nanti.` });
+             return;
         }
 
-        if (field !== 'photoURL' && !canEditField(field)) {
-            toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari.` });
-            return;
-        }
         setEditingField(field);
         form.reset({
             displayName: adminInfo.name || '',
@@ -168,10 +165,6 @@ export default function AdminProfilePage() {
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!canEditField('photoURL')) {
-            toast({ variant: 'destructive', title: 'Foto Profil Dikunci', description: `Anda baru bisa mengubah foto profil lagi setelah 24 jam.` });
-            return;
-        }
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             if (file.size > 2 * 1024 * 1024) { 
@@ -255,8 +248,8 @@ export default function AdminProfilePage() {
     };
 
     const dataRows = [
-        { field: 'phone' as FieldName, value: adminInfo.phone, icon: Phone },
-        { field: 'addressDetail' as FieldName, value: adminInfo.addressDetail, icon: MapPin },
+        { field: 'phone' as FieldName, value: adminInfo.phone },
+        { field: 'addressDetail' as FieldName, value: adminInfo.addressDetail },
     ];
 
     return (
@@ -266,12 +259,12 @@ export default function AdminProfilePage() {
                     <div className="flex items-center gap-4">
                         <div className="relative">
                             <Avatar className="h-20 w-20 border-4 border-background/50">
-                                <AvatarImage src={undefined} />
+                                <AvatarImage src={adminInfo.photoURL || undefined} />
                                 <AvatarFallback className="text-3xl bg-background text-primary">
                                     {adminInfo.name?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
-                            <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
+                             <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
                                 {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
                             </Button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
@@ -279,8 +272,8 @@ export default function AdminProfilePage() {
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                                 <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{adminInfo.name}</CardTitle>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
-                                    <Pencil className="h-4 w-4" />
+                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
+                                    {canEditField("displayName") ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                 </Button>
                             </div>
                             <CardDescription className="text-primary-foreground/80 truncate">{adminInfo.email}</CardDescription>
@@ -292,15 +285,12 @@ export default function AdminProfilePage() {
                     <div className="divide-y">
                         {dataRows.map(row => (
                             <div key={row.field} className="flex items-start justify-between gap-4 p-4">
-                                <div className="flex items-center gap-4">
-                                    <row.icon className="h-5 w-5 text-muted-foreground" />
-                                    <div className="flex-1">
-                                        <p className="text-xs text-muted-foreground">{fieldLabels[row.field]}</p>
-                                        <p className="font-medium">{row.value || 'Belum diisi'}</p>
-                                    </div>
+                                <div className="flex-1">
+                                    <p className="text-xs text-muted-foreground">{fieldLabels[row.field]}</p>
+                                    <p className="font-medium">{row.value || 'Belum diisi'}</p>
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(row.field)}>
-                                    <Pencil className="h-4 w-4" />
+                                     {canEditField(row.field) ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                 </Button>
                             </div>
                         ))}
@@ -347,12 +337,12 @@ export default function AdminProfilePage() {
 
             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
                 <DialogContent>
-                    <DialogHeader className="text-left p-6">
+                    <DialogHeader>
                         <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
-                            <DialogBody className="space-y-4 p-6 pt-0">
+                            <DialogBody className="space-y-4 pt-4">
                                {editingField && editingField !== 'photoURL' && (
                                 <FormField
                                     control={form.control}
@@ -366,13 +356,26 @@ export default function AdminProfilePage() {
                                     )}
                                 />
                                 )}
+                                {editingField === 'photoURL' && form.getValues('photoURL') && (
+                                    <div className="flex justify-center">
+                                         <Avatar className="h-32 w-32 mt-2">
+                                            <AvatarImage src={form.getValues('photoURL') || ''} alt="Preview" />
+                                            <AvatarFallback>
+                                                <Loader2 className="animate-spin" />
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </div>
+                                )}
                             </DialogBody>
-                            <DialogFooter className="p-6">
-                                <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Simpan
-                                </Button>
+                            <DialogFooter className="sm:justify-between gap-2 pt-4">
+                               <div></div>
+                               <div className="flex gap-2 justify-end">
+                                    <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                                    <Button type="submit" disabled={isSubmitting}>
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Simpan
+                                    </Button>
+                               </div>
                             </DialogFooter>
                         </form>
                     </Form>

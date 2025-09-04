@@ -24,14 +24,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotPermittedPage from "@/app/not-permitted/page";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader } from "@/components/ui/dialog";
 
 
 interface MenuConfig {
@@ -153,8 +153,9 @@ export default function PetugasLayout({
   useEffect(() => {
     if (loadingConfig) return;
 
-    // Check if current route is locked or hidden
-    const currentNavItem = navItems.find(item => pathname === item.href);
+    const currentTopLevelPath = `/petugas/${pathname.split('/')[2] || ''}`;
+    const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
+    
     if (currentNavItem && (currentNavItem.locked || !currentNavItem.visible)) {
       setIsAccessDenied(true);
     } else {
@@ -162,7 +163,7 @@ export default function PetugasLayout({
     }
 
     setIsScanPage(pathname === '/petugas/scan');
-
+    
     const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
     const duesDetailMatch = pathname.match(duesDetailRegex);
     const isDuesRecord = pathname === '/petugas/dues/record';
@@ -178,6 +179,7 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, navItems, loadingConfig]);
 
   const handleLogout = () => {
@@ -291,7 +293,7 @@ export default function PetugasLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="p-4 border-b">
-                   <DialogTitle className="sr-only">Menu Navigasi</DialogTitle>
+                   <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                    <NavHeader />
                 </SheetHeader>
                 <div className="flex-1 overflow-auto py-2">
@@ -333,11 +335,8 @@ export default function PetugasLayout({
       </div>
        <Dialog open={false}>
         <DialogContent>
-            <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
-             <DialogHeader>
-                <DialogTitle className="text-2xl text-destructive flex items-center gap-2">
-                    Akun Ditangguhkan
-                </DialogTitle>
+            <DialogHeader>
+                <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
             </DialogHeader>
         </DialogContent>
       </Dialog>

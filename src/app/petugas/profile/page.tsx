@@ -58,7 +58,6 @@ export default function PetugasProfilePage() {
     const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName | 'accessCode']?: Date | null }>({});
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const { toast } = useToast();
@@ -67,11 +66,12 @@ export default function PetugasProfilePage() {
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
+        if (!staffInfo) return false;
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
         const cooldownDays = field === 'photoURL' ? 1 : 7;
         return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
-    }, [lastUpdated]);
+    }, [lastUpdated, staffInfo]);
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -94,18 +94,17 @@ export default function PetugasProfilePage() {
     }, [router]);
     
     const handleEditClick = (field: FieldName) => {
-        if (!staffInfo) return;
-
-        if (field !== 'photoURL' && !canEditField(field)) {
-            toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari.` });
-            return;
+        if (!staffInfo || !canEditField(field)) {
+             toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi nanti.` });
+             return;
         }
+
         setEditingField(field);
         form.reset({
             displayName: staffInfo.name || '',
             phone: staffInfo.phone || '',
             addressDetail: staffInfo.addressDetail || '',
-            photoURL: '',
+            photoURL: staffInfo.photoURL || '',
         });
         if (field === 'photoURL') {
             fileInputRef.current?.click();
@@ -114,6 +113,60 @@ export default function PetugasProfilePage() {
         }
     };
     
+    const compressImage = (file: File, maxSizeKB: number): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let { width, height } = img;
+                    
+                    const size = Math.min(width, height);
+                    const x = (width - size) / 2;
+                    const y = (height - size) / 2;
+
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, x, y, size, size, 0, 0, size, size);
+
+                    let quality = 0.9;
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    const getKB = (str: string) => new Blob([str]).size / 1024;
+                    
+                    while (getKB(dataUrl) > maxSizeKB && quality > 0.1) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    }
+                    resolve(dataUrl);
+                };
+                img.onerror = reject;
+            };
+            reader.onerror = reject;
+        });
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 2 * 1024 * 1024) { 
+                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
+                return;
+            }
+            try {
+                const compressedDataUrl = await compressImage(file, 64);
+                form.setValue('photoURL', compressedDataUrl);
+                setEditingField('photoURL');
+                setIsEditDialogOpen(true);
+            } catch(err) {
+                 toast({ variant: "destructive", title: "Gagal Memproses Gambar", description: "Terjadi kesalahan saat memproses gambar Anda." });
+            }
+        }
+    };
+
     const onProfileEditSubmit = async (data: ProfileEditFormValues) => {
         if (!staffInfo || !editingField) return;
         setIsSubmitting(true);
@@ -180,10 +233,23 @@ export default function PetugasProfilePage() {
     };
 
     const dataRows = [
-        { field: 'phone' as FieldName, value: staffInfo.phone, icon: Phone },
-        { field: 'addressDetail' as FieldName, value: staffInfo.addressDetail, icon: MapPin },
-        { field: 'points' as FieldName, value: `${staffInfo.points || 0} Poin`, icon: Star, noEdit: true },
+        { field: 'phone' as FieldName, value: staffInfo.phone },
+        { field: 'addressDetail' as FieldName, value: staffInfo.addressDetail },
+        { field: 'points' as FieldName, value: `${staffInfo.points || 0} Poin`, noEdit: true },
     ];
+
+    const fieldIcons: Record<keyof Staff | 'displayName', React.ElementType> = {
+        name: User,
+        displayName: User,
+        phone: Phone,
+        addressDetail: MapPin,
+        points: Star,
+        id: User,
+        email: User,
+        addressType: MapPin,
+        accessCode: KeyRound,
+        status: User,
+    };
 
     return (
         <div className="space-y-6">
@@ -192,17 +258,21 @@ export default function PetugasProfilePage() {
                      <div className="flex items-center gap-4">
                         <div className="relative">
                             <Avatar className="h-20 w-20 border-4 border-background/50">
-                                <AvatarImage src={undefined} />
+                                <AvatarImage src={staffInfo.photoURL || undefined} />
                                 <AvatarFallback className="text-3xl bg-background text-primary">
                                     {staffInfo.name?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
+                             <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
+                                {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
+                            </Button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                                 <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{staffInfo.name}</CardTitle>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
-                                    <Pencil className="h-4 w-4" />
+                                    {canEditField("displayName") ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                 </Button>
                             </div>
                             <CardDescription className="text-primary-foreground/80 truncate">{staffInfo.email}</CardDescription>
@@ -212,10 +282,12 @@ export default function PetugasProfilePage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y">
-                        {dataRows.map(row => (
+                        {dataRows.map(row => {
+                           const Icon = fieldIcons[row.field as keyof Staff] || User;
+                           return(
                             <div key={row.field} className="flex items-start justify-between gap-4 p-4">
                                 <div className="flex items-center gap-4">
-                                    <row.icon className="h-5 w-5 text-muted-foreground" />
+                                     <Icon className="h-5 w-5 text-muted-foreground" />
                                     <div className="flex-1">
                                         <p className="text-xs text-muted-foreground">{fieldLabels[row.field as Exclude<FieldName, 'photoURL'>] || 'Poin'}</p>
                                         <p className="font-medium">{row.value || 'Belum diisi'}</p>
@@ -223,11 +295,12 @@ export default function PetugasProfilePage() {
                                 </div>
                                 {!row.noEdit && (
                                     <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(row.field as FieldName)}>
-                                        <Pencil className="h-4 w-4" />
+                                         {canEditField(row.field as FieldName) ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                     </Button>
                                 )}
                             </div>
-                        ))}
+                           )
+                        })}
                     </div>
                 </CardContent>
             </Card>
@@ -270,12 +343,12 @@ export default function PetugasProfilePage() {
             
             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
                 <DialogContent>
-                    <DialogHeader className="text-left">
+                    <DialogHeader>
                         <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
-                             <DialogBody className="space-y-4">
+                             <DialogBody className="space-y-4 pt-4">
                                 {editingField && editingField !== 'photoURL' && (
                                 <FormField
                                     control={form.control}
@@ -289,13 +362,26 @@ export default function PetugasProfilePage() {
                                     )}
                                 />
                                 )}
+                                 {editingField === 'photoURL' && form.getValues('photoURL') && (
+                                    <div className="flex justify-center">
+                                         <Avatar className="h-32 w-32 mt-2">
+                                            <AvatarImage src={form.getValues('photoURL') || ''} alt="Preview" />
+                                            <AvatarFallback>
+                                                <Loader2 className="animate-spin" />
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </div>
+                                )}
                             </DialogBody>
-                            <DialogFooter>
-                                <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Simpan
-                                </Button>
+                            <DialogFooter className="sm:justify-between gap-2 pt-4">
+                                <div></div>
+                                <div className="flex gap-2 justify-end">
+                                    <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                                    <Button type="submit" disabled={isSubmitting}>
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Simpan
+                                    </Button>
+                               </div>
                             </DialogFooter>
                         </form>
                     </Form>

@@ -105,12 +105,21 @@ export default function ToolsAdminPage() {
             if (savedItem) {
                 return { ...initialItem, ...savedItem };
             }
+            // Default new menu items to not visible and not locked
             return { 
                 ...initialItem, 
                 visible: initialItem.id === 'dashboard', 
                 locked: initialItem.id === 'dashboard', 
             };
         });
+
+        // Ensure dashboard is always visible and unlocked
+        const dashboardItem = mergedConfig.find(item => item.id === 'dashboard');
+        if (dashboardItem) {
+            dashboardItem.visible = true;
+            dashboardItem.locked = false; // "Unlocked" in the sense that it cannot be locked by admin
+        }
+        
         setMenuConfig(mergedConfig);
         if (!docSnap.exists()) {
             setDoc(menuConfigRef, { config: mergedConfig });
