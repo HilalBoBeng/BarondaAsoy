@@ -347,7 +347,9 @@ export default function PetugasLayout({
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
-           {children}
+           <div className="mx-auto w-full max-w-screen-2xl">
+            {children}
+          </div>
         </main>
       </div>
        <Dialog open={false}>
