@@ -238,7 +238,7 @@ export default function ToolsAdminPage() {
                                 <FormLabel>Custom Slug (Opsional)</FormLabel>
                                 <FormControl>
                                     <div className="flex items-center">
-                                       <span className="text-sm text-muted-foreground p-2 bg-muted rounded-l-md border border-r-0">/go/</span>
+                                       <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted rounded-l-md border border-r-0 h-10">/go/</span>
                                        <Input {...field} placeholder="promo-juli" className="rounded-l-none"/>
                                     </div>
                                 </FormControl>

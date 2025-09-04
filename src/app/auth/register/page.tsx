@@ -178,7 +178,7 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Nomor HP</FormLabel>
                     <FormControl>
-                      <Input placeholder="08xxxxxxxxxx" {...field} />
+                      <Input placeholder="08xxxxxxxxxx" {...field} inputMode="numeric" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

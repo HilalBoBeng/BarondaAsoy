@@ -283,7 +283,7 @@ export default function PetugasProfilePage() {
                                     render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{fieldLabels[editingField]}</FormLabel>
-                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormControl><Input {...field} inputMode={editingField === 'phone' ? 'numeric' : 'text'} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                     )}
