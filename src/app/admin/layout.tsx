@@ -218,6 +218,7 @@ export default function AdminLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                <SheetHeader className="p-4 border-b">
+                   <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
                    <NavHeader />
                </SheetHeader>
               <div className="flex-1 overflow-auto py-2">

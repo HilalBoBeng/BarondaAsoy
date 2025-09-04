@@ -271,6 +271,10 @@ export default function AdminProfilePage() {
                                     {adminInfo.name?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
+                            <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
+                                {canEditField("photoURL") ? <Camera className="h-4 w-4"/> : <Lock className="h-4 w-4"/>}
+                            </Button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -343,12 +347,12 @@ export default function AdminProfilePage() {
 
             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
                 <DialogContent>
-                    <DialogHeader className="text-left">
+                    <DialogHeader className="text-left p-6">
                         <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
-                            <DialogBody className="space-y-4">
+                            <DialogBody className="space-y-4 p-6 pt-0">
                                {editingField && editingField !== 'photoURL' && (
                                 <FormField
                                     control={form.control}
@@ -363,7 +367,7 @@ export default function AdminProfilePage() {
                                 />
                                 )}
                             </DialogBody>
-                            <DialogFooter>
+                            <DialogFooter className="p-6">
                                 <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                                 <Button type="submit" disabled={isSubmitting}>
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
