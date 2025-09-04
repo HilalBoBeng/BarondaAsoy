@@ -161,7 +161,7 @@ export default function AnnouncementsAdminPage() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-grow">
           <CardTitle>Manajemen Pengumuman</CardTitle>
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>

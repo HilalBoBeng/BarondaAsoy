@@ -276,9 +276,9 @@ export default function ScheduleAdminPage() {
           <CardTitle>Manajemen Jadwal Patroli</CardTitle>
           <CardDescription>Buat, edit, atau hapus jadwal patroli petugas.</CardDescription>
         </div>
-         <div className="flex items-center gap-2">
+         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Select value={selectedDay} onValueChange={setSelectedDay}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter hari" />
                 </SelectTrigger>
                 <SelectContent>
@@ -292,7 +292,7 @@ export default function ScheduleAdminPage() {
                     <SelectItem value="minggu">Minggu</SelectItem>
                 </SelectContent>
             </Select>
-            <Button onClick={() => handleDialogOpen()}>
+            <Button onClick={() => handleDialogOpen()} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Buat Jadwal
             </Button>
@@ -307,6 +307,7 @@ export default function ScheduleAdminPage() {
             filteredSchedule.map((item) => {
               const punctuality = calculatePunctuality(item);
               const Icon = punctuality && (punctuality.text.includes('Cepat') || punctuality.text.includes('Tepat')) ? CheckCircle : AlertCircle;
+              const isActionable = item.status === 'Pending' || item.status === 'In Progress';
               return (
               <Card key={item.id} className="flex flex-col">
                 <CardHeader className="flex-grow">
@@ -328,9 +329,11 @@ export default function ScheduleAdminPage() {
                 </CardContent>
                 <CardFooter>
                   <div className="flex gap-2 justify-end items-center w-full">
-                      <Button asChild variant="outline" size="icon">
-                        <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
-                      </Button>
+                      {isActionable && (
+                        <Button asChild variant="outline" size="icon">
+                          <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
+                        </Button>
+                      )}
                       <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
                           <Edit className="h-4 w-4" />
                       </Button>
@@ -390,6 +393,7 @@ export default function ScheduleAdminPage() {
                   filteredSchedule.map((item) => {
                     const punctuality = calculatePunctuality(item);
                     const Icon = punctuality && (punctuality.text.includes('Cepat') || punctuality.text.includes('Tepat')) ? CheckCircle : AlertCircle;
+                    const isActionable = item.status === 'Pending' || item.status === 'In Progress';
                     return (
                     <TableRow key={item.id}>
                       <TableCell>{item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</TableCell>
@@ -407,9 +411,11 @@ export default function ScheduleAdminPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end items-center">
-                            <Button asChild variant="outline" size="icon">
-                              <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
-                            </Button>
+                            {isActionable && (
+                              <Button asChild variant="outline" size="icon">
+                                <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
+                              </Button>
+                            )}
                             <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
                               <Edit className="h-4 w-4" />
                             </Button>

@@ -187,7 +187,7 @@ export default function PetugasToolsPage() {
                 <DialogDescription>Daftar tautan pendek yang telah Anda buat.</DialogDescription>
             </DialogHeader>
             <DialogBody>
-                 <div className="rounded-lg border overflow-auto max-h-[60vh]">
+                 <div className="rounded-lg border overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
