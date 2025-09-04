@@ -39,7 +39,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
   async ({ baseUrl, ...newAdminData }) => {
     try {
       const token = randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
 
       const verificationData = {
         ...newAdminData,
@@ -71,7 +71,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
             </div>
             <div style="padding: 30px; text-align: center; color: #333;">
               <p style="font-size: 16px;">Halo ${newAdminData.name},</p>
-              <p style="font-size: 16px;">Anda telah didaftarkan sebagai Admin oleh Super Admin Baronda. Klik tombol di bawah ini untuk mengonfirmasi pendaftaran Anda. Tautan ini berlaku selama 1 jam.</p>
+              <p style="font-size: 16px;">Anda telah didaftarkan sebagai Admin oleh Super Admin Baronda. Klik tombol di bawah ini untuk mengonfirmasi pendaftaran Anda. Tautan ini berlaku selama 15 menit.</p>
               <a href="${verificationLink}" style="display: inline-block; background-color: #6f42c1; color: white; padding: 12px 25px; margin: 20px 0; text-decoration: none; border-radius: 5px; font-weight: bold;">Konfirmasi Pendaftaran</a>
               <p style="font-size: 12px; color: #888;">Jika Anda tidak merasa mendaftar, abaikan email ini.</p>
             </div>
