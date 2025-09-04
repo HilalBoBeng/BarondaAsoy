@@ -24,7 +24,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader } from "@/components/ui/sheet";
 import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,21 @@ interface MenuConfig {
   label: string;
   visible: boolean;
   locked: boolean;
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
+        <Image 
+            src="https://iili.io/KJ4aGxp.png" 
+            alt="Loading Logo" 
+            width={120} 
+            height={120} 
+            className="animate-logo-pulse"
+            priority
+        />
+    </div>
+  )
 }
 
 export default function PetugasLayout({
@@ -58,6 +73,7 @@ export default function PetugasLayout({
   const [isDetailPage, setIsDetailPage] = useState(false);
   const [isScanPage, setIsScanPage] = useState(false);
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
+  const [loadingConfig, setLoadingConfig] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
 
@@ -113,6 +129,7 @@ export default function PetugasLayout({
       } else {
         setMenuConfig(initialNavItems.map(item => ({...item, visible: true, locked: false})));
       }
+      setLoadingConfig(false);
     });
 
     if (staffInfo.id) {
@@ -134,6 +151,8 @@ export default function PetugasLayout({
   }, [router]);
   
   useEffect(() => {
+    if (loadingConfig) return;
+
     // Check if current route is locked or hidden
     const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
     if (currentNavItem && (currentNavItem.locked || !currentNavItem.visible)) {
@@ -159,7 +178,7 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-  }, [pathname, navItems]);
+  }, [pathname, navItems, loadingConfig]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -168,7 +187,7 @@ export default function PetugasLayout({
     setTimeout(() => { router.push('/'); }, 1500);
   };
   
-  if (!isClient || isLoggingOut) {
+  if (!isClient || isLoggingOut || loadingConfig) {
       return (
         <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
             <Image src="https://iili.io/KJ4aGxp.png" alt="Loading Logo" width={120} height={120} className="animate-logo-pulse" priority />
@@ -311,7 +330,7 @@ export default function PetugasLayout({
            </div>
         </main>
       </div>
-       <Dialog open={!!suspensionInfo} onOpenChange={() => {}}>
+       <Dialog open={false}>
         <DialogContent>
             <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
              <DialogHeader>
