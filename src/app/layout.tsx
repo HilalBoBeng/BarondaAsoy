@@ -63,7 +63,7 @@ export default function RootLayout({
            <head>
               <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
            </head>
-           <body className={`${ptSans.className} antialiased bg-background`}>
+           <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
                 <LoadingSkeleton />
            </body>
         </html>
@@ -81,7 +81,7 @@ export default function RootLayout({
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
          </head>
-        <body className={`${ptSans.className} antialiased bg-background`}>
+        <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
           <MaintenancePage />
         </body>
       </html>
@@ -95,7 +95,7 @@ export default function RootLayout({
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
       </head>
-      <body className={`${ptSans.className} antialiased bg-background`}>
+      <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
         {children}
         <Toaster />
       </body>

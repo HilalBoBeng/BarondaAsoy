@@ -184,7 +184,7 @@ export default function DuesAdminPage() {
           </div>
         </div>
 
-        <div className="flex justify-between items-center mb-4 gap-4">
+        <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
           <Select value={filterStatus} onValueChange={(val: 'all' | 'paid' | 'unpaid') => setFilterStatus(val)}>
               <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Filter status" />
