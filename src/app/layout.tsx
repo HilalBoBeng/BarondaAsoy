@@ -35,7 +35,7 @@ function LoadingSkeleton() {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   const [maintenanceMode, setMaintenanceMode] = useState<boolean | null>(null);
   const pathname = usePathname();
@@ -60,6 +60,9 @@ export default function RootLayout({
   if (maintenanceMode === null) {
       return (
         <html lang="id">
+           <head>
+              <link rel="icon" href="https://iili.io/KJ4aGxp.png" />
+           </head>
            <body className={`${ptSans.className} antialiased bg-background`}>
                 <LoadingSkeleton />
            </body>

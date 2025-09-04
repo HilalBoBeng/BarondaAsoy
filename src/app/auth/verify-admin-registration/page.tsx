@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { verifyAdminToken } from '@/ai/flows/verify-admin-token';
+import Image from 'next/image';
 
 function VerificationContent() {
   const router = useRouter();
@@ -64,6 +65,11 @@ function VerificationContent() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-muted/40">
+        <div className="flex flex-col items-center justify-center mb-6 text-center">
+            <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
+            <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
+            <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
+        </div>
         <Card className="w-full max-w-md text-center">
              <CardHeader>
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-4">
