@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Loader2, FileDown, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import type { FinancialTransaction, Staff } from '@/lib/types';
@@ -21,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -51,6 +51,7 @@ export default function FinancePage() {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(months[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
@@ -58,6 +59,13 @@ export default function FinancePage() {
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
+    defaultValues: {
+        type: undefined,
+        description: '',
+        amount: 0,
+        category: '',
+        otherCategory: ''
+    }
   });
   const transactionType = form.watch('type');
   const expenseCategory = form.watch('category');
@@ -102,6 +110,7 @@ export default function FinancePage() {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Informasi admin tidak ditemukan.' });
       return;
     }
+    setIsSubmitting(true);
     try {
       const category = values.type === 'income' 
         ? 'Iuran Warga' 
@@ -120,6 +129,8 @@ export default function FinancePage() {
       form.reset();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencatat transaksi.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -295,8 +306,8 @@ export default function FinancePage() {
                       </DialogBody>
                       <DialogFooter>
                           <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                          <Button type="submit" disabled={form.formState.isSubmitting}>
-                              {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          <Button type="submit" disabled={isSubmitting}>
+                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               Simpan Transaksi
                           </Button>
                       </DialogFooter>
