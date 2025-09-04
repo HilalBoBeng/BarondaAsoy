@@ -235,51 +235,53 @@ export default function HonorariumAdminPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
         </div>
-        <div className="rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama Petugas</TableHead>
-                <TableHead>Total Diterima</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-10 w-48" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : filteredStaffWithHonor.length > 0 ? (
-                filteredStaffWithHonor.map((item) => (
-                  <TableRow key={item.staff.id}>
-                    <TableCell>
-                        <div className="flex items-center gap-2">
-                           <Avatar className="h-8 w-8">
-                             <AvatarImage src={undefined} />
-                             <AvatarFallback>{item.staff.name.charAt(0).toUpperCase()}</AvatarFallback>
-                           </Avatar>
-                           {item.staff.name}
-                        </div>
-                    </TableCell>
-                    <TableCell>{formatCurrency(item.totalAmount)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => showDetail(item.staff)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+        <div className="rounded-lg border">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">Belum ada data honorarium.</TableCell>
+                  <TableHead>Nama Petugas</TableHead>
+                  <TableHead>Total Diterima</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredStaffWithHonor.length > 0 ? (
+                  filteredStaffWithHonor.map((item) => (
+                    <TableRow key={item.staff.id}>
+                      <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={undefined} />
+                              <AvatarFallback>{item.staff.name.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            {item.staff.name}
+                          </div>
+                      </TableCell>
+                      <TableCell>{formatCurrency(item.totalAmount)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => showDetail(item.staff)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">Belum ada data honorarium.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
     </Card>

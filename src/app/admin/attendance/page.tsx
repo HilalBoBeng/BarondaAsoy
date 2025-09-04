@@ -234,48 +234,49 @@ export default function AttendancePage() {
              </div>
         </div>
 
-
-        <div className="rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal Patroli</TableHead>
-                <TableHead>Nama Petugas</TableHead>
-                <TableHead>Area Tugas</TableHead>
-                <TableHead>Jam Tugas</TableHead>
-                <TableHead className="text-right">Status Kehadiran</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell>
-                  </TableRow>
-                ))
-              ) : filteredSchedules.length > 0 ? (
-                filteredSchedules.map((schedule) => (
-                  <TableRow key={schedule.id}>
-                    <TableCell>{format(schedule.date as Date, "PPP", { locale: id })}</TableCell>
-                    <TableCell>{schedule.officer}</TableCell>
-                    <TableCell>{schedule.area}</TableCell>
-                    <TableCell>{schedule.time}</TableCell>
-                    <TableCell className="text-right">
-                       <Badge variant="secondary" className={cn(statusConfig[schedule.status]?.className)}>
-                          {statusConfig[schedule.status]?.label || schedule.status}
-                       </Badge>
+        <div className="rounded-lg border">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal Patroli</TableHead>
+                  <TableHead>Nama Petugas</TableHead>
+                  <TableHead>Area Tugas</TableHead>
+                  <TableHead>Jam Tugas</TableHead>
+                  <TableHead className="text-right">Status Kehadiran</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredSchedules.length > 0 ? (
+                  filteredSchedules.map((schedule) => (
+                    <TableRow key={schedule.id}>
+                      <TableCell>{format(schedule.date as Date, "PPP", { locale: id })}</TableCell>
+                      <TableCell>{schedule.officer}</TableCell>
+                      <TableCell>{schedule.area}</TableCell>
+                      <TableCell>{schedule.time}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary" className={cn(statusConfig[schedule.status]?.className)}>
+                            {statusConfig[schedule.status]?.label || schedule.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      Tidak ada data kehadiran untuk filter yang dipilih.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Tidak ada data kehadiran untuk filter yang dipilih.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
     </Card>

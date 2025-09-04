@@ -99,10 +99,10 @@ export default function UsersAdminPage() {
         })) as Staff[];
         
         const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
-        const adminUsers = activeStaff.filter(s => (s as any).role === 'admin');
+        // Filter out admins from the active staff list
         const regularStaff = activeStaff.filter(s => (s as any).role !== 'admin');
         
-        setStaff([...adminUsers, ...regularStaff]); // Admins on top
+        setStaff(regularStaff);
         setPendingStaff(allStaff.filter(s => s.status === 'pending'));
         setLoading(false);
     }, (error) => {

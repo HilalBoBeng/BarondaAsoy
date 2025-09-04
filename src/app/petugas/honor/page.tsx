@@ -84,28 +84,30 @@ export default function HonorariumPetugasPage() {
 
   const renderDesktopTable = () => (
     <div className="rounded-lg border hidden sm:block">
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Periode</TableHead>
-                    <TableHead>Jumlah</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Catatan</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {honorariums.map((h) => (
-                    <TableRow key={h.id}>
-                        <TableCell>{format(h.issueDate as Date, "PPP", { locale: id })}</TableCell>
-                        <TableCell>{h.period}</TableCell>
-                        <TableCell>{formatCurrency(h.amount)}</TableCell>
-                        <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
-                        <TableCell className="max-w-xs truncate">{h.notes || '-'}</TableCell>
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Tanggal</TableHead>
+                        <TableHead>Periode</TableHead>
+                        <TableHead>Jumlah</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Catatan</TableHead>
                     </TableRow>
-                ))}
-            </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                    {honorariums.map((h) => (
+                        <TableRow key={h.id}>
+                            <TableCell>{format(h.issueDate as Date, "PPP", { locale: id })}</TableCell>
+                            <TableCell>{h.period}</TableCell>
+                            <TableCell>{formatCurrency(h.amount)}</TableCell>
+                            <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
+                            <TableCell className="max-w-xs truncate">{h.notes || '-'}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
     </div>
   )
 

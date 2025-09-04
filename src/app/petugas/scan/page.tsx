@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client';
 import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTimestamp, increment } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, ArrowLeft, QrCode, CheckCircle, ShieldAlert, CameraOff } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
@@ -221,5 +221,3 @@ export default function ScanPage() {
         </Suspense>
     )
 }
-
-    

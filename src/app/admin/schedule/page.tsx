@@ -326,74 +326,76 @@ export default function ScheduleAdminPage() {
         </div>
 
         {/* Desktop View */}
-        <div className="hidden sm:block rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Waktu</TableHead>
-                <TableHead>Petugas</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-28" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-[124px] ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : filteredSchedule.length > 0 ? (
-                filteredSchedule.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</TableCell>
-                    <TableCell>{item.time}</TableCell>
-                    <TableCell>{item.officer}</TableCell>
-                    <TableCell>{item.area}</TableCell>
-                    <TableCell><StatusBadge status={item.status} /></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end items-center">
-                          <Button asChild variant="outline" size="icon">
-                            <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
-                          </Button>
-                          <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-lg">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(item.id)}>Hapus</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                      </div>
+        <div className="hidden sm:block">
+          <div className="rounded-lg border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Waktu</TableHead>
+                  <TableHead>Petugas</TableHead>
+                  <TableHead>Area</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-28" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-[124px] ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredSchedule.length > 0 ? (
+                  filteredSchedule.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</TableCell>
+                      <TableCell>{item.time}</TableCell>
+                      <TableCell>{item.officer}</TableCell>
+                      <TableCell>{item.area}</TableCell>
+                      <TableCell><StatusBadge status={item.status} /></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end items-center">
+                            <Button asChild variant="outline" size="icon">
+                              <Link href={`/admin/schedule/${item.id}`}><QrCode className="h-4 w-4" /></Link>
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => handleDialogOpen(item)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-lg">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                  <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(item.id)}>Hapus</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center h-24">
+                      Belum ada jadwal untuk hari yang dipilih.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">
-                    Belum ada jadwal untuk hari yang dipilih.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

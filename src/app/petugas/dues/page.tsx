@@ -231,46 +231,48 @@ export default function DuesPetugasPage() {
 
 
         <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama Warga</TableHead>
-                <TableHead>Status Pembayaran</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                  </TableRow>
-                ))
-              ) : paginatedUsers.length > 0 ? (
-                paginatedUsers.map((user) => (
-                  <TableRow key={user.uid}>
-                    <TableCell>
-                        <Link href={`/petugas/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
-                            {user.displayName}
-                        </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.paymentStatus === 'Lunas' ? 'secondary' : 'destructive'}
-                        className={cn(user.paymentStatus === 'Lunas' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 border-green-200 dark:border-green-800')}>
-                        {user.paymentStatus}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center h-24">
-                    Data warga tidak ditemukan.
-                  </TableCell>
+                  <TableHead>Nama Warga</TableHead>
+                  <TableHead>Status Pembayaran</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedUsers.length > 0 ? (
+                  paginatedUsers.map((user) => (
+                    <TableRow key={user.uid}>
+                      <TableCell>
+                          <Link href={`/petugas/dues/${user.uid}`} className="font-medium text-primary hover:underline text-left">
+                              {user.displayName}
+                          </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.paymentStatus === 'Lunas' ? 'secondary' : 'destructive'}
+                          className={cn(user.paymentStatus === 'Lunas' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 border-green-200 dark:border-green-800')}>
+                          {user.paymentStatus}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center h-24">
+                      Data warga tidak ditemukan.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
        <CardFooter>

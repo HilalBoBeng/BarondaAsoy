@@ -303,69 +303,71 @@ export default function NotificationsAdminPage() {
         </div>
       </CardHeader>
       <CardContent>
-          <div className="rounded-lg border overflow-x-auto">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Tanggal</TableHead>
-                        <TableHead>Penerima</TableHead>
-                        <TableHead>Judul</TableHead>
-                        <TableHead className="w-[100px]">Pesan</TableHead>
-                        <TableHead className="text-right w-[50px]">Aksi</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-10" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-8 w-10 ml-auto" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : notifications.length > 0 ? (
-                    notifications.map((notif) => (
-                      <TableRow key={notif.id}>
-                        <TableCell>{notif.createdAt instanceof Date ? format(notif.createdAt, "PPP, HH:mm", { locale: id }) : 'N/A'}</TableCell>
-                        <TableCell>
-                            <span className="font-medium">{notif.recipientName || notif.userId}</span>
-                        </TableCell>
-                        <TableCell className="font-medium">{notif.title}</TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="icon" onClick={() => { setSelectedMessage(notif.message); setIsViewMessageOpen(true);}}>
-                            <Eye className="h-4 w-4"/>
-                          </Button>
-                        </TableCell>
-                        <TableCell className="text-right">
-                           <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Hapus Pemberitahuan?</AlertDialogTitle>
-                                        <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDelete(notif.id)}>Hapus</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24">
-                        Belum ada pemberitahuan yang dikirim.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-            </Table>
+          <div className="rounded-lg border">
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Tanggal</TableHead>
+                            <TableHead>Penerima</TableHead>
+                            <TableHead>Judul</TableHead>
+                            <TableHead className="w-[100px]">Pesan</TableHead>
+                            <TableHead className="text-right w-[50px]">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                            <TableCell><Skeleton className="h-8 w-10" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-8 w-10 ml-auto" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                          <TableRow key={notif.id}>
+                            <TableCell>{notif.createdAt instanceof Date ? format(notif.createdAt, "PPP, HH:mm", { locale: id }) : 'N/A'}</TableCell>
+                            <TableCell>
+                                <span className="font-medium">{notif.recipientName || notif.userId}</span>
+                            </TableCell>
+                            <TableCell className="font-medium">{notif.title}</TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="icon" onClick={() => { setSelectedMessage(notif.message); setIsViewMessageOpen(true);}}>
+                                <Eye className="h-4 w-4"/>
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Hapus Pemberitahuan?</AlertDialogTitle>
+                                            <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(notif.id)}>Hapus</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center h-24">
+                            Belum ada pemberitahuan yang dikirim.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                </Table>
+            </div>
           </div>
       </CardContent>
        <CardFooter>
