@@ -25,6 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const profileEditSchema = z.object({
@@ -237,7 +238,47 @@ export default function AdminProfilePage() {
     };
 
     if (!adminInfo) {
-        return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin h-8 w-8" /></div>;
+        return (
+            <div className="space-y-6">
+                <Card className="overflow-hidden">
+                    <CardHeader className="bg-muted p-6">
+                         <div className="flex items-center gap-4">
+                            <Skeleton className="h-20 w-20 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-7 w-48" />
+                                <Skeleton className="h-4 w-64" />
+                                <Skeleton className="h-5 w-24" />
+                            </div>
+                         </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                         <div className="divide-y">
+                            {Array.from({length: 2}).map((_, i) => (
+                                 <div key={i} className="flex items-start justify-between gap-4 p-4">
+                                     <div className="flex-1 space-y-2">
+                                         <Skeleton className="h-3 w-20" />
+                                         <Skeleton className="h-5 w-40" />
+                                     </div>
+                                     <Skeleton className="h-8 w-8" />
+                                 </div>
+                            ))}
+                         </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                        <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                        <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                        <Skeleton className="h-10 w-36" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
     
     const fieldLabels: Record<FieldName, string> = {

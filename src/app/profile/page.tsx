@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const profileSchema = z.object({
@@ -266,16 +267,74 @@ export default function ProfilePage() {
 
   if (loading || isLoggingOut) {
      return (
-        <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
-            <Image 
-                src="https://iili.io/KJ4aGxp.png" 
-                alt="Loading Logo" 
-                width={120} 
-                height={120} 
-                className="animate-logo-pulse"
-                priority
-            />
-            {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
+        <div className="flex min-h-screen flex-col bg-muted/40">
+           <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-10 w-40" />
+           </header>
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+                <div className="container mx-auto max-w-4xl space-y-8">
+                     <Card className="overflow-hidden">
+                        <CardHeader className="bg-muted p-6">
+                             <div className="flex items-center gap-4">
+                                <Skeleton className="h-20 w-20 rounded-full" />
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-7 w-48" />
+                                    <Skeleton className="h-4 w-64" />
+                                    <Skeleton className="h-5 w-24" />
+                                </div>
+                             </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                             <div className="divide-y">
+                                {Array.from({length: 2}).map((_, i) => (
+                                     <div key={i} className="flex items-start justify-between gap-4 p-4">
+                                         <div className="flex items-center gap-4 flex-1">
+                                            <Skeleton className="h-5 w-5 rounded-full" />
+                                            <div className="flex-1 space-y-2">
+                                                <Skeleton className="h-3 w-20" />
+                                                <Skeleton className="h-5 w-40" />
+                                            </div>
+                                         </div>
+                                         <Skeleton className="h-8 w-8" />
+                                     </div>
+                                ))}
+                             </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                           <Skeleton className="h-6 w-48" />
+                           <Skeleton className="h-4 w-64" />
+                        </CardHeader>
+                        <CardContent>
+                           <div className="rounded-lg border">
+                              <Table>
+                                  <TableHeader>
+                                      <TableRow>
+                                        <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                        <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                        <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                      </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                      <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                                  </TableBody>
+                              </Table>
+                           </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-6 w-48" />
+                           <Skeleton className="h-4 w-64" />
+                        </CardHeader>
+                        <CardContent>
+                           <Skeleton className="h-40 w-full" />
+                        </CardContent>
+                    </Card>
+                </div>
+            </main>
         </div>
     );
   }
