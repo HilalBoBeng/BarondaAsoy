@@ -94,7 +94,7 @@ const emailTemplates = {
     subject: 'Kode Konfirmasi Pembuatan Admin Baronda',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
-        <div style="background-color: #FF7426; color: white; padding: 20px; text-align: center;">
+        <div style="background-color: #6f42c1; color: white; padding: 20px; text-align: center;">
           <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
           <h1 style="margin: 0; font-size: 24px;">Konfirmasi Pembuatan Admin</h1>
         </div>
@@ -171,3 +171,5 @@ const sendOtpFlow = ai.defineFlow(
     }
   }
 );
+
+    

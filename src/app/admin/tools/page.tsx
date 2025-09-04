@@ -120,6 +120,8 @@ export default function ToolsAdminPage() {
   const [otpStep, setOtpStep] = useState(false);
   const [newAdminData, setNewAdminData] = useState<AddAdminFormValues | null>(null);
   
+  const [cooldown, setCooldown] = useState(0);
+  const [resendAttempts, setResendAttempts] = useState(0);
 
   const { toast } = useToast();
 
@@ -134,6 +136,49 @@ export default function ToolsAdminPage() {
   });
   const otpForm = useForm<OtpFormValues>({ resolver: zodResolver(otpSchema), defaultValues: { otp: '' } });
   const addressType = addAdminForm.watch('addressType');
+
+  const getCooldownKey = (email: string) => `adminCreationCooldown_${email}`;
+
+  const getCooldownData = useCallback(() => {
+    if (typeof window === 'undefined' || !newAdminData?.email) return null;
+    const data = localStorage.getItem(getCooldownKey(newAdminData.email));
+    if (!data) return null;
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      return null;
+    }
+  }, [newAdminData?.email]);
+
+  useEffect(() => {
+    const savedCooldown = getCooldownData();
+    if (savedCooldown) {
+      const now = new Date().getTime();
+      const remaining = Math.ceil((savedCooldown.expiry - now) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+        setResendAttempts(savedCooldown.attempts);
+      } else {
+        if (newAdminData?.email) localStorage.removeItem(getCooldownKey(newAdminData.email));
+      }
+    }
+  }, [newAdminData, getCooldownData]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => {
+            if(prev - 1 <= 0) {
+                if (newAdminData?.email) localStorage.removeItem(getCooldownKey(newAdminData.email));
+                return 0;
+            }
+            return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown, newAdminData]);
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -251,6 +296,30 @@ export default function ToolsAdminPage() {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (!newAdminData?.email) return;
+    try {
+      const otpResult = await sendOtp({ email: newAdminData.email, context: 'adminCreation' });
+      if (!otpResult.success) throw new Error(otpResult.message);
+      
+      toast({ title: "Berhasil", description: "Kode OTP baru telah dikirim." });
+      
+      const newAttempts = resendAttempts + 1;
+      setResendAttempts(newAttempts);
+
+      let newCooldown = 60; // 1 minute
+      if (newAttempts === 2) newCooldown = 180; // 3 minutes
+      else if (newAttempts > 2) newCooldown = 300; // 5 minutes
+
+      setCooldown(newCooldown);
+      const expiry = new Date().getTime() + newCooldown * 1000;
+      localStorage.setItem(getCooldownKey(newAdminData.email), JSON.stringify({ expiry, attempts: newAttempts }));
+
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal Mengirim Ulang', description: error instanceof Error ? error.message : "Terjadi kesalahan." });
+    }
+  }
+
   const handleOtpSubmit = async (values: OtpFormValues) => {
       if (!newAdminData) return;
       setIsSubmitting(true);
@@ -273,6 +342,7 @@ export default function ToolsAdminPage() {
           setOtpStep(false);
           addAdminForm.reset();
           otpForm.reset();
+          if (newAdminData.email) localStorage.removeItem(getCooldownKey(newAdminData.email));
 
       } catch (error) {
           toast({ variant: "destructive", title: "Gagal", description: `Proses pembuatan admin gagal. ${error instanceof Error ? error.message : ''}`});
@@ -620,7 +690,7 @@ export default function ToolsAdminPage() {
                                                  </Button>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="max-w-xs break-normal whitespace-nowrap">
+                                        <TableCell className="max-w-xs whitespace-nowrap">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-mono text-xs truncate">
                                                     {revealedUrlId === link.id ? link.longUrl : '*****'}
@@ -741,7 +811,7 @@ export default function ToolsAdminPage() {
             ) : (
                  <Form {...otpForm}>
                     <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)}>
-                        <DialogBody className="flex flex-col items-center justify-center">
+                        <DialogBody className="flex flex-col items-center justify-center space-y-4">
                             <FormField
                                 control={otpForm.control}
                                 name="otp"
@@ -764,6 +834,15 @@ export default function ToolsAdminPage() {
                                 </FormItem>
                                 )}
                             />
+                            <Button 
+                                type="button" 
+                                variant="link" 
+                                className="p-0 h-auto text-primary hover:text-primary/80 text-xs"
+                                onClick={handleResendOtp}
+                                disabled={cooldown > 0}
+                            >
+                                {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Tidak menerima kode? Kirim ulang."}
+                            </Button>
                         </DialogBody>
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setOtpStep(false)}>Kembali</Button>
@@ -813,5 +892,7 @@ export default function ToolsAdminPage() {
     </>
   );
 }
+
+    
 
     
