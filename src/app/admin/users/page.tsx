@@ -452,7 +452,7 @@ export default function UsersAdminPage() {
                             ))
                          ) : (
                              <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">Tidak ada pendaftaran staf yang tertunda.</TableCell>
+                                <TableCell colSpan={3} className="text-center h-24">Tidak ada pendaftaran staf yang tertunda.</TableCell>
                             </TableRow>
                          )}
                     </TableBody>
