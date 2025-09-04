@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, use } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check, QrCode } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Calendar as CalendarIcon, MapPin, User, Clock, Check, QrCode, CheckCircle, AlertCircle } from 'lucide-react';
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -101,6 +101,8 @@ export default function ScheduleAdminPage() {
         id: doc.id,
         ...doc.data(),
         date: doc.data().date?.toDate(),
+        patrolStartTime: doc.data().patrolStartTime ? doc.data().patrolStartTime.toDate() : undefined,
+        patrolEndTime: doc.data().patrolEndTime ? doc.data().patrolEndTime.toDate() : undefined,
       })) as ScheduleEntry[];
 
        // Auto-update overdue schedules
@@ -243,6 +245,28 @@ export default function ScheduleAdminPage() {
     
     field.onChange(formattedVal);
   };
+  
+  const calculatePunctuality = (schedule: ScheduleEntry) => {
+    if (!schedule.patrolStartTime || !schedule.time) return null;
+
+    const [startTimeStr] = schedule.time.split(' - ');
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+
+    const scheduleDate = schedule.date as Date;
+    const expectedStartTime = new Date(scheduleDate);
+    expectedStartTime.setHours(startHour, startMinute, 0, 0);
+
+    const actualStartTime = schedule.patrolStartTime as Date;
+    const diffMinutes = Math.round((actualStartTime.getTime() - expectedStartTime.getTime()) / 60000);
+
+    if (diffMinutes === 0) {
+      return { text: 'Tepat Waktu', color: 'text-green-600' };
+    } else if (diffMinutes < 0) {
+      return { text: `Lebih Cepat ${-diffMinutes} mnt`, color: 'text-green-600' };
+    } else {
+      return { text: `Terlambat ${diffMinutes} mnt`, color: 'text-red-600' };
+    }
+  };
 
 
   return (
@@ -278,9 +302,12 @@ export default function ScheduleAdminPage() {
          {/* Mobile View */}
         <div className="sm:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
            {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)
+            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)
           ) : filteredSchedule.length > 0 ? (
-            filteredSchedule.map((item) => (
+            filteredSchedule.map((item) => {
+              const punctuality = calculatePunctuality(item);
+              const Icon = punctuality && (punctuality.text.includes('Cepat') || punctuality.text.includes('Tepat')) ? CheckCircle : AlertCircle;
+              return (
               <Card key={item.id} className="flex flex-col">
                 <CardHeader className="flex-grow">
                   <div className="flex justify-between items-start">
@@ -292,6 +319,12 @@ export default function ScheduleAdminPage() {
                    <p className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> {item.officer}</p>
                    <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" /> {item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</p>
                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> {item.time}</p>
+                   {punctuality && (
+                     <div className={cn("flex items-center gap-1 text-xs", punctuality.color)}>
+                        <Icon className="h-3 w-3"/>
+                        <span>{punctuality.text}</span>
+                     </div>
+                   )}
                 </CardContent>
                 <CardFooter>
                   <div className="flex gap-2 justify-end items-center w-full">
@@ -319,7 +352,7 @@ export default function ScheduleAdminPage() {
                   </div>
                 </CardFooter>
               </Card>
-            ))
+            )})
            ) : (
             <div className="text-center py-12 text-muted-foreground col-span-full">Belum ada jadwal untuk hari yang dipilih.</div>
           )}
@@ -332,10 +365,11 @@ export default function ScheduleAdminPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tanggal</TableHead>
-                  <TableHead>Waktu</TableHead>
                   <TableHead>Petugas</TableHead>
                   <TableHead>Area</TableHead>
+                  <TableHead>Waktu</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Ketepatan Waktu</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -344,21 +378,33 @@ export default function ScheduleAdminPage() {
                   Array.from({ length: 4 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-10 w-[124px] ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : filteredSchedule.length > 0 ? (
-                  filteredSchedule.map((item) => (
+                  filteredSchedule.map((item) => {
+                    const punctuality = calculatePunctuality(item);
+                    const Icon = punctuality && (punctuality.text.includes('Cepat') || punctuality.text.includes('Tepat')) ? CheckCircle : AlertCircle;
+                    return (
                     <TableRow key={item.id}>
                       <TableCell>{item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</TableCell>
-                      <TableCell>{item.time}</TableCell>
                       <TableCell>{item.officer}</TableCell>
                       <TableCell>{item.area}</TableCell>
+                      <TableCell>{item.time}</TableCell>
                       <TableCell><StatusBadge status={item.status} /></TableCell>
+                      <TableCell>
+                          {punctuality ? (
+                            <div className={cn("flex items-center gap-1 text-xs", punctuality.color)}>
+                                <Icon className="h-3 w-3"/>
+                                <span>{punctuality.text}</span>
+                            </div>
+                          ) : '-'}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end items-center">
                             <Button asChild variant="outline" size="icon">
@@ -385,10 +431,10 @@ export default function ScheduleAdminPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={7} className="text-center h-24">
                       Belum ada jadwal untuk hari yang dipilih.
                     </TableCell>
                   </TableRow>

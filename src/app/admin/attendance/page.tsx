@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { FileDown } from 'lucide-react';
+import { FileDown, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import type { ScheduleEntry, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -60,6 +60,8 @@ export default function AttendancePage() {
             id: doc.id,
             ...doc.data(),
             date: (doc.data().date as Timestamp).toDate(),
+            patrolStartTime: doc.data().patrolStartTime ? (doc.data().patrolStartTime as Timestamp).toDate() : undefined,
+            patrolEndTime: doc.data().patrolEndTime ? (doc.data().patrolEndTime as Timestamp).toDate() : undefined,
         } as ScheduleEntry)));
         setLoading(false);
     });
@@ -69,6 +71,32 @@ export default function AttendancePage() {
         unsubSchedule();
     };
   }, []);
+
+  const calculatePunctuality = (schedule: ScheduleEntry) => {
+    if (!schedule.patrolStartTime || !schedule.time) return { start: null, end: null };
+
+    const [startTimeStr] = schedule.time.split(' - ');
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+
+    const scheduleDate = schedule.date as Date;
+    const expectedStartTime = new Date(scheduleDate);
+    expectedStartTime.setHours(startHour, startMinute, 0, 0);
+
+    const actualStartTime = schedule.patrolStartTime as Date;
+    const diffMinutes = Math.round((actualStartTime.getTime() - expectedStartTime.getTime()) / 60000);
+
+    let startStatus;
+    if (diffMinutes <= 0) {
+      startStatus = { text: `Lebih Cepat ${-diffMinutes} mnt`, color: 'text-green-600' };
+    } else {
+      startStatus = { text: `Terlambat ${diffMinutes} mnt`, color: 'text-red-600' };
+    }
+     if (diffMinutes === 0) {
+      startStatus = { text: 'Tepat Waktu', color: 'text-green-600' };
+    }
+
+    return { start: startStatus, end: null }; // End logic can be added later if needed
+  };
 
   const filteredSchedules = useMemo(() => {
     return schedules.filter(schedule => {
@@ -163,6 +191,22 @@ export default function AttendancePage() {
     };
   };
 
+  const renderPunctuality = (schedule: ScheduleEntry) => {
+    const punctuality = calculatePunctuality(schedule);
+    if (!punctuality.start) return <TableCell>-</TableCell>;
+
+    const Icon = punctuality.start.text.includes('Cepat') || punctuality.start.text.includes('Tepat') ? CheckCircle : AlertCircle;
+    
+    return (
+        <TableCell>
+            <div className={cn("flex items-center gap-1 text-xs", punctuality.start.color)}>
+                <Icon className="h-3 w-3" />
+                <span>{punctuality.start.text}</span>
+            </div>
+        </TableCell>
+    )
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -241,16 +285,15 @@ export default function AttendancePage() {
                 <TableRow>
                   <TableHead>Tanggal Patroli</TableHead>
                   <TableHead>Nama Petugas</TableHead>
-                  <TableHead>Area Tugas</TableHead>
-                  <TableHead>Jam Tugas</TableHead>
-                  <TableHead className="text-right">Status Kehadiran</TableHead>
+                  <TableHead>Ketepatan Waktu</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell colSpan={4}><Skeleton className="h-5 w-full" /></TableCell>
                     </TableRow>
                   ))
                 ) : filteredSchedules.length > 0 ? (
@@ -258,9 +301,8 @@ export default function AttendancePage() {
                     <TableRow key={schedule.id}>
                       <TableCell>{format(schedule.date as Date, "PPP", { locale: id })}</TableCell>
                       <TableCell>{schedule.officer}</TableCell>
-                      <TableCell>{schedule.area}</TableCell>
-                      <TableCell>{schedule.time}</TableCell>
-                      <TableCell className="text-right">
+                      {renderPunctuality(schedule)}
+                      <TableCell>
                         <Badge variant="secondary" className={cn(statusConfig[schedule.status]?.className)}>
                             {statusConfig[schedule.status]?.label || schedule.status}
                         </Badge>
@@ -269,7 +311,7 @@ export default function AttendancePage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={4} className="h-24 text-center">
                       Tidak ada data kehadiran untuk filter yang dipilih.
                     </TableCell>
                   </TableRow>
