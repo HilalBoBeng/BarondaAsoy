@@ -219,7 +219,7 @@ export default function AdminLayout({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <SheetHeader className="p-0 border-b">
+               <SheetHeader className="p-4 border-b">
                    <NavHeader />
                </SheetHeader>
               <div className="flex-1 overflow-auto py-2">

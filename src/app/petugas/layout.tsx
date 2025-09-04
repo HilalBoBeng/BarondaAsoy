@@ -17,6 +17,7 @@ import {
   Banknote,
   Lock,
   User as UserIcon,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -69,6 +70,7 @@ export default function PetugasLayout({
     { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
     { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
     { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
+    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
     { id: 'emergency-contacts', href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
   ];
 
@@ -270,7 +272,7 @@ export default function PetugasLayout({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-                <SheetHeader className="p-0 border-b">
+                <SheetHeader className="p-4 border-b">
                    <NavHeader />
                 </SheetHeader>
                 <div className="flex-1 overflow-auto py-2">
