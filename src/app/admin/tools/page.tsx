@@ -839,13 +839,13 @@ export default function ToolsAdminPage() {
                                 variant="link" 
                                 className="p-0 h-auto text-primary hover:text-primary/80 text-xs"
                                 onClick={handleResendOtp}
-                                disabled={cooldown > 0}
+                                disabled={cooldown > 0 || isSubmitting}
                             >
                                 {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Tidak menerima kode? Kirim ulang."}
                             </Button>
                         </DialogBody>
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setOtpStep(false)}>Kembali</Button>
+                            <Button type="button" variant="ghost" onClick={() => setOtpStep(false)} disabled={isSubmitting}>Kembali</Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Verifikasi & Buat Akun
@@ -892,7 +892,3 @@ export default function ToolsAdminPage() {
     </>
   );
 }
-
-    
-
-    
