@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +32,7 @@ const months = [
 ];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
+const HONOR_PER_PAGE = 12;
 
 const honorariumSchema = z.object({
   staffId: z.string().min(1, "Petugas harus dipilih."),
@@ -61,6 +62,7 @@ export default function HonorariumAdminPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentHonorPage, setCurrentHonorPage] = useState(1);
   const { toast } = useToast();
 
   const form = useForm<HonorariumFormValues>({
@@ -87,11 +89,9 @@ export default function HonorariumAdminPage() {
   }, [staff, honorariums, watchedMonth, watchedYear, currentHonorarium]);
   
   useEffect(() => {
-    // Simplified query to avoid composite index requirement
     const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'));
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
         const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
-        // Sort client-side
         staffData.sort((a, b) => a.name.localeCompare(b.name));
         setStaff(staffData);
     });
@@ -195,6 +195,7 @@ export default function HonorariumAdminPage() {
   
   const showDetail = (staffMember: Staff) => {
     setSelectedStaff(staffMember);
+    setCurrentHonorPage(1);
     setIsDetailOpen(true);
   }
   
@@ -204,6 +205,13 @@ export default function HonorariumAdminPage() {
         .filter(h => h.staffId === selectedStaff.id)
         .sort((a, b) => (b.issueDate as Date).getTime() - (a.issueDate as Date).getTime());
   }, [honorariums, selectedStaff]);
+
+  const paginatedStaffHonorHistory = useMemo(() => {
+    const startIndex = (currentHonorPage - 1) * HONOR_PER_PAGE;
+    return staffHonorHistory.slice(startIndex, startIndex + HONOR_PER_PAGE);
+  }, [staffHonorHistory, currentHonorPage]);
+
+  const totalHonorPages = Math.ceil(staffHonorHistory.length / HONOR_PER_PAGE);
 
   return (
     <>
@@ -379,6 +387,7 @@ export default function HonorariumAdminPage() {
         <DialogContent className="max-w-2xl">
             <DialogHeader>
                 <DialogTitle>Riwayat Honor: {selectedStaff?.name}</DialogTitle>
+                <DialogDescription>Daftar semua transaksi honorarium untuk petugas yang dipilih.</DialogDescription>
             </DialogHeader>
             <DialogBody>
                 <div className="rounded-lg border max-h-[60vh] overflow-auto">
@@ -392,7 +401,7 @@ export default function HonorariumAdminPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {staffHonorHistory.map(h => (
+                        {paginatedStaffHonorHistory.map(h => (
                             <TableRow key={h.id}>
                                 <TableCell>{h.period}</TableCell>
                                 <TableCell>{formatCurrency(h.amount)}</TableCell>
@@ -421,6 +430,27 @@ export default function HonorariumAdminPage() {
                 </Table>
                 </div>
             </DialogBody>
+             <DialogFooter>
+                <div className="flex items-center justify-end space-x-2 w-full">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentHonorPage(prev => prev - 1)}
+                        disabled={currentHonorPage === 1}
+                    >
+                        Sebelumnya
+                    </Button>
+                    <span className="text-sm text-muted-foreground">Halaman {currentHonorPage} dari {totalHonorPages}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentHonorPage(prev => prev + 1)}
+                        disabled={currentHonorPage === totalHonorPages}
+                    >
+                        Berikutnya
+                    </Button>
+                </div>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
     </>

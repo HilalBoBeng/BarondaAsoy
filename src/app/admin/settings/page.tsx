@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { isBefore, subDays, addDays, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 const adminProfileSchema = z.object({
   displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
