@@ -66,6 +66,9 @@ export default function PetugasProfilePage() {
     const form = useForm<ProfileEditFormValues>({ resolver: zodResolver(profileEditSchema) });
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
+    const { formState } = form;
+    const { formState: accessCodeFormState } = accessCodeForm;
+    
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
         if (!staffInfo) return false;
         const lastUpdateDate = lastUpdated[field];
@@ -345,7 +348,7 @@ export default function PetugasProfilePage() {
                                     {lastUpdated.accessCode && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.accessCode, 7), { addSuffix: true, locale: id })}.</p>}
                                 </FormItem>
                             )}
-                            <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode')}>
+                            <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode') || !accessCodeFormState.isValid}>
                                 {isAccessCodeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4"/>}
                                 Ganti Kode Akses
                             </Button>
@@ -404,7 +407,7 @@ export default function PetugasProfilePage() {
                                 <div></div>
                                 <div className="flex gap-2 justify-end">
                                     <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                                    <Button type="submit" disabled={isSubmitting}>
+                                    <Button type="submit" disabled={isSubmitting || !formState.isValid}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Simpan
                                     </Button>

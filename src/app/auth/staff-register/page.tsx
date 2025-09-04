@@ -43,7 +43,7 @@ const toTitleCase = (str: string) => {
 
 const staffRegisterSchema = z
   .object({
-    name: z.string().min(1, "Nama tidak boleh kosong.").max(25, 'Nama tidak boleh lebih dari 25 karakter.').regex(/^[a-zA-Z .,-]+$/, "Nama hanya boleh berisi huruf, spasi, dan simbol .,-"),
+    name: z.string().min(1, "Nama tidak boleh kosong.").max(35, 'Nama tidak boleh lebih dari 35 karakter.').regex(/^[a-zA-Z .,-]+$/, "Nama hanya boleh berisi huruf, spasi, dan simbol .,-"),
     email: z.string().email("Format email tidak valid."),
     phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
     addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
@@ -132,7 +132,7 @@ export default function StaffRegisterPage() {
                   <FormItem>
                     <FormLabel>Nama Lengkap</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nama Anda" {...field} maxLength={25} />
+                      <Input placeholder="Nama Anda" {...field} maxLength={35} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

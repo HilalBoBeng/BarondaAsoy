@@ -31,8 +31,6 @@ export default function AnnouncementsAdminPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const { toast } = useToast();
 
@@ -40,6 +38,8 @@ export default function AnnouncementsAdminPage() {
     resolver: zodResolver(announcementSchema),
     defaultValues: { title: '', content: '' },
   });
+
+  const { formState: { isSubmitting, isValid } } = form;
 
   useEffect(() => {
     const q = query(collection(db, 'announcements'), orderBy('date', 'desc'));
@@ -76,7 +76,6 @@ export default function AnnouncementsAdminPage() {
   };
 
   const onSubmit = async (values: AnnouncementFormValues) => {
-    setIsSubmitting(true);
     try {
       if (currentAnnouncement) {
         const docRef = doc(db, 'announcements', currentAnnouncement.id);
@@ -98,20 +97,15 @@ export default function AnnouncementsAdminPage() {
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan." });
       console.error(error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    setIsDeleting(id);
     try {
       await deleteDoc(doc(db, 'announcements', id));
       toast({ title: "Berhasil", description: "Pengumuman berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus pengumuman." });
-    } finally {
-      setIsDeleting(null);
     }
   };
   
@@ -132,14 +126,14 @@ export default function AnnouncementsAdminPage() {
 
   const renderActions = (ann: Announcement) => (
     <div className="flex gap-2 justify-end">
-      <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)} disabled={isSubmitting || !!isDeleting}>
+      <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)} disabled={isSubmitting}>
         <Edit className="h-4 w-4" />
         <span className="sr-only">Edit</span>
       </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="destructive" size="sm" disabled={isSubmitting || !!isDeleting}>
-            {isDeleting === ann.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
+          <Button variant="destructive" size="sm" disabled={isSubmitting}>
+             <Trash className="h-4 w-4" />
             <span className="sr-only">Hapus</span>
           </Button>
         </AlertDialogTrigger>
@@ -167,7 +161,7 @@ export default function AnnouncementsAdminPage() {
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-          <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
+          <Button onClick={() => handleDialogOpen()} disabled={isSubmitting}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Buat
           </Button>
@@ -321,7 +315,7 @@ export default function AnnouncementsAdminPage() {
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>
                     </DialogClose>
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button type="submit" disabled={isSubmitting || !isValid}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Simpan
                     </Button>

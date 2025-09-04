@@ -38,13 +38,14 @@ export default function UserDuesHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPayment, setCurrentPayment] = useState<DuesPayment | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
 
   const form = useForm<EditDuesFormValues>({
     resolver: zodResolver(editDuesSchema),
   });
+  
+  const { formState: { isSubmitting, isValid } } = form;
 
   useEffect(() => {
     if (!userId) {
@@ -114,7 +115,6 @@ export default function UserDuesHistoryPage() {
 
   const onEditSubmit = async (values: EditDuesFormValues) => {
       if (!currentPayment) return;
-      setIsSubmitting(true);
       try {
           const paymentRef = doc(db, 'dues', currentPayment.id);
           await updateDoc(paymentRef, { amount: values.amount });
@@ -123,8 +123,6 @@ export default function UserDuesHistoryPage() {
           setCurrentPayment(null);
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memperbarui jumlah iuran.' });
-      } finally {
-          setIsSubmitting(false);
       }
   }
 
@@ -251,7 +249,7 @@ export default function UserDuesHistoryPage() {
               </DialogBody>
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || !isValid}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Simpan Perubahan
                 </Button>
@@ -263,4 +261,3 @@ export default function UserDuesHistoryPage() {
     </>
   );
 }
-
