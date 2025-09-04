@@ -473,10 +473,10 @@ export default function ToolsAdminPage() {
                                     const fullShortUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/go/${link.slug}`;
                                     return (
                                     <TableRow key={link.id}>
-                                        <TableCell>{format(link.createdAt, 'd MMM yyyy', { locale: id })}</TableCell>
-                                        <TableCell>
+                                        <TableCell className="whitespace-nowrap">{format(link.createdAt, 'd MMM yyyy', { locale: id })}</TableCell>
+                                        <TableCell className="whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <a href={fullShortUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 break-all">
+                                                <a href={fullShortUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                                     {fullShortUrl}
                                                 </a>
                                                  <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => copyToClipboard(fullShortUrl)}>
@@ -484,9 +484,9 @@ export default function ToolsAdminPage() {
                                                  </Button>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="max-w-xs">
+                                        <TableCell className="max-w-xs whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <p className="font-mono text-xs break-all">
+                                                <p className="font-mono text-xs truncate">
                                                     {revealedUrlId === link.id ? link.longUrl : '*****'}
                                                 </p>
                                                 <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => setRevealedUrlId(revealedUrlId === link.id ? null : link.id)}>
