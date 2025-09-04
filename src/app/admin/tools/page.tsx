@@ -22,8 +22,8 @@ import { id } from 'date-fns/locale';
 import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogDescription, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from "@/components/ui/label";
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -99,30 +99,21 @@ export default function ToolsAdminPage() {
     
     const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
     const unsubMenuConfig = onSnapshot(menuConfigRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const savedConfig = docSnap.data().config;
-            const mergedConfig = initialMenuState.map(initialItem => {
-                const savedItem = savedConfig.find((d: MenuConfig) => d.id === initialItem.id);
-                if (savedItem) {
-                    return { ...initialItem, ...savedItem };
-                }
-                // Default for new, unsaved menu items
-                return { 
-                    ...initialItem, 
-                    visible: initialItem.id === 'dashboard', // Dashboard is always visible
-                    locked: initialItem.id === 'dashboard', // Dashboard is always locked (cannot be hidden/locked)
-                };
-            });
-            setMenuConfig(mergedConfig);
-        } else {
-            // First time setup
-            const defaultConfig = initialMenuState.map(item => ({
-                ...item,
-                visible: item.id === 'dashboard',
-                locked: item.id === 'dashboard',
-            }));
-            setMenuConfig(defaultConfig);
-            setDoc(menuConfigRef, { config: defaultConfig });
+        const savedConfig = docSnap.exists() ? docSnap.data().config : [];
+        const mergedConfig = initialMenuState.map(initialItem => {
+            const savedItem = savedConfig.find((d: MenuConfig) => d.id === initialItem.id);
+            if (savedItem) {
+                return { ...initialItem, ...savedItem };
+            }
+            return { 
+                ...initialItem, 
+                visible: initialItem.id === 'dashboard', 
+                locked: initialItem.id === 'dashboard', 
+            };
+        });
+        setMenuConfig(mergedConfig);
+        if (!docSnap.exists()) {
+            setDoc(menuConfigRef, { config: mergedConfig });
         }
         setLoadingMenuConfig(false);
     });
@@ -324,7 +315,17 @@ export default function ToolsAdminPage() {
                                           </div>
                                         </>
                                       ) : (
-                                          <Badge variant="outline">Selalu Aktif</Badge>
+                                          <div className="flex items-center gap-4">
+                                            <div className="flex items-center space-x-2">
+                                                <Switch id={`visible-${item.id}`} checked={true} disabled />
+                                                <Label htmlFor={`visible-${item.id}`} className="text-xs text-muted-foreground">Tampil</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
+                                                    <Unlock className="h-4 w-4 text-muted-foreground" />
+                                                </Button>
+                                            </div>
+                                          </div>
                                       )}
                                     </div>
                                 </div>

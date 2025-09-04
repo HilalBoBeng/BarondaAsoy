@@ -24,13 +24,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotPermittedPage from "@/app/not-permitted/page";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 
 interface MenuConfig {
@@ -310,6 +311,16 @@ export default function PetugasLayout({
            </div>
         </main>
       </div>
+       <Dialog open={!!suspensionInfo} onOpenChange={() => {}}>
+        <DialogContent>
+            <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
+             <DialogHeader>
+                <DialogTitle className="text-2xl text-destructive flex items-center gap-2">
+                    Akun Ditangguhkan
+                </DialogTitle>
+            </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

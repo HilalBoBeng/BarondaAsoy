@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { KeyRound, User, Phone, MapPin, Star, Lock } from "lucide-react";
+import { KeyRound, User, Phone, MapPin, Star, Lock, Pencil } from "lucide-react";
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Staff } from "@/lib/types";
@@ -16,11 +16,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { doc, onSnapshot, Timestamp } from "firebase/firestore";
+import { doc, onSnapshot, Timestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { isBefore, addDays, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const profileEditSchema = z.object({
+  displayName: z.string().min(1, "Nama tidak boleh kosong.").max(25, 'Nama tidak boleh lebih dari 25 karakter.'),
+});
 
 const accessCodeSchema = z.object({
   currentAccessCode: z.string().min(1, "Kode akses saat ini harus diisi."),
@@ -31,18 +36,22 @@ const accessCodeSchema = z.object({
     path: ["confirmNewAccessCode"],
 });
 
+type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
 type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
+type FieldName = 'name' | 'accessCode';
 
 export default function PetugasProfilePage() {
     const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<{ accessCode?: Date | null }>({});
+    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const router = useRouter();
     const { toast } = useToast();
 
+    const profileEditForm = useForm<ProfileEditFormValues>({ resolver: zodResolver(profileEditSchema) });
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
-    const canEditField = useCallback((field: 'accessCode') => {
+    const canEditField = useCallback((field: FieldName) => {
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
         const cooldownDays = 7;
@@ -69,6 +78,27 @@ export default function PetugasProfilePage() {
         }
     }, [router]);
     
+    const handleEditNameClick = () => {
+        if (!staffInfo) return;
+        profileEditForm.reset({ displayName: staffInfo.name });
+        setIsEditDialogOpen(true);
+    };
+
+    const onProfileEditSubmit = async (data: ProfileEditFormValues) => {
+        if (!staffInfo) return;
+        setIsSubmitting(true);
+        try {
+            const staffRef = doc(db, 'staff', staffInfo.id);
+            await updateDoc(staffRef, { name: data.displayName });
+            toast({ title: 'Berhasil', description: 'Nama berhasil diperbarui.' });
+            setIsEditDialogOpen(false);
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal memperbarui nama.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
         if (!staffInfo?.id) return;
         setIsSubmitting(true);
@@ -109,7 +139,10 @@ export default function PetugasProfilePage() {
                         <AvatarFallback className="text-2xl bg-primary text-primary-foreground">{staffInfo.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <h2 className="text-xl font-bold">{staffInfo.name}</h2>
+                        <div className="flex items-center gap-2">
+                           <h2 className="text-xl font-bold">{staffInfo.name}</h2>
+                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleEditNameClick}><Pencil className="h-4 w-4" /></Button>
+                        </div>
                         <p className="text-sm text-muted-foreground">{staffInfo.email}</p>
                         <Badge variant="secondary" className="mt-2">Petugas</Badge>
                     </div>
@@ -178,6 +211,37 @@ export default function PetugasProfilePage() {
                 </Card>
             </CardContent>
         </Card>
+        
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit Nama Lengkap</DialogTitle>
+                </DialogHeader>
+                <Form {...profileEditForm}>
+                    <form onSubmit={profileEditForm.handleSubmit(onProfileEditSubmit)} className="space-y-4">
+                       <FormField
+                            control={profileEditForm.control}
+                            name="displayName"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nama Lengkap</FormLabel>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Simpan
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
         </div>
     );
 }
