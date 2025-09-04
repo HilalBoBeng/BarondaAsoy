@@ -71,7 +71,7 @@ export default function RootLayout({
   
   if (maintenanceMode === null) {
       return (
-        <html lang="id" suppressHydrationWarning>
+        <html lang="id">
            <body className={`${ptSans.className} antialiased bg-background`}>
                 <LoadingSkeleton />
            </body>
@@ -80,7 +80,7 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id">
       <head>
           <title>Baronda - Siskamling Digital</title>
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
