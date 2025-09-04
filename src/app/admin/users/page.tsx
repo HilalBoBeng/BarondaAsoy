@@ -301,11 +301,13 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users">Warga</TabsTrigger>
-            <TabsTrigger value="staff">Staf & Admin</TabsTrigger>
+            <TabsTrigger value="staff">Staf</TabsTrigger>
+            <TabsTrigger value="admins">Admin</TabsTrigger>
             <TabsTrigger value="pending-staff">
-                Persetujuan Staf {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
+                Persetujuan 
+                {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
             </TabsTrigger>
           </TabsList>
           
@@ -365,7 +367,7 @@ export default function UsersAdminPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama</TableHead>
-                            <TableHead>Peran</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -378,8 +380,8 @@ export default function UsersAdminPage() {
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
-                         ) : [...filteredAdmins, ...filteredStaff].length > 0 ? (
-                            [...filteredAdmins, ...filteredStaff].map((s) => (
+                         ) : filteredStaff.length > 0 ? (
+                            filteredStaff.map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
                                     <TableCell>
@@ -397,6 +399,51 @@ export default function UsersAdminPage() {
                          ) : (
                              <TableRow>
                                 <TableCell colSpan={3} className="h-24 text-center">Belum ada staf aktif.</TableCell>
+                            </TableRow>
+                         )}
+                    </TableBody>
+                </Table>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="admins" className="mt-4">
+             <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nama</TableHead>
+                            <TableHead>Peran</TableHead>
+                            <TableHead className="text-right">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                         {loading ? (
+                             Array.from({ length: 1 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))
+                         ) : filteredAdmins.length > 0 ? (
+                            filteredAdmins.map((s) => (
+                                <TableRow key={s.id}>
+                                    <TableCell>{s.name}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={'secondary'} className={getStaffStatus(s).className}>
+                                          {getStaffStatus(s).text}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                       <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
+                                          <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                         ) : (
+                             <TableRow>
+                                <TableCell colSpan={3} className="h-24 text-center">Belum ada admin.</TableCell>
                             </TableRow>
                          )}
                     </TableBody>
