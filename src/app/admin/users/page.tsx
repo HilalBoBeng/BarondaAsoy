@@ -596,7 +596,7 @@ export default function UsersAdminPage() {
                     </DialogBody>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsActionDialogOpen(false)}>Batal</Button>
-                        <Button type="submit" variant={'destructive'} disabled={isSubmitting}>
+                        <Button type="submit" variant={'destructive'} disabled={isSubmitting || !actionReasonForm.formState.isValid}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {actionType === 'block' ? 'Blokir Pengguna' :
                               actionType === 'suspend' ? 'Tangguhkan' :

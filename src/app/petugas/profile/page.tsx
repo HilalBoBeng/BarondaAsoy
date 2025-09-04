@@ -56,10 +56,11 @@ export default function PetugasProfilePage() {
     const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAccessCodeSubmitting, setIsAccessCodeSubmitting] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName | 'accessCode']?: Date | null }>({});
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+    const [zoomedImageUrl, setZoomedImageUrl] = useState('');
     const router = useRouter();
     const { toast } = useToast();
 
@@ -71,14 +72,23 @@ export default function PetugasProfilePage() {
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
         if (!staffInfo) return false;
-        const lastUpdateDate = lastUpdated[field];
-        if (!lastUpdateDate) return true;
         
-        // No cooldown for photoURL
-        if (field === 'photoURL') return true;
+        let lastUpdateTimestamp: Timestamp | undefined | null = null;
+        if (field === 'accessCode') {
+            lastUpdateTimestamp = staffInfo.lastCodeChangeTimestamp;
+        } else if (field === 'phone') {
+            lastUpdateTimestamp = staffInfo.lastUpdated_phone;
+        } else if (field === 'addressDetail') {
+            lastUpdateTimestamp = staffInfo.lastUpdated_addressDetail;
+        } else if (field === 'photoURL') {
+            lastUpdateTimestamp = staffInfo.lastUpdated_photoURL;
+        }
 
-        return isBefore(lastUpdateDate, subDays(new Date(), 7));
-    }, [lastUpdated, staffInfo]);
+        if (!lastUpdateTimestamp) return true;
+        const lastUpdateDate = lastUpdateTimestamp.toDate();
+        const cooldownDays = field === 'photoURL' ? 1 : 7;
+        return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
+    }, [staffInfo]);
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -87,9 +97,6 @@ export default function PetugasProfilePage() {
                 if (docSnap.exists()) {
                     const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                     setStaffInfo(staffData);
-                    const newLastUpdated: { [key in FieldName | 'accessCode']?: Date | null } = {};
-                    if(staffData.lastCodeChangeTimestamp) newLastUpdated.accessCode = (staffData.lastCodeChangeTimestamp as Timestamp).toDate();
-                    setLastUpdated(newLastUpdated);
                 } else {
                      router.push('/auth/staff-login');
                 }
@@ -103,7 +110,7 @@ export default function PetugasProfilePage() {
     const handleEditClick = (field: FieldName) => {
         if (field === 'displayName') return;
         if (!staffInfo || !canEditField(field)) {
-             toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.` });
+             toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi nanti.` });
              return;
         }
 
@@ -151,15 +158,16 @@ export default function PetugasProfilePage() {
             const valueToUpdate = data[editingField];
             
             const updateData: { [key: string]: any } = {};
-            updateData[editingField === 'displayName' ? 'name' : editingField] = valueToUpdate;
+            const fieldKey = editingField === 'displayName' ? 'name' : editingField;
+            updateData[fieldKey] = valueToUpdate;
+            updateData[`lastUpdated_${fieldKey}`] = serverTimestamp();
             
             await updateDoc(staffRef, updateData);
             
             toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
             
-            const updatedStaffInfo = { ...staffInfo, [editingField === 'displayName' ? 'name' : editingField]: valueToUpdate };
+            const updatedStaffInfo = { ...staffInfo, [fieldKey]: valueToUpdate };
             setStaffInfo(updatedStaffInfo);
-            setLastUpdated(prev => ({ ...prev, [editingField!]: new Date() }));
             localStorage.setItem('staffInfo', JSON.stringify(updatedStaffInfo));
 
             setIsEditDialogOpen(false);
@@ -186,7 +194,6 @@ export default function PetugasProfilePage() {
             if (result.success) {
                 toast({ title: 'Berhasil', description: result.message });
                 accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
-                setLastUpdated(prev => ({...prev, accessCode: new Date() }));
             } else {
                 throw new Error(result.message);
             }
@@ -194,6 +201,13 @@ export default function PetugasProfilePage() {
             toast({ variant: 'destructive', title: 'Gagal', description: error instanceof Error ? error.message : "Gagal mengubah kode akses." });
         } finally {
             setIsAccessCodeSubmitting(false);
+        }
+    };
+
+    const handleImageZoom = (url?: string | null) => {
+        if (url) {
+            setZoomedImageUrl(url);
+            setIsZoomModalOpen(true);
         }
     };
 
@@ -276,12 +290,14 @@ export default function PetugasProfilePage() {
                 <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                      <div className="flex items-center gap-4">
                         <div className="relative">
-                            <Avatar className="h-20 w-20 border-4 border-background/50">
-                                <AvatarImage src={staffInfo.photoURL || undefined} />
-                                <AvatarFallback className="text-3xl bg-background text-primary">
-                                    {staffInfo.name?.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
+                            <button onClick={() => handleImageZoom(staffInfo.photoURL)}>
+                                <Avatar className="h-20 w-20 border-4 border-background/50">
+                                    <AvatarImage src={staffInfo.photoURL || undefined} />
+                                    <AvatarFallback className="text-3xl bg-background text-primary">
+                                        {staffInfo.name?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </button>
                              <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
                                 <Camera className="h-4 w-4"/>
                             </Button>
@@ -345,7 +361,7 @@ export default function PetugasProfilePage() {
                                 <FormItem>
                                     <FormLabel>Kode Akses</FormLabel>
                                     <FormControl><Input readOnly value="••••••••" className="bg-muted" /></FormControl>
-                                    {lastUpdated.accessCode && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.accessCode, 7), { addSuffix: true, locale: id })}.</p>}
+                                    {staffInfo.lastCodeChangeTimestamp && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(staffInfo.lastCodeChangeTimestamp.toDate(), 7), { addSuffix: true, locale: id })}.</p>}
                                 </FormItem>
                             )}
                             <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode') || !accessCodeFormState.isValid}>
@@ -415,6 +431,13 @@ export default function PetugasProfilePage() {
                             </DialogFooter>
                         </form>
                     </Form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
+                    <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
+                    <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
                 </DialogContent>
             </Dialog>
         </div>

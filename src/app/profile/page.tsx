@@ -54,6 +54,9 @@ export default function ProfilePage() {
   const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+  const [zoomedImageUrl, setZoomedImageUrl] = useState('');
+
   const { toast } = useToast();
   const auth = getAuth(app);
   const router = useRouter();
@@ -67,12 +70,21 @@ export default function ProfilePage() {
   }
 
   const canEditField = useCallback((field: FieldName) => {
+    if (!user) return false;
     // Always allow photo change
     if (field === 'photoURL') return true;
-    const lastUpdateDate = lastUpdated[field];
-    if (!lastUpdateDate) return true;
+    
+    let lastUpdateTimestamp: Timestamp | undefined | null = null;
+    if (field === 'phone') {
+        lastUpdateTimestamp = user.lastUpdated_phone;
+    } else if (field === 'addressDetail') {
+        lastUpdateTimestamp = user.lastUpdated_addressDetail;
+    }
+
+    if (!lastUpdateTimestamp) return true;
+    const lastUpdateDate = lastUpdateTimestamp.toDate();
     return isBefore(lastUpdateDate, subDays(new Date(), 7));
-  }, [lastUpdated]);
+  }, [user]);
 
 
   useEffect(() => {
@@ -139,14 +151,6 @@ export default function ProfilePage() {
                 addressDetail: userData.addressDetail || '',
                 photoURL: userData.photoURL || '',
             });
-
-            const lastUpdatedDates: { [key in FieldName]?: Date | null } = {};
-            if (userData.lastUpdated_displayName) lastUpdatedDates.displayName = (userData.lastUpdated_displayName as Timestamp).toDate();
-            if (userData.lastUpdated_phone) lastUpdatedDates.phone = (userData.lastUpdated_phone as Timestamp).toDate();
-            if (userData.lastUpdated_addressDetail) lastUpdatedDates.addressDetail = (userData.lastUpdated_addressDetail as Timestamp).toDate();
-            if (userData.lastUpdated_photoURL) lastUpdatedDates.photoURL = (userData.lastUpdated_photoURL as Timestamp).toDate();
-            setLastUpdated(lastUpdatedDates);
-
 
             const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
             const duesSnapshot = await getDocs(duesQuery);
@@ -231,10 +235,8 @@ export default function ProfilePage() {
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           
-          const newLastUpdatedDate = new Date();
-          const updatedUser = { ...user, [editingField]: valueToUpdate };
-          setUser(updatedUser as AppUser);
-          setLastUpdated(prev => ({ ...prev, [editingField!]: newLastUpdatedDate }));
+          const updatedUser = { ...user, [editingField]: valueToUpdate, [`lastUpdated_${editingField}`]: Timestamp.now() } as AppUser;
+          setUser(updatedUser);
 
           setIsEditDialogOpen(false);
           setEditingField(null);
@@ -264,6 +266,14 @@ export default function ProfilePage() {
             setIsSubmitting(false);
         }
     };
+
+  const handleImageZoom = (url?: string | null) => {
+    if (url) {
+        setZoomedImageUrl(url);
+        setIsZoomModalOpen(true);
+    }
+  };
+
 
   if (loading || isLoggingOut) {
      return (
@@ -357,7 +367,9 @@ export default function ProfilePage() {
   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
     const Icon = fieldIcons[field];
     const canEdit = canEditField(field);
-    const lastUpdateDate = lastUpdated[field];
+    let lastUpdateDate: Date | null = null;
+    if (field === 'phone' && user?.lastUpdated_phone) lastUpdateDate = user.lastUpdated_phone.toDate();
+    if (field === 'addressDetail' && user?.lastUpdated_addressDetail) lastUpdateDate = user.lastUpdated_addressDetail.toDate();
     const isNameField = field === 'displayName';
 
     return (
@@ -415,12 +427,14 @@ export default function ProfilePage() {
                     <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                         <div className="flex items-center gap-4">
                              <div className="relative">
-                                <Avatar className="h-20 w-20 border-4 border-background/50">
-                                    <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
-                                    <AvatarFallback className="text-3xl bg-background text-primary">
-                                        {user?.displayName?.charAt(0).toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
+                                <button onClick={() => handleImageZoom(user?.photoURL)}>
+                                    <Avatar className="h-20 w-20 border-4 border-background/50">
+                                        <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
+                                        <AvatarFallback className="text-3xl bg-background text-primary">
+                                            {user?.displayName?.charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </button>
                                 <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
                                    <Camera className="h-4 w-4"/>
                                 </Button>
@@ -563,7 +577,7 @@ export default function ProfilePage() {
                            ) : <div></div>}
                            <div className="flex gap-2 justify-end">
                                 <Button type="button" variant="secondary" onClick={() => {setIsEditDialogOpen(false); setEditingField(null)}}>Batal</Button>
-                                <Button type="submit" disabled={isSubmitting}>
+                                <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Simpan
                                 </Button>
@@ -571,6 +585,12 @@ export default function ProfilePage() {
                         </DialogFooter>
                     </form>
                 </Form>
+            </DialogContent>
+        </Dialog>
+        <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+            <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
+                <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
+                <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
             </DialogContent>
         </Dialog>
 

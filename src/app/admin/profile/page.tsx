@@ -73,16 +73,17 @@ export default function AdminProfilePage() {
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
         if (!adminInfo || adminInfo.id === 'admin_utama') return false;
         
-        let lastUpdateDate: Date | null = null;
-        if (field === 'accessCode' && adminInfo.lastCodeChangeTimestamp) {
-            lastUpdateDate = (adminInfo.lastCodeChangeTimestamp as Timestamp).toDate();
-        } else if (field === 'phone' && adminInfo.lastUpdated_phone) {
-            lastUpdateDate = (adminInfo.lastUpdated_phone as Timestamp).toDate();
-        } else if (field === 'addressDetail' && adminInfo.lastUpdated_addressDetail) {
-            lastUpdateDate = (adminInfo.lastUpdated_addressDetail as Timestamp).toDate();
+        let lastUpdateTimestamp: Timestamp | undefined | null = null;
+        if (field === 'accessCode') {
+            lastUpdateTimestamp = adminInfo.lastCodeChangeTimestamp;
+        } else if (field === 'phone') {
+            lastUpdateTimestamp = adminInfo.lastUpdated_phone;
+        } else if (field === 'addressDetail') {
+            lastUpdateTimestamp = adminInfo.lastUpdated_addressDetail;
         }
 
-        if (!lastUpdateDate) return true;
+        if (!lastUpdateTimestamp) return true;
+        const lastUpdateDate = lastUpdateTimestamp.toDate();
         const cooldownDays = field === 'photoURL' ? 1 : 7;
         return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
     }, [adminInfo]);
@@ -334,7 +335,12 @@ export default function AdminProfilePage() {
                                 </Button>
                             </div>
                             <CardDescription className="text-primary-foreground/80 truncate">{adminInfo.email}</CardDescription>
-                            <Badge variant="secondary" className="mt-2">Administrator</Badge>
+                            <Badge variant="secondary" className={cn(
+                                "mt-2 w-fit", 
+                                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-primary/80 text-primary-foreground hover:bg-primary/90"
+                                )}>
+                              {adminInfo.role === 'super_admin' ? 'Super Admin' : 'Administrator'}
+                            </Badge>
                         </div>
                     </div>
                 </CardHeader>
@@ -383,7 +389,7 @@ export default function AdminProfilePage() {
                                 </FormItem>
                             )}
 
-                            <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode')}>
+                            <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode') || !accessCodeForm.formState.isValid}>
                                 {isAccessCodeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4"/>}
                                 Ganti Kode Akses
                             </Button>
