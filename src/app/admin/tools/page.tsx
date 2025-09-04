@@ -25,6 +25,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from '@/components/ui/badge';
 import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
 import { Textarea } from '@/components/ui/textarea';
+import type { Staff } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const shortLinkSchema = z.object({
@@ -59,10 +61,19 @@ const addAdminSchema = z.object({
     email: z.string().email("Format email tidak valid."),
     confirmEmail: z.string().email("Format email tidak valid."),
     phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
-    addressDetail: z.string().min(1, "Alamat tidak boleh kosong."),
+    addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
+    addressDetail: z.string().optional(),
 }).refine(data => data.email === data.confirmEmail, {
     message: "Konfirmasi email tidak cocok.",
     path: ["confirmEmail"],
+}).refine((data) => {
+    if (data.addressType === 'luar_kilongan') {
+      return !!data.addressDetail && data.addressDetail.length > 0;
+    }
+    return true;
+}, {
+    message: "Detail alamat harus diisi jika memilih 'Luar Kilongan'.",
+    path: ["addressDetail"],
 });
 type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
@@ -93,6 +104,7 @@ export default function ToolsAdminPage() {
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
   const [loadingMenuConfig, setLoadingMenuConfig] = useState(true);
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
 
 
   const { toast } = useToast();
@@ -103,8 +115,13 @@ export default function ToolsAdminPage() {
   });
   
   const addAdminForm = useForm<AddAdminFormValues>({ resolver: zodResolver(addAdminSchema) });
+  const addressType = addAdminForm.watch('addressType');
 
   useEffect(() => {
+    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (info) {
+        setCurrentAdmin(info);
+    }
     const settingsRef = doc(db, 'app_settings', 'config');
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -124,25 +141,33 @@ export default function ToolsAdminPage() {
     });
     
     const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-    const unsubMenuConfig = onSnapshot(menuConfigRef, (docSnap) => {
+    const unsubMenuConfig = onSnapshot(menuConfigRef, async (docSnap) => {
         const savedConfig = docSnap.exists() ? docSnap.data().config : [];
+        let configChanged = false;
+
         const mergedConfig = initialMenuState.map(initialItem => {
             const savedItem = savedConfig.find((d: MenuConfig) => d.id === initialItem.id);
             if (savedItem) {
                 return { ...initialItem, ...savedItem };
             }
+            // New item found in code, add it to config
+            configChanged = true;
             return { ...initialItem, visible: false, locked: false };
         });
 
+        // Ensure dashboard is always visible and unlocked
         const dashboardItem = mergedConfig.find(item => item.id === 'dashboard');
         if (dashboardItem) {
-            dashboardItem.visible = true;
-            dashboardItem.locked = false;
+            if (!dashboardItem.visible || dashboardItem.locked) {
+                dashboardItem.visible = true;
+                dashboardItem.locked = false;
+                configChanged = true;
+            }
         }
         
         setMenuConfig(mergedConfig);
-        if (!docSnap.exists()) {
-            setDoc(menuConfigRef, { config: mergedConfig });
+        if (configChanged) {
+            await setDoc(menuConfigRef, { config: mergedConfig });
         }
         setLoadingMenuConfig(false);
     });
@@ -176,8 +201,8 @@ export default function ToolsAdminPage() {
             name: toTitleCase(values.name),
             email: values.email,
             phone: values.phone,
-            addressType: 'luar_kilongan',
-            addressDetail: values.addressDetail,
+            addressType: values.addressType,
+            addressDetail: values.addressType === 'luar_kilongan' ? values.addressDetail : 'Kilongan',
             status: 'active',
             accessCode: accessCode,
             createdAt: serverTimestamp(),
@@ -267,6 +292,8 @@ export default function ToolsAdminPage() {
       }
   }
 
+  const isSuperAdmin = currentAdmin?.email === 'admin@baronda.app';
+
 
   return (
     <>
@@ -351,18 +378,20 @@ export default function ToolsAdminPage() {
                         </div>
                         {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                     </div>
-                     <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                            <PlusCircle className="h-5 w-5 text-muted-foreground" />
-                            <div className="space-y-0.5">
-                                <Label htmlFor="maintenance-mode">Manajemen Admin</Label>
-                                <p className="text-xs text-muted-foreground">Tambah admin baru untuk membantu mengelola aplikasi.</p>
-                            </div>
-                        </div>
-                        <Button onClick={() => setIsAddAdminOpen(true)}>
-                            Tambah Admin
-                        </Button>
-                    </div>
+                     {isSuperAdmin && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Manajemen Admin</CardTitle>
+                                <CardDescription>Tambah admin baru untuk membantu mengelola aplikasi.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button onClick={() => setIsAddAdminOpen(true)}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Tambah Admin
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
                 </CardContent>
             </Card>
             <Card>
@@ -524,9 +553,40 @@ export default function ToolsAdminPage() {
                          <FormField control={addAdminForm.control} name="phone" render={({ field }) => (
                             <FormItem><FormLabel>Nomor HP</FormLabel><FormControl><Input {...field} inputMode="numeric" /></FormControl><FormMessage /></FormItem>
                         )} />
-                         <FormField control={addAdminForm.control} name="addressDetail" render={({ field }) => (
-                            <FormItem><FormLabel>Alamat</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
+                        <FormField
+                            control={addAdminForm.control}
+                            name="addressType"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Alamat</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Pilih jenis alamat" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="kilongan">Kilongan</SelectItem>
+                                        <SelectItem value="luar_kilongan">Luar Kilongan</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                         {addressType === 'luar_kilongan' && (
+                            <FormField
+                                control={addAdminForm.control}
+                                name="addressDetail"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Detail Alamat</FormLabel>
+                                    <FormControl>
+                                    <Textarea placeholder="Masukkan nama jalan, nomor rumah, RT/RW, dll." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        )}
                     </DialogBody>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>

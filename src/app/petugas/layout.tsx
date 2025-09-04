@@ -152,7 +152,7 @@ export default function PetugasLayout({
   }, [router]);
   
   useEffect(() => {
-    if (loadingConfig) return;
+    if (loadingConfig || menuConfig.length === 0) return;
 
     const currentTopLevelPath = `/petugas/${pathname.split('/')[2] || ''}`;
     const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
@@ -180,7 +180,7 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-  }, [pathname, navItems, loadingConfig]);
+  }, [pathname, navItems, loadingConfig, menuConfig]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -191,6 +191,18 @@ export default function PetugasLayout({
   
   if (!isClient || isLoggingOut || loadingConfig) {
       return <LoadingSkeleton />;
+  }
+
+  if (isAccessDenied) {
+    return (
+      <html lang="id">
+        <body>
+          <Suspense fallback={<LoadingSkeleton />}>
+            <NotPermittedPage />
+          </Suspense>
+        </body>
+      </html>
+    );
   }
   
   const NavHeader = () => (
@@ -265,12 +277,6 @@ export default function PetugasLayout({
     )
   }
 
-  const PageContent = isAccessDenied ? (
-      <Suspense fallback={<LoadingSkeleton />}>
-        <NotPermittedPage />
-      </Suspense>
-    ) : children;
-
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
@@ -328,7 +334,7 @@ export default function PetugasLayout({
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
            <div className="overflow-auto">
-             {PageContent}
+             {children}
            </div>
         </main>
       </div>
