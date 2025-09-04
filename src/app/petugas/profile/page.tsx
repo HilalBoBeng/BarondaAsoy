@@ -65,9 +65,11 @@ export default function PetugasProfilePage() {
                 if (docSnap.exists()) {
                     const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                     setStaffInfo(staffData);
+                    const newLastUpdated: { [key in FieldName]?: Date | null } = {};
                     if(staffData.lastCodeChangeTimestamp) {
-                        setLastUpdated({ accessCode: (staffData.lastCodeChangeTimestamp as Timestamp).toDate() });
+                        newLastUpdated.accessCode = (staffData.lastCodeChangeTimestamp as Timestamp).toDate();
                     }
+                    setLastUpdated(newLastUpdated);
                 } else {
                      router.push('/auth/staff-login');
                 }
@@ -113,7 +115,7 @@ export default function PetugasProfilePage() {
             if (result.success) {
                 toast({ title: 'Berhasil', description: result.message });
                 accessCodeForm.reset();
-                setLastUpdated({ accessCode: new Date() });
+                setLastUpdated(prev => ({...prev, accessCode: new Date() }));
             } else {
                 throw new Error(result.message);
             }
