@@ -31,6 +31,7 @@ export default function AdminPage() {
     const [greeting, setGreeting] = useState("Selamat Datang");
     const [currentTime, setCurrentTime] = useState("");
     const [currentDate, setCurrentDate] = useState("");
+    const [adminName, setAdminName] = useState<string | null>(null);
 
     useEffect(() => {
         const getGreeting = () => {
@@ -47,6 +48,14 @@ export default function AdminPage() {
           setCurrentTime(now.toLocaleTimeString('id-ID'));
           setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
         }, 1000);
+        
+        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        if (staffInfo.name) {
+            setAdminName(staffInfo.name);
+        } else {
+            setAdminName("Admin");
+        }
+
 
         return () => clearInterval(timer);
     }, []);
@@ -142,9 +151,13 @@ export default function AdminPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
-                    {greeting}, Admin!
-                </h1>
+                 {adminName ? (
+                     <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
+                        {greeting}, {adminName}!
+                    </h1>
+                 ) : (
+                    <Skeleton className="h-8 w-64" />
+                 )}
                 <p className="text-muted-foreground text-sm sm:text-base mt-1">
                     Selamat datang di Dasbor Admin Baronda.
                 </p>

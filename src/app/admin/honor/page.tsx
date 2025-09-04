@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, use } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -387,7 +387,7 @@ export default function HonorariumAdminPage() {
 
     <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl">
-            <DialogHeader>
+            <DialogHeader className="text-left">
                 <DialogTitle>Riwayat Honor: {selectedStaff?.name}</DialogTitle>
                 <DialogDescription>Daftar semua transaksi honorarium untuk petugas yang dipilih.</DialogDescription>
             </DialogHeader>

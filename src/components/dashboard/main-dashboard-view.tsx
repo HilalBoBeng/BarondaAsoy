@@ -470,9 +470,13 @@ export default function MainDashboardView() {
         <div className="mx-auto max-w-screen-2xl space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
-                    {greeting}, {user?.displayName || 'Warga'}!
-                </h1>
+                {loading ? (
+                    <Skeleton className="h-8 w-64" />
+                ) : (
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
+                        {greeting}, {user?.displayName || 'Warga'}!
+                    </h1>
+                )}
                 <p className="text-muted-foreground text-sm sm:text-base mt-1">
                     {currentDate} | {currentTime}
                 </p>

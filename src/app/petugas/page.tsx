@@ -149,15 +149,19 @@ export default function PetugasPage() {
   return (
     <div className="space-y-6">
       <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
-              {greeting}, {petugasName || 'Petugas'}!
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base mt-1">
-              Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.
-          </p>
-          <p className="text-muted-foreground text-sm sm:text-base">
-              {currentDate} | {currentTime}
-          </p>
+            {petugasName ? (
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
+                    {greeting}, {petugasName}!
+                </h1>
+            ) : (
+                <Skeleton className="h-8 w-64" />
+            )}
+            <p className="text-muted-foreground text-sm sm:text-base mt-1">
+                Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.
+            </p>
+            <p className="text-muted-foreground text-sm sm:text-base">
+                {currentDate} | {currentTime}
+            </p>
       </div>
       
         {loading ? <Skeleton className="h-56 w-full" /> :
