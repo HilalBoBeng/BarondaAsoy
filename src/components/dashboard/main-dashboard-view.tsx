@@ -400,7 +400,7 @@ export default function MainDashboardView() {
                     <Avatar>
                         <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User profile'} />
                         <AvatarFallback>
-                            <UserCircle className="h-8 w-8" />
+                            <UserIcon className="h-5 w-5" />
                         </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -460,7 +460,7 @@ export default function MainDashboardView() {
         </div>
       </header>
       <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
-        <div className="mx-auto max-w-screen-2xl space-y-6">
+        <div className="mx-auto w-full max-w-screen-2xl space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 {loading ? (
