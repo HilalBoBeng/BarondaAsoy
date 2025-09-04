@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, doc, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, deleteDoc, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, endBefore, limitToLast } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -319,7 +319,7 @@ export default function NotificationsPetugasPage() {
                       {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
                            <TableRow key={i}>
-                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            <TableCell className="w-[180px]"><Skeleton className="h-5 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                             <TableCell className="w-[100px]"><Skeleton className="h-10 w-10" /></TableCell>
@@ -400,64 +400,68 @@ export default function NotificationsPetugasPage() {
                 <CardDescription>Kirim pesan ke warga atau staf tertentu.</CardDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-                 <FormField
-                  control={form.control}
-                  name="recipientIds"
-                  render={({ field }) => (
-                    <FormItem>
-                       <div className="mb-4">
-                        <FormLabel className="text-base">Pilih Penerima</FormLabel>
-                       </div>
-                       <Tabs defaultValue="users">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="users">Warga</TabsTrigger>
-                                <TabsTrigger value="staff">Staf</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="users" className="mt-4">
-                                <RecipientList recipients={users} field={field} type="users" />
-                            </TabsContent>
-                             <TabsContent value="staff" className="mt-4">
-                                <RecipientList recipients={staff} field={field} type="staff" />
-                            </TabsContent>
-                       </Tabs>
-                       <FormMessage />
-                    </FormItem>
-                  )}
-                 />
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Judul</FormLabel>
-                      <FormControl>
-                        <Input 
-                            placeholder="Judul pemberitahuan" 
-                            {...field} 
-                            maxLength={50}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                }
-                            }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="message"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Isi Pesan</FormLabel>
-                      <FormControl><Textarea placeholder="Tulis pesan Anda di sini..." {...field} rows={4} maxLength={1200} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <DialogBody>
+                  <div className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="recipientIds"
+                      render={({ field }) => (
+                        <FormItem>
+                           <div className="mb-4">
+                            <FormLabel className="text-base">Pilih Penerima</FormLabel>
+                           </div>
+                           <Tabs defaultValue="users">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="users">Warga</TabsTrigger>
+                                    <TabsTrigger value="staff">Staf</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="users" className="mt-4">
+                                    <RecipientList recipients={users} field={field} type="users" />
+                                </TabsContent>
+                                 <TabsContent value="staff" className="mt-4">
+                                    <RecipientList recipients={staff} field={field} type="staff" />
+                                </TabsContent>
+                           </Tabs>
+                           <FormMessage />
+                        </FormItem>
+                      )}
+                     />
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Judul</FormLabel>
+                          <FormControl>
+                            <Input 
+                                placeholder="Judul pemberitahuan" 
+                                {...field} 
+                                maxLength={50}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                    }
+                                }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Isi Pesan</FormLabel>
+                          <FormControl><Textarea placeholder="Tulis pesan Anda di sini..." {...field} rows={4} maxLength={1200} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
                     <Button type="submit" disabled={isSubmitting}>
@@ -475,8 +479,10 @@ export default function NotificationsPetugasPage() {
             <DialogHeader>
                 <DialogTitle>Isi Pesan</DialogTitle>
             </DialogHeader>
-            <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedMessage.replace(/\n/g, '<br />') }}>
-            </div>
+            <DialogBody>
+               <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedMessage.replace(/\n/g, '<br />') }}>
+               </div>
+            </DialogBody>
             <DialogFooter>
                 <Button onClick={() => setIsViewMessageOpen(false)}>Tutup</Button>
             </DialogFooter>

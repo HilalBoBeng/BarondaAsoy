@@ -319,7 +319,7 @@ export default function NotificationsAdminPage() {
                       {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
                           <TableRow key={i}>
-                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            <TableCell className="w-[180px]"><Skeleton className="h-5 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                             <TableCell className="w-[100px]"><Skeleton className="h-10 w-10" /></TableCell>
@@ -400,7 +400,8 @@ export default function NotificationsAdminPage() {
                 <CardDescription>Kirim pesan ke warga atau staf tertentu.</CardDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <DialogBody className="space-y-6">
                  <FormField
                   control={form.control}
                   name="recipientIds"
@@ -458,6 +459,7 @@ export default function NotificationsAdminPage() {
                     </FormItem>
                   )}
                 />
+                </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
                     <Button type="submit" disabled={isSubmitting}>
@@ -475,8 +477,10 @@ export default function NotificationsAdminPage() {
             <DialogHeader>
                 <DialogTitle>Isi Pesan</DialogTitle>
             </DialogHeader>
-            <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedMessage.replace(/\n/g, '<br />') }}>
-            </div>
+            <DialogBody>
+               <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedMessage.replace(/\n/g, '<br />') }}>
+               </div>
+            </DialogBody>
             <DialogFooter>
                 <Button onClick={() => setIsViewMessageOpen(false)}>Tutup</Button>
             </DialogFooter>
