@@ -54,12 +54,13 @@ export default function AttendancePage() {
         setStaff(staffData);
     });
 
-    const scheduleQuery = query(collection(db, 'schedules'), orderBy('date', 'desc'));
+    const scheduleQuery = query(collection(db, 'schedules'), orderBy('startDate', 'desc'));
     const unsubSchedule = onSnapshot(scheduleQuery, (snapshot) => {
         setSchedules(snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
-            date: (doc.data().date as Timestamp).toDate(),
+            startDate: (doc.data().startDate as Timestamp).toDate(),
+            endDate: (doc.data().endDate as Timestamp).toDate(),
             patrolStartTime: doc.data().patrolStartTime ? (doc.data().patrolStartTime as Timestamp).toDate() : undefined,
             patrolEndTime: doc.data().patrolEndTime ? (doc.data().patrolEndTime as Timestamp).toDate() : undefined,
         } as ScheduleEntry)));
@@ -76,13 +77,15 @@ export default function AttendancePage() {
     let startStatus: { text: string; color: string; } | null = null;
     let endStatus: { text: string; color: string; } | null = null;
 
-    const scheduleDate = schedule.date as Date;
+    const scheduleStartDate = schedule.startDate as Date;
+    const scheduleEndDate = schedule.endDate as Date;
+
     const [startTimeStr, endTimeStr] = schedule.time.split(' - ');
     const [startHour, startMinute] = startTimeStr.split(':').map(Number);
     const [endHour, endMinute] = endTimeStr.split(':').map(Number);
 
     if (schedule.patrolStartTime) {
-      const expectedStartTime = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), startHour, startMinute);
+      const expectedStartTime = new Date(scheduleStartDate.getFullYear(), scheduleStartDate.getMonth(), scheduleStartDate.getDate(), startHour, startMinute);
       const actualStartTime = schedule.patrolStartTime as Date;
       const diffStartMinutes = Math.round((actualStartTime.getTime() - expectedStartTime.getTime()) / 60000);
 
@@ -97,7 +100,7 @@ export default function AttendancePage() {
     }
 
     if (schedule.patrolEndTime) {
-      const expectedEndTime = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), endHour, endMinute);
+      const expectedEndTime = new Date(scheduleEndDate.getFullYear(), scheduleEndDate.getMonth(), scheduleEndDate.getDate(), endHour, endMinute);
       const actualEndTime = schedule.patrolEndTime as Date;
       const diffEndMinutes = Math.round((actualEndTime.getTime() - expectedEndTime.getTime()) / 60000);
 
@@ -115,7 +118,7 @@ export default function AttendancePage() {
 
   const filteredSchedules = useMemo(() => {
     return schedules.filter(schedule => {
-        const scheduleDate = schedule.date instanceof Date ? schedule.date : (schedule.date as Timestamp).toDate();
+        const scheduleDate = schedule.startDate instanceof Date ? schedule.startDate : (schedule.startDate as Timestamp).toDate();
         const staffMatch = selectedStaff === 'all' || schedule.officerId === selectedStaff;
         const monthMatch = months[scheduleDate.getMonth()] === selectedMonth;
         const yearMatch = scheduleDate.getFullYear().toString() === selectedYear;
@@ -135,7 +138,7 @@ export default function AttendancePage() {
         headers.join(','),
         ...filteredSchedules.map(s => {
             const row = [
-                format(s.date as Date, "yyyy-MM-dd", { locale: id }),
+                format(s.startDate as Date, "yyyy-MM-dd", { locale: id }),
                 `"${s.officer}"`,
                 `"${s.area}"`,
                 `"${s.time}"`,
@@ -178,7 +181,7 @@ export default function AttendancePage() {
             startY: 40,
             head: [['Tanggal Patroli', 'Nama Petugas', 'Area Tugas', 'Jam Tugas', 'Status Kehadiran']],
             body: filteredSchedules.map(s => [
-                format(s.date as Date, "d MMMM yyyy", { locale: id }),
+                format(s.startDate as Date, "d MMMM yyyy", { locale: id }),
                 s.officer,
                 s.area,
                 s.time,
@@ -211,16 +214,16 @@ export default function AttendancePage() {
     return (
         <TableCell>
             <div className="flex flex-col gap-1">
-                {start ? (
-                    <div className={cn("flex items-center gap-1 text-xs", start.color)}>
-                        <CheckCircle className="h-3 w-3" />
-                        <span>Masuk: {start.text}</span>
+                {schedule.patrolStartTime ? (
+                    <div className={cn("flex items-center gap-1 text-xs", start?.color)}>
+                        <Clock className="h-3 w-3" />
+                        <span>Masuk: {format(schedule.patrolStartTime, "HH:mm")} ({start?.text})</span>
                     </div>
                 ) : <span className="text-xs text-muted-foreground">-</span>}
-                {end ? (
-                     <div className={cn("flex items-center gap-1 text-xs", end.color)}>
+                {schedule.patrolEndTime ? (
+                     <div className={cn("flex items-center gap-1 text-xs", end?.color)}>
                         <Clock className="h-3 w-3" />
-                        <span>Pulang: {end.text}</span>
+                        <span>Pulang: {format(schedule.patrolEndTime, "HH:mm")} ({end?.text})</span>
                     </div>
                 ): <span className="text-xs text-muted-foreground">-</span>}
             </div>
@@ -306,7 +309,7 @@ export default function AttendancePage() {
                 <TableRow>
                   <TableHead>Tanggal Patroli</TableHead>
                   <TableHead>Nama Petugas</TableHead>
-                  <TableHead>Ketepatan Waktu</TableHead>
+                  <TableHead>Absensi & Ketepatan</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -320,7 +323,7 @@ export default function AttendancePage() {
                 ) : filteredSchedules.length > 0 ? (
                   filteredSchedules.map((schedule) => (
                     <TableRow key={schedule.id}>
-                      <TableCell>{format(schedule.date as Date, "PPP", { locale: id })}</TableCell>
+                      <TableCell>{format(schedule.startDate as Date, "PPP", { locale: id })}</TableCell>
                       <TableCell>{schedule.officer}</TableCell>
                       {renderPunctuality(schedule)}
                       <TableCell>

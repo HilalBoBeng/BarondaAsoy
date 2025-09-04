@@ -35,7 +35,13 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
     const docRef = doc(db, 'schedules', scheduleId);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
-            setSchedule({ id: docSnap.id, ...docSnap.data() } as ScheduleEntry);
+            const data = docSnap.data();
+            setSchedule({ 
+                id: docSnap.id, 
+                ...data,
+                startDate: (data.startDate as Timestamp).toDate(),
+                endDate: (data.endDate as Timestamp).toDate(),
+            } as ScheduleEntry);
         } else {
             notFound();
         }
@@ -81,7 +87,12 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
     notFound();
   }
 
-  const scheduleDate = (schedule.date as Timestamp).toDate();
+  const scheduleStartDate = (schedule.startDate as Date);
+  const scheduleEndDate = (schedule.endDate as Date);
+  const isSameDay = format(scheduleStartDate, 'yyyy-MM-dd') === format(scheduleEndDate, 'yyyy-MM-dd');
+  const dateDisplay = isSameDay 
+    ? format(scheduleStartDate, "EEEE, d MMMM yyyy", { locale: id })
+    : `${format(scheduleStartDate, "d MMM", { locale: id })} - ${format(scheduleEndDate, "d MMM yyyy", { locale: id })}`;
 
   const TokenDisplay = ({ type, token, expires, isTaskInProgress, isTaskCompleted }: { type: 'start' | 'end', token?: string, expires?: Timestamp, isTaskInProgress: boolean, isTaskCompleted: boolean }) => {
     const tokenExpiresDate = expires ? expires.toDate() : null;
@@ -153,7 +164,7 @@ export default function ScheduleDetailPage({ params }: { params: { scheduleId: s
             </div>
              <div className="flex items-center justify-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                <span>{format(scheduleDate, "EEEE, d MMMM yyyy", { locale: id })}</span>
+                <span>{dateDisplay}</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />

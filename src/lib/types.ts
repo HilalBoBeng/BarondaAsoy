@@ -12,7 +12,8 @@ export interface Announcement {
 
 export interface ScheduleEntry {
   id:string;
-  date: string | Date | Timestamp;
+  startDate: Date | Timestamp;
+  endDate: Date | Timestamp;
   time: string;
   officer: string;
   officerId: string;
@@ -160,6 +161,7 @@ export interface Honorarium {
     period: string; // e.g., "Juli 2024"
     issueDate: Timestamp | Date;
     status: 'Dibayarkan' | 'Belum Dibayar';
+    notes?: string;
 }
 
 export interface AdminLog {

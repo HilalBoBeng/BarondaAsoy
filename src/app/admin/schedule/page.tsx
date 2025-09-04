@@ -33,18 +33,15 @@ const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const scheduleSchema = z.object({
   officerId: z.string().min(1, "Petugas harus dipilih."),
   area: z.string().min(1, "Area tidak boleh kosong."),
-  date: z.date({ required_error: "Tanggal patroli harus diisi." }),
+  startDate: z.date({ required_error: "Tanggal mulai patroli harus diisi." }),
+  endDate: z.date({ required_error: "Tanggal selesai patroli harus diisi." }),
   startTime: z.string().regex(timeRegex, "Format jam mulai tidak valid (HH:MM)."),
   endTime: z.string().regex(timeRegex, "Format jam selesai tidak valid (HH:MM)."),
-}).refine(data => {
-    if (!data.startTime || !data.endTime) return true;
-    const [startHour, startMinute] = data.startTime.split(':').map(Number);
-    const [endHour, endMinute] = data.endTime.split(':').map(Number);
-    return endHour > startHour || (endHour === startHour && endMinute > startMinute);
-}, {
-    message: "Jam selesai harus setelah jam mulai.",
-    path: ["endTime"],
+}).refine(data => data.endDate >= data.startDate, {
+    message: "Tanggal selesai tidak boleh sebelum tanggal mulai.",
+    path: ["endDate"],
 });
+
 
 type ScheduleFormValues = z.infer<typeof scheduleSchema>;
 
@@ -70,21 +67,22 @@ export default function ScheduleAdminPage() {
     },
   });
 
-  const watchedDate = form.watch('date');
+  const watchedStartDate = form.watch('startDate');
+  const watchedEndDate = form.watch('endDate');
 
   const availableStaff = useMemo(() => {
-    if (!watchedDate) {
+    if (!watchedStartDate) {
       return staff;
     }
     const scheduledStaffIds = schedule
-      .filter(s => s.date && format(s.date as Date, 'yyyy-MM-dd') === format(watchedDate, 'yyyy-MM-dd'))
+      .filter(s => s.startDate && format(s.startDate as Date, 'yyyy-MM-dd') === format(watchedStartDate, 'yyyy-MM-dd'))
       .map(s => s.officerId);
 
     return staff.filter(s => 
       !scheduledStaffIds.includes(s.id) ||
       (currentSchedule && s.id === currentSchedule.officerId)
     );
-  }, [staff, schedule, watchedDate, currentSchedule]);
+  }, [staff, schedule, watchedStartDate, currentSchedule]);
 
   
   useEffect(() => {
@@ -95,12 +93,13 @@ export default function ScheduleAdminPage() {
       setStaff(staffData);
     });
 
-    const q = query(collection(db, 'schedules'), orderBy('date', 'desc'));
+    const q = query(collection(db, 'schedules'), orderBy('startDate', 'desc'));
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const scheduleData: ScheduleEntry[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        date: doc.data().date?.toDate(),
+        startDate: doc.data().startDate?.toDate(),
+        endDate: doc.data().endDate?.toDate(),
         patrolStartTime: doc.data().patrolStartTime ? doc.data().patrolStartTime.toDate() : undefined,
         patrolEndTime: doc.data().patrolEndTime ? doc.data().patrolEndTime.toDate() : undefined,
       })) as ScheduleEntry[];
@@ -112,7 +111,7 @@ export default function ScheduleAdminPage() {
       let updatesMade = false;
 
       scheduleData.forEach(s => {
-        if (s.status === 'Pending' && s.date && (s.date as Date) < yesterday) {
+        if (s.status === 'Pending' && s.endDate && (s.endDate as Date) < yesterday) {
           const scheduleRef = doc(db, 'schedules', s.id);
           batch.update(scheduleRef, { status: 'Tanpa Keterangan' });
           updatesMade = true;
@@ -147,13 +146,14 @@ export default function ScheduleAdminPage() {
         const [startTime, endTime] = currentSchedule.time.split(' - ');
         const defaultValues = {
             ...currentSchedule,
-            date: currentSchedule.date instanceof Timestamp ? currentSchedule.date.toDate() : (currentSchedule.date as Date),
+            startDate: currentSchedule.startDate instanceof Timestamp ? currentSchedule.startDate.toDate() : (currentSchedule.startDate as Date),
+            endDate: currentSchedule.endDate instanceof Timestamp ? currentSchedule.endDate.toDate() : (currentSchedule.endDate as Date),
             startTime: startTime || '',
             endTime: endTime || '',
         };
         form.reset(defaultValues as any);
       } else {
-        form.reset({ officerId: '', area: '', startTime: '', endTime: '', date: undefined });
+        form.reset({ officerId: '', area: '', startTime: '', endTime: '', startDate: undefined, endDate: undefined });
       }
     }
   }, [isDialogOpen, currentSchedule, form]);
@@ -177,7 +177,8 @@ export default function ScheduleAdminPage() {
         officerId: selectedStaff.id,
         area: values.area,
         time: `${values.startTime} - ${values.endTime}`,
-        date: Timestamp.fromDate(values.date),
+        startDate: Timestamp.fromDate(values.startDate),
+        endDate: Timestamp.fromDate(values.endDate),
       };
 
       if (currentSchedule) {
@@ -226,7 +227,7 @@ export default function ScheduleAdminPage() {
   
   const filteredSchedule = schedule.filter(item => {
     if (selectedDay === 'all') return true;
-    const itemDayIndex = item.date instanceof Date ? item.date.getDay() : -1;
+    const itemDayIndex = item.startDate instanceof Date ? item.startDate.getDay() : -1;
     const selectedDayIndex = daysOfWeek.indexOf(selectedDay);
     return itemDayIndex === selectedDayIndex;
   });
@@ -252,7 +253,7 @@ export default function ScheduleAdminPage() {
     const [startTimeStr] = schedule.time.split(' - ');
     const [startHour, startMinute] = startTimeStr.split(':').map(Number);
 
-    const scheduleDate = schedule.date as Date;
+    const scheduleDate = schedule.startDate as Date;
     const expectedStartTime = new Date(scheduleDate);
     expectedStartTime.setHours(startHour, startMinute, 0, 0);
 
@@ -266,6 +267,15 @@ export default function ScheduleAdminPage() {
     } else {
       return { text: `Terlambat ${diffMinutes} mnt`, color: 'text-red-600' };
     }
+  };
+  
+  const formatDateRange = (startDate: Date, endDate: Date) => {
+    const startStr = format(startDate, "d MMM", { locale: id });
+    const endStr = format(endDate, "d MMM yyyy", { locale: id });
+    if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
+        return format(startDate, "PPP", { locale: id });
+    }
+    return `${startStr} - ${endStr}`;
   };
 
 
@@ -318,7 +328,7 @@ export default function ScheduleAdminPage() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm flex-grow">
                    <p className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> {item.officer}</p>
-                   <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" /> {item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</p>
+                   <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" /> {item.startDate instanceof Date && item.endDate instanceof Date ? formatDateRange(item.startDate, item.endDate) : 'N/A'}</p>
                    <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> {item.time}</p>
                    {punctuality && (
                      <div className={cn("flex items-center gap-1 text-xs", punctuality.color)}>
@@ -396,7 +406,7 @@ export default function ScheduleAdminPage() {
                     const isActionable = item.status === 'Pending' || item.status === 'In Progress';
                     return (
                     <TableRow key={item.id}>
-                      <TableCell>{item.date instanceof Date ? format(item.date, "PPP", { locale: id }) : 'N/A'}</TableCell>
+                      <TableCell>{item.startDate instanceof Date && item.endDate instanceof Date ? formatDateRange(item.startDate, item.endDate) : 'N/A'}</TableCell>
                       <TableCell>{item.officer}</TableCell>
                       <TableCell>{item.area}</TableCell>
                       <TableCell>{item.time}</TableCell>
@@ -457,24 +467,44 @@ export default function ScheduleAdminPage() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                 <FormField control={form.control} name="date" render={({ field }) => (
-                  <FormItem className="flex flex-col"><FormLabel>Tanggal</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < startOfDay(new Date())} initialFocus locale={id} />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="startDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Tanggal Mulai</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < startOfDay(new Date())} initialFocus locale={id} />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                     <FormField control={form.control} name="endDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Tanggal Selesai</FormLabel>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < startOfDay(new Date())} initialFocus locale={id} />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                 </div>
                 <FormField
                   control={form.control}
                   name="officerId"
@@ -483,8 +513,8 @@ export default function ScheduleAdminPage() {
                       <FormLabel>Nama Petugas</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger disabled={!watchedDate}>
-                            <SelectValue placeholder={!watchedDate ? "Pilih tanggal dulu" : "Pilih petugas"} />
+                          <SelectTrigger disabled={!watchedStartDate}>
+                            <SelectValue placeholder={!watchedStartDate ? "Pilih tanggal dulu" : "Pilih petugas"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
