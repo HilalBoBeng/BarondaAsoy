@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { useForm } from 'react-hook-form';
