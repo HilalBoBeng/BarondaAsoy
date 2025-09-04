@@ -257,7 +257,7 @@ export default function RegisterPage() {
                   Sudah punya akun?{" "}
                   <Link
                       href="/auth/login"
-                      className="text-primary hover:underline"
+                      className="text-primary hover:text-primary/80 no-underline"
                   >
                       Masuk di sini
                   </Link>

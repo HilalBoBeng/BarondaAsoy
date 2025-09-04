@@ -7,7 +7,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb } from "@/lib/firebase/admin";
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 
 const VerifyOtpInputSchema = z.object({

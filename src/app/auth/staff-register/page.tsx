@@ -211,7 +211,7 @@ export default function StaffRegisterPage() {
                   Sudah punya akun petugas?{" "}
                   <Link
                       href="/auth/staff-login"
-                      className="underline text-primary"
+                      className="text-primary no-underline"
                   >
                       Masuk di sini
                   </Link>

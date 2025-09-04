@@ -452,13 +452,6 @@ export default function MainDashboardView() {
                            <span>Daftar</span>
                          </Link>
                       </DropdownMenuItem>
-                       <DropdownMenuSeparator />
-                       <DropdownMenuItem asChild>
-                         <Link href="/settings">
-                           <Settings className="mr-2 h-4 w-4" />
-                           <span>Pengaturan</span>
-                         </Link>
-                      </DropdownMenuItem>
                     </>
                    )}
                 </DropdownMenuContent>
@@ -594,5 +587,3 @@ export default function MainDashboardView() {
     </>
   );
 }
-
-    
