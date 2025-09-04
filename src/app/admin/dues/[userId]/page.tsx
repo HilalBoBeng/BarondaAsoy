@@ -141,9 +141,15 @@ export default function UserDuesHistoryPage() {
       <Card>
         <CardHeader>
           <CardTitle>Riwayat Pembayaran</CardTitle>
-          <CardDescription>
-            {loading ? <Skeleton className="h-5 w-32" /> : user?.displayName}
-          </CardDescription>
+          {loading ? (
+             <div className="text-sm text-muted-foreground">
+               <Skeleton className="h-5 w-32" />
+             </div>
+            ) : (
+             <CardDescription>
+                {user?.displayName}
+             </CardDescription>
+            )}
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border max-h-[60vh] overflow-auto">
