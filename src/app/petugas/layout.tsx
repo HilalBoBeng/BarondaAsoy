@@ -23,12 +23,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader } from "@/components/ui/sheet";
 import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import NotPermittedPage from "@/app/not-permitted/page";
+
 
 interface MenuConfig {
   id: string;
@@ -55,6 +57,7 @@ export default function PetugasLayout({
   const [isScanPage, setIsScanPage] = useState(false);
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isAccessDenied, setIsAccessDenied] = useState(false);
 
   const initialNavItems = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
@@ -79,9 +82,9 @@ export default function PetugasLayout({
     .map(item => {
       const config = menuConfig.find(c => c.id === item.id);
       return { ...item, ...config, badge: getBadgeCount(item.badgeKey) };
-    })
-    .filter(item => item.visible);
+    });
 
+  const visibleNavItems = navItems.filter(item => item.visible);
 
   useEffect(() => {
     setIsClient(true);
@@ -128,6 +131,14 @@ export default function PetugasLayout({
   }, [router]);
   
   useEffect(() => {
+    // Check if current route is locked or hidden
+    const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
+    if (currentNavItem && (currentNavItem.locked || !currentNavItem.visible)) {
+      setIsAccessDenied(true);
+    } else {
+      setIsAccessDenied(false);
+    }
+
     setIsScanPage(pathname === '/petugas/scan');
 
     const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
@@ -145,7 +156,6 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, navItems]);
 
   const handleLogout = () => {
@@ -173,7 +183,7 @@ export default function PetugasLayout({
         <div className="flex flex-col">
             <p className="font-bold text-base truncate">{staffName}</p>
             <p className="text-sm text-muted-foreground truncate">{staffEmail}</p>
-            <p className="text-xs text-muted-foreground mt-1">Petugas</p>
+            <Badge variant="secondary" className="mt-2 w-fit">Petugas</Badge>
         </div>
     </div>
   );
@@ -182,7 +192,7 @@ export default function PetugasLayout({
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
            const linkContent = (
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
@@ -238,6 +248,8 @@ export default function PetugasLayout({
     )
   }
 
+  const PageContent = isAccessDenied ? <NotPermittedPage /> : children;
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
@@ -259,7 +271,6 @@ export default function PetugasLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="p-0 border-b">
-                   <SheetTitle className="sr-only">Profil & Navigasi</SheetTitle>
                    <NavHeader />
                 </SheetHeader>
                 <div className="flex-1 overflow-auto py-2">
@@ -295,7 +306,7 @@ export default function PetugasLayout({
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
            <div className="overflow-auto">
-             {children}
+             {PageContent}
            </div>
         </main>
       </div>

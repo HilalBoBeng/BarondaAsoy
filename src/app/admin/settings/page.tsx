@@ -5,13 +5,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, Mail, Shield, Phone, MapPin, KeyRound, Camera, Pencil, Lock, LogOut } from 'lucide-react';
+import { Loader2, User, Mail, Phone, MapPin, KeyRound, Camera, Pencil, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +20,9 @@ import { isBefore, subDays, addDays, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { resetStaffAccessCode } from '@/ai/flows/reset-staff-access-code';
+import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
+import type { Staff } from '@/lib/types';
+
 
 const adminProfileSchema = z.object({
   displayName: z.string().optional(),
@@ -31,29 +33,35 @@ const adminProfileSchema = z.object({
 
 const accessCodeSchema = z.object({
   currentAccessCode: z.string().min(1, "Kode akses saat ini harus diisi."),
+  newAccessCode: z.string().min(6, "Kode akses baru minimal 6 karakter."),
+  confirmNewAccessCode: z.string(),
+}).refine(data => data.newAccessCode === data.confirmNewAccessCode, {
+    message: "Konfirmasi kode akses baru tidak cocok.",
+    path: ["confirmNewAccessCode"],
 });
+
 
 type AdminProfileFormValues = z.infer<typeof adminProfileSchema>;
 type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 type FieldName = keyof AdminProfileFormValues;
 
 export default function AdminSettingsPage() {
-    const [adminInfo, setAdminInfo] = useState<{ id: string, name: string; email: string, photoURL?: string, phone?: string, addressDetail?: string } | null>(null);
+    const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
     
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
+    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName | 'accessCode']?: Date | null }>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const router = useRouter();
     const { toast } = useToast();
 
-    const profileForm = useForm<AdminProfileFormValues>();
+    const profileForm = useForm<AdminProfileFormValues>({ resolver: zodResolver(adminProfileSchema) });
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
-
-    const canEditField = useCallback((field: FieldName) => {
+    
+    const canEditField = useCallback((field: FieldName | 'accessCode') => {
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
         const cooldownDays = field === 'photoURL' ? 1 : 7;
@@ -62,22 +70,31 @@ export default function AdminSettingsPage() {
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-        if (info.email) {
-            setAdminInfo(info);
-            profileForm.reset({
-                displayName: info.name,
-                phone: info.phone || '',
-                addressDetail: info.addressDetail || '',
-                photoURL: info.photoURL || '',
-            });
+        if (info.id) {
+            const unsub = onSnapshot(doc(db, "staff", info.id), (docSnap) => {
+                if (docSnap.exists()) {
+                    const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+                    setAdminInfo(staffData);
+                    profileForm.reset({
+                        displayName: staffData.name,
+                        phone: staffData.phone || '',
+                        addressDetail: staffData.addressDetail || '',
+                        photoURL: undefined, 
+                    });
 
-             const lastUpdatedDates: { [key in FieldName]?: Date | null } = {};
-            setLastUpdated(lastUpdatedDates);
+                    const lastUpdatedDates: { [key in FieldName | 'accessCode']?: Date | null } = {};
+                    if(staffData.lastCodeChangeTimestamp) lastUpdatedDates.accessCode = (staffData.lastCodeChangeTimestamp as Timestamp).toDate();
+                    setLastUpdated(lastUpdatedDates);
+                } else {
+                     router.push('/auth/staff-login');
+                }
+            });
+            return () => unsub();
         } else {
-            // Handle case where admin is not logged in or info is missing
-            router.push('/auth/staff-login');
+             router.push('/auth/staff-login');
         }
     }, [profileForm, router]);
+
 
     const handleEditClick = (field: FieldName) => {
         if (!canEditField(field)) {
@@ -154,41 +171,42 @@ export default function AdminSettingsPage() {
         setIsSubmitting(true);
         const fieldToUpdate = editingField || 'photoURL';
         
-        const updatedInfo = { ...adminInfo, ...data };
+        const updatePayload: Record<string, any> = { ...data };
+        if (data.displayName) {
+             updatePayload.name = data.displayName;
+             delete updatePayload.displayName;
+        }
 
-        localStorage.setItem('staffInfo', JSON.stringify(updatedInfo));
-        setAdminInfo(updatedInfo);
+        const staffRef = doc(db, 'staff', adminInfo.id);
+        await updateDoc(staffRef, updatePayload);
         
         toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
 
-        setLastUpdated(prev => ({...prev, [fieldToUpdate]: new Date()}))
         setIsEditDialogOpen(false);
         setEditingField(null);
         setIsSubmitting(false);
     };
-
+    
     const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
-        if (!adminInfo?.id) {
-            toast({ variant: 'destructive', title: "Gagal", description: "ID Admin tidak ditemukan. Silakan login ulang." });
-            return;
-        }
-
+        if (!adminInfo?.id) return;
         setIsSubmittingPassword(true);
+        
         try {
-            const result = await resetStaffAccessCode({
+            const result = await updateStaffAccessCode({
                 staffId: adminInfo.id,
                 currentAccessCode: data.currentAccessCode,
+                newAccessCode: data.newAccessCode,
             });
 
             if (result.success) {
-                toast({ title: "Berhasil", description: result.message });
+                toast({ title: 'Berhasil', description: result.message });
                 accessCodeForm.reset();
+                 setLastUpdated(prev => ({ ...prev, accessCode: new Date() }));
             } else {
                 throw new Error(result.message);
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan.";
-            toast({ variant: 'destructive', title: "Gagal", description: errorMessage });
+            toast({ variant: 'destructive', title: 'Gagal', description: error instanceof Error ? error.message : "Gagal mengubah kode akses." });
         } finally {
             setIsSubmittingPassword(false);
         }
@@ -240,7 +258,7 @@ export default function AdminSettingsPage() {
                      <div className="flex items-center gap-4">
                         <div className="relative">
                             <Avatar className="h-20 w-20 border-4 border-background/50">
-                                <AvatarImage src={adminInfo.photoURL || ''} alt={adminInfo.name} />
+                                <AvatarImage src={undefined} alt={adminInfo.name} />
                                 <AvatarFallback className="text-3xl bg-background text-primary">
                                     {adminInfo.name.charAt(0).toUpperCase()}
                                 </AvatarFallback>
@@ -253,12 +271,13 @@ export default function AdminSettingsPage() {
                         <div className="flex-1 min-w-0">
                             <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{adminInfo.name}</CardTitle>
                             <CardDescription className="text-primary-foreground/80 truncate">{adminInfo.email}</CardDescription>
-                            <Badge variant="secondary" className="mt-2">Administrator</Badge>
+                             <Badge variant="secondary" className="mt-2">Administrator</Badge>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y">
+                        {renderDataRow("displayName", adminInfo.name)}
                         {renderDataRow("phone", adminInfo.phone)}
                         {renderDataRow("addressDetail", adminInfo.addressDetail)}
                     </div>
@@ -273,20 +292,28 @@ export default function AdminSettingsPage() {
                 <CardContent>
                     <Form {...accessCodeForm}>
                         <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="space-y-4">
-                             <FormField
-                                control={accessCodeForm.control}
-                                name="currentAccessCode"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Kode Akses Saat Ini</FormLabel>
-                                        <FormControl><Input type="password" {...field} placeholder="Masukkan kode akses Anda yang sekarang" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="submit" disabled={isSubmittingPassword}>
+                            {canEditField('accessCode') ? (
+                                <>
+                                    <FormField control={accessCodeForm.control} name="currentAccessCode" render={({ field }) => (
+                                        <FormItem><FormLabel>Kode Akses Saat Ini</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={accessCodeForm.control} name="newAccessCode" render={({ field }) => (
+                                        <FormItem><FormLabel>Kode Akses Baru</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={accessCodeForm.control} name="confirmNewAccessCode" render={({ field }) => (
+                                        <FormItem><FormLabel>Konfirmasi Kode Akses Baru</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </>
+                            ) : (
+                                <FormItem>
+                                    <FormLabel>Kode Akses Saat Ini</FormLabel>
+                                    <FormControl><Input readOnly value="••••••••" className="bg-muted" /></FormControl>
+                                    {lastUpdated.accessCode && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.accessCode, 7), { addSuffix: true, locale: id })}.</p>}
+                                </FormItem>
+                            )}
+                             <Button type="submit" disabled={isSubmittingPassword || !canEditField('accessCode')}>
                                 {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Kirim Kode Akses Baru ke Email
+                                Ganti Kode Akses
                             </Button>
                         </form>
                     </Form>

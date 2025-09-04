@@ -158,7 +158,7 @@ export default function AdminLayout({
         <div className="flex flex-col">
             <p className="font-bold text-base truncate">{adminName}</p>
             <p className="text-sm text-muted-foreground truncate">{adminEmail}</p>
-            <p className="text-xs text-muted-foreground mt-1">Admin</p>
+            <Badge variant="secondary" className="mt-2 w-fit">Administrator</Badge>
         </div>
     </div>
   );
