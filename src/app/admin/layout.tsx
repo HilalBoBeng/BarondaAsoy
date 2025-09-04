@@ -19,7 +19,7 @@ import {
   QrCode,
   Banknote,
   ClipboardList,
-  Link as LinkIcon,
+  User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ import Image from "next/image";
 import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AdminLayout({
   children,
@@ -53,6 +54,8 @@ export default function AdminLayout({
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const navItems = [
+        { href: "/admin", icon: Home, label: "Dasbor" },
+        { href: "/admin/settings", icon: UserIcon, label: "Profil Saya" },
         { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: badgeCounts.newReports },
         { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
         { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
@@ -60,7 +63,7 @@ export default function AdminLayout({
         { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
         { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
-        { href: "/admin/settings", icon: LinkIcon, label: "Lainnya" },
+        { href: "/admin/settings", icon: Settings, label: "Lainnya" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     ];
@@ -80,7 +83,6 @@ export default function AdminLayout({
             setAdminEmail(staffInfo.email);
         }
 
-        // Setup badge listeners
         const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
         const staffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
         
@@ -114,7 +116,7 @@ export default function AdminLayout({
     }
      else {
       setIsDetailPage(false);
-      const activeItem = navItems.find(item => pathname.startsWith(item.href));
+      const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
       setPageTitle(activeItem?.label || 'Dasbor Admin');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,14 +124,11 @@ export default function AdminLayout({
 
   const handleLogout = () => {
     setIsLoggingOut(true);
-    // Clear local storage first
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
 
-    // Then redirect
     setTimeout(() => {
         router.push('/');
-        // No need to set isLoggingOut to false as the component will unmount
     }, 1500); 
   };
   
@@ -150,35 +149,32 @@ export default function AdminLayout({
   }
 
   const NavHeader = () => (
-    <div className="flex flex-col items-start p-4 text-left">
-        <p className="font-bold text-base">{adminName}</p>
-        <p className="text-sm text-muted-foreground">{adminEmail}</p>
-        <p className="text-xs text-muted-foreground mt-1">Admin</p>
+    <div className="flex items-center gap-4 p-4 text-left">
+        <Avatar className="h-12 w-12">
+            <AvatarImage src={undefined} />
+            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{adminName.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+            <p className="font-bold text-base truncate">{adminName}</p>
+            <p className="text-sm text-muted-foreground truncate">{adminEmail}</p>
+            <p className="text-xs text-muted-foreground mt-1">Admin</p>
+        </div>
     </div>
   );
 
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-         <Link
-            href="/admin"
-            onClick={onLinkClick}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              pathname === "/admin" && "bg-muted text-primary"
-            )}
-          >
-            <Home className="h-4 w-4" />
-            Dasbor
-          </Link>
         {navItems.map((item) => (
           <Link
-            key={item.href}
+            key={item.href + item.label}
             href={item.href}
             onClick={onLinkClick}
             className={cn(
               "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              pathname.startsWith(item.href) && "bg-muted text-primary"
+              (pathname === item.href && item.href !== '/admin/settings') || (pathname.startsWith(item.href) && item.href !== '/admin' && item.href !== '/admin/settings') && "bg-muted text-primary",
+              pathname === '/admin/settings' && item.href === '/admin/settings' && "bg-muted text-primary",
+              pathname === '/admin' && item.href === '/admin' && 'bg-muted text-primary'
             )}
           >
             <div className="flex items-center gap-3">
@@ -202,7 +198,7 @@ export default function AdminLayout({
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
         <div className="flex h-auto items-center border-b px-2 lg:h-auto lg:px-4 py-2">
-          <NavHeader />
+            <NavHeader />
         </div>
         <div className="flex-1 overflow-auto py-2">
             <NavContent />
@@ -222,9 +218,10 @@ export default function AdminLayout({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-              <SheetHeader className="p-4 border-b">
-                 <SheetTitle className="text-lg font-semibold">Menu Navigasi</SheetTitle>
-              </SheetHeader>
+               <SheetHeader className="p-0 border-b">
+                   <SheetTitle className="sr-only">Profil & Navigasi</SheetTitle>
+                   <NavHeader />
+               </SheetHeader>
               <div className="flex-1 overflow-auto py-2">
                 <NavContent onLinkClick={() => setIsSheetOpen(false)} />
               </div>

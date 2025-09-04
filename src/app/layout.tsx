@@ -8,7 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import MaintenancePage from "./maintenance/page";
+import MaintenancePage from "@/app/maintenance/page";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 

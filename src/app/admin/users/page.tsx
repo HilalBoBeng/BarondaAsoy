@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -25,7 +25,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { add } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns/locale';
+import { format, formatDistanceToNow } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
@@ -303,7 +304,7 @@ export default function UsersAdminPage() {
                         </TableCell>
                         <TableCell className="text-right">
                            <Button variant="ghost" size="icon" onClick={() => showUserDetail(user)}>
-                              <Eye className="h-4 w-4" />
+                              <MoreVertical className="h-4 w-4" />
                            </Button>
                         </TableCell>
                       </TableRow>
@@ -348,7 +349,7 @@ export default function UsersAdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                        <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
-                                          <Eye className="h-4 w-4" />
+                                          <MoreVertical className="h-4 w-4" />
                                       </Button>
                                     </TableCell>
                                 </TableRow>
@@ -393,7 +394,7 @@ export default function UsersAdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
-                                          <Eye className="h-4 w-4" />
+                                          <MoreVertical className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -438,6 +439,9 @@ export default function UsersAdminPage() {
                           )}
                           {'points' in selectedUserForDetail && (
                               <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
+                          )}
+                          {'createdAt' in selectedUserForDetail && selectedUserForDetail.createdAt && (
+                             <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format(selectedUserForDetail.createdAt as Date, "d MMMM yyyy", { locale: localeId })}</span></div>
                           )}
                       </div>
                   </CardContent>

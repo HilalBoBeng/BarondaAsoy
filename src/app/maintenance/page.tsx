@@ -1,12 +1,15 @@
 
 'use client';
 
+import Link from 'next/link';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { HardHat, Info } from 'lucide-react';
 
 export default function MaintenancePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background text-center px-4 overflow-hidden">
-       <div className="relative mb-8">
+      <div className="relative mb-8">
          <Image
           src="https://iili.io/KJ4aGxp.png"
           alt="Baronda Logo"
@@ -19,7 +22,8 @@ export default function MaintenancePage() {
         </div>
       </div>
       <div className="animate-fade-in-up">
-        <h1 className="text-4xl font-extrabold tracking-tighter text-primary">
+        <h1 className="text-4xl font-extrabold tracking-tight text-primary flex items-center justify-center gap-3">
+            <HardHat className="h-10 w-10"/>
             Segera Kembali
         </h1>
         <p className="mt-4 text-xl font-semibold text-foreground">

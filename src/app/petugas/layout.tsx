@@ -16,6 +16,7 @@ import {
   Megaphone,
   Banknote,
   Lock,
+  User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/fire
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface MenuConfig {
   id: string;
@@ -56,6 +58,7 @@ export default function PetugasLayout({
 
   const initialNavItems = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
+    { id: 'profile', href: "/petugas/settings", icon: UserIcon, label: "Profil Saya" },
     { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
     { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
     { id: 'patrol-log', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
@@ -93,11 +96,16 @@ export default function PetugasLayout({
     if (staffInfo.name) setStaffName(staffInfo.name);
     if (staffInfo.email) setStaffEmail(staffInfo.email);
 
-    // Fetch Menu Config
     const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
     const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
       if (docSnap.exists()) {
-        setMenuConfig(docSnap.data().config);
+        const fullConfig = initialNavItems.map(initial => {
+          const saved = docSnap.data().config?.find((c: MenuConfig) => c.id === initial.id);
+          return { ...initial, ...saved };
+        });
+        setMenuConfig(fullConfig);
+      } else {
+        setMenuConfig(initialNavItems.map(item => ({...item, visible: true, locked: false})));
       }
     });
 
@@ -134,7 +142,7 @@ export default function PetugasLayout({
     } else if (isDuesRecord) {
         setPageTitle("Catat Iuran Warga");
     } else {
-        const activeItem = navItems.find(item => pathname.startsWith(item.href));
+        const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,10 +165,16 @@ export default function PetugasLayout({
   }
   
   const NavHeader = () => (
-    <div className="flex flex-col items-start p-4 text-left">
-        <p className="font-bold text-base">{staffName}</p>
-        <p className="text-sm text-muted-foreground">{staffEmail}</p>
-        <p className="text-xs text-muted-foreground mt-1">Petugas</p>
+    <div className="flex items-center gap-4 p-4 text-left">
+        <Avatar className="h-12 w-12">
+            <AvatarImage src={undefined} />
+            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffName.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+            <p className="font-bold text-base truncate">{staffName}</p>
+            <p className="text-sm text-muted-foreground truncate">{staffEmail}</p>
+            <p className="text-xs text-muted-foreground mt-1">Petugas</p>
+        </div>
     </div>
   );
 
@@ -197,7 +211,9 @@ export default function PetugasLayout({
               onClick={onLinkClick}
               className={cn(
                 "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                pathname.startsWith(item.href) && "bg-muted text-primary"
+                 (pathname === item.href && item.href !== '/petugas/settings') || (pathname.startsWith(item.href) && item.href !== '/petugas') && "bg-muted text-primary",
+                 pathname === '/petugas/settings' && item.href === '/petugas/settings' && "bg-muted text-primary",
+                 pathname === '/petugas' && item.href === '/petugas' && 'bg-muted text-primary'
               )}
             >
               {linkContent}
@@ -243,6 +259,7 @@ export default function PetugasLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="p-0 border-b">
+                   <SheetTitle className="sr-only">Profil & Navigasi</SheetTitle>
                    <NavHeader />
                 </SheetHeader>
                 <div className="flex-1 overflow-auto py-2">
