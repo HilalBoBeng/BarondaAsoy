@@ -27,9 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { sendOtp } from '@/ai/flows/send-otp';
 import { createAdmin } from '@/ai/flows/create-admin';
-import { verifyOtp } from '@/ai/flows/verify-otp';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 
@@ -81,11 +79,6 @@ const addAdminSchema = z.object({
 });
 type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
-const otpSchema = z.object({
-    otp: z.string().min(6, "Kode OTP harus 6 digit."),
-});
-type OtpFormValues = z.infer<typeof otpSchema>;
-
 const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
     { id: 'dashboard', label: 'Dasbor' },
     { id: 'profile', label: 'Profil Saya' },
@@ -118,9 +111,6 @@ export default function ToolsAdminPage() {
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
   
-  const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
-  const [adminDataToCreate, setAdminDataToCreate] = useState<AddAdminFormValues | null>(null);
-
 
   const { toast } = useToast();
 
@@ -134,11 +124,6 @@ export default function ToolsAdminPage() {
     defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
   });
   const addressType = addAdminForm.watch('addressType');
-
-  const otpForm = useForm<OtpFormValues>({
-      resolver: zodResolver(otpSchema),
-      defaultValues: { otp: '' },
-  });
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -223,10 +208,6 @@ export default function ToolsAdminPage() {
   }
   
   const handleAddAdmin = async (values: AddAdminFormValues) => {
-    if (!currentAdmin?.email) {
-        toast({ variant: "destructive", title: "Gagal", description: "Tidak dapat memverifikasi identitas Anda."});
-        return;
-    }
     setIsSubmitting(true);
     try {
         const emailQuery = query(collection(db, 'staff'), where('email', '==', values.email));
@@ -244,57 +225,27 @@ export default function ToolsAdminPage() {
         if (!phoneSnapshot.empty || !userPhoneSnapshot.empty) {
             addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' }); return;
         }
-
-        const otpResult = await sendOtp({ email: currentAdmin.email, context: 'adminCreation' });
-        if (!otpResult.success) throw new Error(otpResult.message);
-        
-        toast({ title: "Verifikasi Diperlukan", description: "Kode OTP telah dikirim ke email Anda untuk konfirmasi." });
-        setAdminDataToCreate(values);
-        setIsAddAdminOpen(false);
-        setIsOtpDialogOpen(true);
-
-    } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: `Gagal mengirim OTP. ${error instanceof Error ? error.message : ''}`});
-    } finally {
-        setIsSubmitting(false);
-    }
-  };
-
-  const handleOtpSubmit = async (values: OtpFormValues) => {
-      if (!currentAdmin?.email || !adminDataToCreate) return;
-      setIsSubmitting(true);
-      try {
-        const verifyResult = await verifyOtp({
-            email: currentAdmin.email,
-            otp: values.otp,
-            flow: 'adminCreation'
-        });
-
-        if (!verifyResult.success) throw new Error(verifyResult.message);
         
         const createResult = await createAdmin({
-            name: toTitleCase(adminDataToCreate.name),
-            email: adminDataToCreate.email,
-            phone: adminDataToCreate.phone,
-            addressType: adminDataToCreate.addressType,
-            addressDetail: adminDataToCreate.addressDetail
+            name: toTitleCase(values.name),
+            email: values.email,
+            phone: values.phone,
+            addressType: values.addressType,
+            addressDetail: values.addressDetail
         });
 
         if (!createResult.success) throw new Error(createResult.message);
 
         toast({ title: "Admin Berhasil Dibuat", description: createResult.message });
-        setIsOtpDialogOpen(false);
-        setAdminDataToCreate(null);
+        setIsAddAdminOpen(false);
         addAdminForm.reset();
-        otpForm.reset();
 
-      } catch (error) {
+    } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: `Proses pembuatan admin gagal. ${error instanceof Error ? error.message : ''}`});
-      } finally {
+    } finally {
         setIsSubmitting(false);
-      }
-  }
-
+    }
+  };
 
   const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
       const newConfig = menuConfig.map(item => 
@@ -366,6 +317,7 @@ export default function ToolsAdminPage() {
       try {
           await deleteDoc(doc(db, 'staff', adminId));
           toast({ title: 'Berhasil', description: 'Admin telah dihapus.' });
+          setIsUserDetailOpen(false);
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus admin.' });
       }
@@ -548,9 +500,30 @@ export default function ToolsAdminPage() {
                                                 {admin.name}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
+                                                 <div className="flex items-center justify-end gap-1">
+                                                    <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                    {isSuperAdmin && currentAdmin?.id !== admin.id && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                    <Trash className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Hapus Admin Ini?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>Tindakan ini akan menghapus akun admin secara permanen. Anda yakin?</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteAdmin(admin.id)}>Ya, Hapus</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                         ))
@@ -663,7 +636,7 @@ export default function ToolsAdminPage() {
             <DialogHeader>
                 <DialogTitle>Tambah Admin Baru</DialogTitle>
                 <DialogDescription>
-                    Isi detail di bawah ini untuk membuat akun admin baru. Diperlukan verifikasi OTP ke email Anda.
+                    Isi detail di bawah ini untuk membuat akun admin baru. Kode akses akan dikirimkan ke email yang didaftarkan.
                 </DialogDescription>
             </DialogHeader>
             <Form {...addAdminForm}>
@@ -720,53 +693,7 @@ export default function ToolsAdminPage() {
                         <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                            Lanjutkan
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
-
-    <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
-        <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-                 <DialogTitle>Konfirmasi Tindakan</DialogTitle>
-                 <DialogDescription>
-                    Masukkan kode OTP yang telah dikirim ke email Anda ({currentAdmin?.email}) untuk menyelesaikan pembuatan admin baru.
-                 </DialogDescription>
-            </DialogHeader>
-             <Form {...otpForm}>
-                <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)}>
-                    <DialogBody className="flex justify-center">
-                         <FormField
-                            control={otpForm.control}
-                            name="otp"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="sr-only">Kode OTP</FormLabel>
-                                <FormControl>
-                                    <InputOTP maxLength={6} {...field}>
-                                        <InputOTPGroup>
-                                            <InputOTPSlot index={0} />
-                                            <InputOTPSlot index={1} />
-                                            <InputOTPSlot index={2} />
-                                            <InputOTPSlot index={3} />
-                                            <InputOTPSlot index={4} />
-                                            <InputOTPSlot index={5} />
-                                        </InputOTPGroup>
-                                    </InputOTP>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </DialogBody>
-                     <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsOtpDialogOpen(false)}>Batal</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Konfirmasi & Buat Admin
+                            Buat Akun Admin
                         </Button>
                     </DialogFooter>
                 </form>
@@ -801,29 +728,6 @@ export default function ToolsAdminPage() {
                   </CardContent>
                    <DialogFooter className="p-4 border-t bg-muted/50 flex justify-between">
                         <Button type="button" variant="secondary" onClick={() => setIsUserDetailOpen(false)}>Tutup</Button>
-                        {isSuperAdmin && currentAdmin?.id !== selectedUserForDetail.id && (
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <Trash className="mr-2 h-4 w-4" /> Hapus Admin
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Hapus Admin Ini?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Tindakan ini akan menghapus akun admin secara permanen. Anda yakin?
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteAdmin(selectedUserForDetail.id)}>
-                                            Ya, Hapus
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        )}
                   </DialogFooter>
               </Card>
           )}
@@ -832,3 +736,5 @@ export default function ToolsAdminPage() {
     </>
   );
 }
+
+    
