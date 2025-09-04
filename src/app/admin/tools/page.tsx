@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,11 +23,13 @@ import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogD
 import { Switch } from '@/components/ui/switch';
 import { Label } from "@/components/ui/label";
 import { Badge } from '@/components/ui/badge';
-import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
 import { Textarea } from '@/components/ui/textarea';
 import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { sendOtp } from '@/ai/flows/send-otp';
+import { createAdmin } from '@/ai/flows/create-admin';
+import { verifyOtp } from '@/ai/flows/verify-otp';
 
 
 const shortLinkSchema = z.object({
@@ -78,6 +80,10 @@ const addAdminSchema = z.object({
 });
 type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
+const otpSchema = z.object({
+    otp: z.string().min(6, "Kode OTP harus 6 digit."),
+});
+type OtpFormValues = z.infer<typeof otpSchema>;
 
 const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
     { id: 'dashboard', label: 'Dasbor' },
@@ -110,6 +116,9 @@ export default function ToolsAdminPage() {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
+  
+  const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
+  const [adminDataToCreate, setAdminDataToCreate] = useState<AddAdminFormValues | null>(null);
 
 
   const { toast } = useToast();
@@ -124,6 +133,11 @@ export default function ToolsAdminPage() {
     defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
   });
   const addressType = addAdminForm.watch('addressType');
+
+  const otpForm = useForm<OtpFormValues>({
+      resolver: zodResolver(otpSchema),
+      defaultValues: { otp: '' },
+  });
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -208,61 +222,77 @@ export default function ToolsAdminPage() {
   }
   
   const handleAddAdmin = async (values: AddAdminFormValues) => {
+    if (!currentAdmin?.email) {
+        toast({ variant: "destructive", title: "Gagal", description: "Tidak dapat memverifikasi identitas Anda."});
+        return;
+    }
     setIsSubmitting(true);
     try {
-        // Check for uniqueness of email and phone
         const emailQuery = query(collection(db, 'staff'), where('email', '==', values.email));
         const phoneQuery = query(collection(db, 'staff'), where('phone', '==', values.phone));
         const userEmailQuery = query(collection(db, 'users'), where('email', '==', values.email));
         const userPhoneQuery = query(collection(db, 'users'), where('phone', '==', values.phone));
 
         const [emailSnapshot, phoneSnapshot, userEmailSnapshot, userPhoneSnapshot] = await Promise.all([
-            getDocs(emailQuery),
-            getDocs(phoneQuery),
-            getDocs(userEmailQuery),
-            getDocs(userPhoneQuery)
+            getDocs(emailQuery), getDocs(phoneQuery), getDocs(userEmailQuery), getDocs(userPhoneQuery)
         ]);
 
         if (!emailSnapshot.empty || !userEmailSnapshot.empty) {
-            addAdminForm.setError('email', { message: 'Email ini sudah terdaftar.' });
-            setIsSubmitting(false);
-            return;
+            addAdminForm.setError('email', { message: 'Email ini sudah terdaftar.' }); return;
         }
         if (!phoneSnapshot.empty || !userPhoneSnapshot.empty) {
-            addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' });
-            setIsSubmitting(false);
-            return;
+            addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' }); return;
         }
 
-        const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-        const newAdminData = {
-            name: toTitleCase(values.name),
-            email: values.email,
-            phone: values.phone,
-            addressType: values.addressType,
-            addressDetail: values.addressType === 'luar_kilongan' ? values.addressDetail : 'Kilongan',
-            status: 'active',
-            accessCode: accessCode,
-            createdAt: serverTimestamp(),
-            points: 0,
-            role: 'admin',
-        };
+        const otpResult = await sendOtp({ email: currentAdmin.email, context: 'adminCreation' });
+        if (!otpResult.success) throw new Error(otpResult.message);
         
-        const docRef = doc(collection(db, 'staff'));
-        await setDoc(docRef, newAdminData);
-
-        await approveOrRejectStaff({ staffId: docRef.id, approved: true });
-
-        toast({ title: "Admin Berhasil Dibuat", description: `Admin baru ${values.name} telah dibuat dan email berisi kode akses telah dikirim.`});
+        toast({ title: "Verifikasi Diperlukan", description: "Kode OTP telah dikirim ke email Anda untuk konfirmasi." });
+        setAdminDataToCreate(values);
         setIsAddAdminOpen(false);
-        addAdminForm.reset();
+        setIsOtpDialogOpen(true);
 
     } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: `Gagal membuat admin baru. ${error instanceof Error ? error.message : ''}`});
+        toast({ variant: "destructive", title: "Gagal", description: `Gagal mengirim OTP. ${error instanceof Error ? error.message : ''}`});
     } finally {
         setIsSubmitting(false);
     }
   };
+
+  const handleOtpSubmit = async (values: OtpFormValues) => {
+      if (!currentAdmin?.email || !adminDataToCreate) return;
+      setIsSubmitting(true);
+      try {
+        const verifyResult = await verifyOtp({
+            email: currentAdmin.email,
+            otp: values.otp,
+            flow: 'adminCreation'
+        });
+
+        if (!verifyResult.success) throw new Error(verifyResult.message);
+        
+        const createResult = await createAdmin({
+            name: toTitleCase(adminDataToCreate.name),
+            email: adminDataToCreate.email,
+            phone: adminDataToCreate.phone,
+            addressType: adminDataToCreate.addressType,
+            addressDetail: adminDataToCreate.addressDetail
+        });
+
+        if (!createResult.success) throw new Error(createResult.message);
+
+        toast({ title: "Admin Berhasil Dibuat", description: createResult.message });
+        setIsOtpDialogOpen(false);
+        setAdminDataToCreate(null);
+        addAdminForm.reset();
+        otpForm.reset();
+
+      } catch (error) {
+        toast({ variant: "destructive", title: "Gagal", description: `Proses pembuatan admin gagal. ${error instanceof Error ? error.message : ''}`});
+      } finally {
+        setIsSubmitting(false);
+      }
+  }
 
 
   const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
@@ -403,20 +433,6 @@ export default function ToolsAdminPage() {
                     )}
                 </CardContent>
             </Card>
-            {isSuperAdmin && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Manajemen Admin</CardTitle>
-                        <CardDescription>Tambah admin baru untuk membantu mengelola aplikasi.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button onClick={() => setIsAddAdminOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Tambah Admin
-                        </Button>
-                    </CardContent>
-                </Card>
-            )}
         </div>
 
         <div className="lg:col-span-2 space-y-6">
@@ -484,47 +500,51 @@ export default function ToolsAdminPage() {
              {isSuperAdmin && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Daftar Admin</CardTitle>
-                        <CardDescription>Lihat daftar semua administrator yang terdaftar.</CardDescription>
+                        <CardTitle className="text-base">Manajemen Admin</CardTitle>
+                        <CardDescription>Tambah admin baru atau lihat daftar admin yang sudah ada.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                       <div className="rounded-lg border overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead>Nama</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead className="text-right">Aksi</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {loadingAdmins ? (
-                                    Array.from({ length: 1 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                                        <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : allAdmins.length > 0 ? (
-                                    allAdmins.map((admin) => (
-                                    <TableRow key={admin.id}>
-                                        <TableCell>{admin.name}</TableCell>
-                                        <TableCell>{admin.email}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : (
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="p-4 border rounded-lg flex flex-col items-center text-center">
+                            <h3 className="font-semibold mb-2">Tambah Admin Baru</h3>
+                             <p className="text-xs text-muted-foreground mb-4">Buat akun untuk administrator baru.</p>
+                             <Button onClick={() => setIsAddAdminOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Tambah Admin
+                            </Button>
+                        </div>
+                         <div className="p-4 border rounded-lg flex flex-col items-center text-center">
+                           <h3 className="font-semibold mb-2">Daftar Admin</h3>
+                           <p className="text-xs text-muted-foreground mb-4">Lihat daftar semua administrator.</p>
+                           <div className="rounded-lg border overflow-x-auto w-full">
+                                <Table>
+                                    <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center h-24">Belum ada admin yang ditambahkan.</TableCell>
+                                        <TableHead>Nama</TableHead>
+                                        <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
-                                )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                    {loadingAdmins ? (
+                                        <TableRow><TableCell colSpan={2}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                    ) : allAdmins.length > 0 ? (
+                                        allAdmins.map((admin) => (
+                                        <TableRow key={admin.id}>
+                                            <TableCell>{admin.name}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={2} className="text-center h-16">Belum ada admin.</TableCell>
+                                        </TableRow>
+                                    )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -622,11 +642,11 @@ export default function ToolsAdminPage() {
     </Dialog>
 
      <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
                 <DialogTitle>Tambah Admin Baru</DialogTitle>
                 <DialogDescription>
-                    Isi detail di bawah ini untuk membuat akun admin baru. Kode akses akan dikirim ke email yang didaftarkan.
+                    Isi detail di bawah ini untuk membuat akun admin baru. Diperlukan verifikasi OTP ke email Anda.
                 </DialogDescription>
             </DialogHeader>
             <Form {...addAdminForm}>
@@ -682,14 +702,54 @@ export default function ToolsAdminPage() {
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Buat Admin
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                            Lanjutkan
                         </Button>
                     </DialogFooter>
                 </form>
             </Form>
         </DialogContent>
     </Dialog>
+
+    <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+                 <DialogTitle>Konfirmasi Tindakan</DialogTitle>
+                 <DialogDescription>
+                    Masukkan kode OTP yang telah dikirim ke email Anda ({currentAdmin?.email}) untuk menyelesaikan pembuatan admin baru.
+                 </DialogDescription>
+            </DialogHeader>
+             <Form {...otpForm}>
+                <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)}>
+                    <DialogBody className="flex justify-center">
+                         <FormField
+                            control={otpForm.control}
+                            name="otp"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="sr-only">Kode OTP</FormLabel>
+                                <FormControl>
+                                    <InputOTP maxLength={6} {...field}>
+                                    {/* ... InputOTPSlot ... */}
+                                    </InputOTP>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </DialogBody>
+                     <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsOtpDialogOpen(false)}>Batal</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Konfirmasi & Buat Admin
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+
      <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
       <DialogContent className="p-0 border-0 max-w-sm">
        <DialogTitle className="sr-only">Detail Admin</DialogTitle>
@@ -725,5 +785,7 @@ export default function ToolsAdminPage() {
     </>
   );
 }
+
+    
 
     
