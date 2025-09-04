@@ -14,7 +14,8 @@ import {
   ArrowLeft,
   Bell,
   Megaphone,
-  Banknote
+  Banknote,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,6 +27,13 @@ import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/fire
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+
+interface MenuConfig {
+  id: string;
+  label: string;
+  visible: boolean;
+  locked: boolean;
+}
 
 export default function PetugasLayout({
   children,
@@ -43,17 +51,34 @@ export default function PetugasLayout({
   const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
   const [isDetailPage, setIsDetailPage] = useState(false);
   const [isScanPage, setIsScanPage] = useState(false);
+  const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const navItems = [
-    { href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badge: badgeCounts.newReports + badgeCounts.myReports },
-    { href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badge: badgeCounts.pendingSchedules },
-    { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
-    { href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badge: badgeCounts.newHonors },
-    { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
-    { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
-    { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+  const initialNavItems = [
+    { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
+    { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
+    { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
+    { id: 'patrol-log', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
+    { id: 'dues', href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
+    { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
+    { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
+    { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
+    { id: 'emergency-contacts', href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
   ];
+
+  const getBadgeCount = (badgeKey?: string) => {
+    if (!badgeKey) return 0;
+    if (badgeKey === 'newReports') return badgeCounts.newReports + badgeCounts.myReports;
+    return badgeCounts[badgeKey as keyof typeof badgeCounts] || 0;
+  }
+  
+  const navItems = initialNavItems
+    .map(item => {
+      const config = menuConfig.find(c => c.id === item.id);
+      return { ...item, ...config, badge: getBadgeCount(item.badgeKey) };
+    })
+    .filter(item => item.visible);
+
 
   useEffect(() => {
     setIsClient(true);
@@ -62,21 +87,25 @@ export default function PetugasLayout({
 
     if (userRole !== 'petugas') {
       router.replace('/auth/staff-login');
-    } else {
-        if (staffInfo.name) {
-            setStaffName(staffInfo.name);
-        }
-        if (staffInfo.email) {
-            setStaffEmail(staffInfo.email);
-        }
+      return;
+    } 
+      
+    if (staffInfo.name) setStaffName(staffInfo.name);
+    if (staffInfo.email) setStaffEmail(staffInfo.email);
 
-        // Badge listeners
+    // Fetch Menu Config
+    const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
+    const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setMenuConfig(docSnap.data().config);
+      }
+    });
+
+    if (staffInfo.id) {
         const reportsRef = collection(db, 'reports');
         const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
         const myReportsQuery = query(reportsRef, where('handlerId', '==', staffInfo.id), where('status', '==', 'in_progress'));
-        
         const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', staffInfo.id), where('status', '==', 'Pending'));
-        
         const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', staffInfo.id), where('status', '==', 'Tertunda'));
 
         const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
@@ -85,10 +114,7 @@ export default function PetugasLayout({
         const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
         
         return () => {
-          unsubNewReports();
-          unsubMyReports();
-          unsubSchedules();
-          unsubHonors();
+          unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
         }
     }
   }, [router]);
@@ -112,30 +138,19 @@ export default function PetugasLayout({
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, navItems]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
-
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
-    
-    setTimeout(() => {
-        router.push('/');
-    }, 1500);
+    setTimeout(() => { router.push('/'); }, 1500);
   };
   
   if (!isClient || isLoggingOut) {
       return (
         <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
-            <Image 
-                src="https://iili.io/KJ4aGxp.png" 
-                alt="Loading Logo" 
-                width={120} 
-                height={120} 
-                className="animate-logo-pulse"
-                priority
-            />
+            <Image src="https://iili.io/KJ4aGxp.png" alt="Loading Logo" width={120} height={120} className="animate-logo-pulse" priority />
             {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
         </div>
       );
@@ -150,35 +165,45 @@ export default function PetugasLayout({
   );
 
 
-  const NavContent = () => (
+  const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-         <Link
-            href="/petugas"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              pathname === "/petugas" && "bg-muted text-primary"
-            )}
-          >
-            <Home className="h-4 w-4" />
-            Dasbor
-          </Link>
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              pathname.startsWith(item.href) && "bg-muted text-primary"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <item.icon className="h-4 w-4" />
-              {item.label}
+        {navItems.map((item) => {
+           const linkContent = (
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </div>
+              <div className="flex items-center gap-2">
+                {item.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                {item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
+              </div>
             </div>
-             {item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
-          </Link>
-        ))}
+          );
+          
+          if (item.locked) {
+            return (
+              <button key={item.id} disabled className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all opacity-50 cursor-not-allowed">
+                {linkContent}
+              </button>
+            )
+          }
+
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={onLinkClick}
+              className={cn(
+                "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                pathname.startsWith(item.href) && "bg-muted text-primary"
+              )}
+            >
+              {linkContent}
+            </Link>
+          );
+        })}
       </nav>
       <div className="mt-auto p-4">
          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout} disabled={isLoggingOut}>
@@ -209,25 +234,20 @@ export default function PetugasLayout({
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet>
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
+              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="p-0 border-b">
-                  <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                  <NavHeader />
+                   <NavHeader />
                 </SheetHeader>
-              <div className="flex-1 overflow-auto py-2">
-                  <NavContent />
-              </div>
+                <div className="flex-1 overflow-auto py-2">
+                  <NavContent onLinkClick={() => setIsSheetOpen(false)} />
+                </div>
             </SheetContent>
           </Sheet>
 

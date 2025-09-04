@@ -6,13 +6,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs, setDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,8 +21,8 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogDescription, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { Label } from "@/components/ui/label";
+import { Separator } from '@/components/ui/separator';
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -37,16 +37,36 @@ interface ShortLinkData {
   createdAt: Date;
 }
 
+interface MenuConfig {
+  id: string;
+  label: string;
+  visible: boolean;
+  locked: boolean;
+}
+
+const initialMenuState: MenuConfig[] = [
+    { id: 'dashboard', label: 'Dasbor', visible: true, locked: true },
+    { id: 'reports', label: 'Laporan Warga', visible: true, locked: false },
+    { id: 'schedule', label: 'Jadwal Saya', visible: true, locked: false },
+    { id: 'patrol-log', label: 'Patroli & Log', visible: true, locked: false },
+    { id: 'dues', label: 'Iuran Warga', visible: true, locked: false },
+    { id: 'honor', label: 'Honor Saya', visible: true, locked: false },
+    { id: 'announcements', label: 'Pengumuman', visible: true, locked: false },
+    { id: 'notifications', label: 'Notifikasi', visible: true, locked: false },
+    { id: 'emergency-contacts', label: 'Kontak Darurat', visible: true, locked: false },
+];
+
 export default function SettingsAdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [history, setHistory] = useState<ShortLinkData[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
-  const [selectedLongUrl, setSelectedLongUrl] = useState('');
+  const [revealedUrlId, setRevealedUrlId] = useState<string | null>(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
+  const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
+  const [loadingMenuConfig, setLoadingMenuConfig] = useState(true);
 
   const { toast } = useToast();
 
@@ -64,28 +84,40 @@ export default function SettingsAdminPage() {
         setLoadingMaintenance(false);
     });
 
-    const q = query(collection(db, 'shortlinks'), orderBy('createdAt', 'desc'));
-    const unsubHistory = onSnapshot(q, (snapshot) => {
+    const shortlinksQuery = query(collection(db, 'shortlinks'), orderBy('createdAt', 'desc'));
+    const unsubHistory = onSnapshot(shortlinksQuery, (snapshot) => {
         const historyData = snapshot.docs.map(doc => {
             const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
-            } as ShortLinkData;
+            return { id: doc.id, ...data, createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date() } as ShortLinkData;
         });
         setHistory(historyData);
         setLoadingHistory(false);
+    });
+    
+    const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
+    const unsubMenuConfig = onSnapshot(menuConfigRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data().config;
+            const mergedConfig = initialMenuState.map(initialItem => {
+                const savedItem = data.find((d: MenuConfig) => d.id === initialItem.id);
+                return savedItem ? { ...initialItem, ...savedItem } : initialItem;
+            });
+            setMenuConfig(mergedConfig);
+        } else {
+            setMenuConfig(initialMenuState);
+            setDoc(menuConfigRef, { config: initialMenuState });
+        }
+        setLoadingMenuConfig(false);
     });
 
     return () => {
         unsubSettings();
         unsubHistory();
+        unsubMenuConfig();
     };
   }, []);
 
   const handleMaintenanceToggle = async (checked: boolean) => {
-    setMaintenanceMode(checked);
     setLoadingMaintenance(true);
     try {
         const settingsRef = doc(db, 'app_settings', 'config');
@@ -93,11 +125,26 @@ export default function SettingsAdminPage() {
         toast({ title: 'Berhasil', description: `Mode pemeliharaan telah di${checked ? 'aktifkan' : 'nonaktifkan'}.` });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mengubah status mode pemeliharaan.' });
-        setMaintenanceMode(!checked); // Revert on failure
+        setMaintenanceMode(!checked); 
     } finally {
         setLoadingMaintenance(false);
     }
   }
+
+  const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
+      const newConfig = menuConfig.map(item => 
+          item.id === id ? { ...item, [type]: !item[type as keyof MenuConfig] } : item
+      );
+      setMenuConfig(newConfig);
+      try {
+        const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
+        await setDoc(menuConfigRef, { config: newConfig });
+        toast({ title: 'Berhasil', description: 'Konfigurasi menu petugas diperbarui.' });
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan konfigurasi menu.' });
+      }
+  };
+
 
   const onSubmit = async (values: ShortLinkFormValues) => {
     setIsSubmitting(true);
@@ -149,10 +196,6 @@ export default function SettingsAdminPage() {
       }
   }
 
-  const showOriginalUrl = (url: string) => {
-    setSelectedLongUrl(url);
-    setIsUrlModalOpen(true);
-  };
 
   return (
     <>
@@ -219,29 +262,54 @@ export default function SettingsAdminPage() {
                     )}
                 </CardContent>
             </Card>
+        </div>
 
-            <Card>
+        <div className="lg:col-span-2 space-y-6">
+             <Card>
                 <CardHeader>
                     <CardTitle>Pengaturan Aplikasi</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
                         <div className="flex items-center space-x-3">
                             <MonitorOff className="h-5 w-5 text-muted-foreground" />
                             <div className="space-y-0.5">
                                 <Label htmlFor="maintenance-mode">Mode Pemeliharaan</Label>
-                                <p className="text-xs text-muted-foreground">Alihkan semua traffic ke halaman maintenance.</p>
+                                <p className="text-xs text-muted-foreground">Arahkan semua traffic ke halaman maintenance.</p>
                             </div>
                         </div>
                         {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                     </div>
                 </CardContent>
             </Card>
-        </div>
-
-        <div className="lg:col-span-2">
-            <h2 className="font-bold text-lg mb-4">Informasi Lainnya</h2>
-            <p className="text-muted-foreground">Bagian ini sedang dalam pengembangan.</p>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Manajemen Menu Petugas</CardTitle>
+                    <CardDescription>Atur menu yang dapat dilihat atau diakses oleh petugas.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loadingMenuConfig ? <Skeleton className="h-48 w-full" /> : (
+                        <div className="space-y-4">
+                            {menuConfig.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                    <span className="font-medium text-sm">{item.label}</span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center space-x-2">
+                                            <Switch id={`visible-${item.id}`} checked={item.visible} onCheckedChange={() => handleMenuConfigChange(item.id, 'visible')} />
+                                            <Label htmlFor={`visible-${item.id}`} className="text-xs">Tampil</Label>
+                                        </div>
+                                         <div className="flex items-center space-x-2">
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMenuConfigChange(item.id, 'locked')} disabled={!item.visible}>
+                                                {item.locked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
+                                            </Button>
+                                         </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     </div>
     
@@ -249,6 +317,7 @@ export default function SettingsAdminPage() {
         <DialogContent className="max-w-3xl">
             <DialogHeader>
                 <DialogTitle>Riwayat Tautan Pendek</DialogTitle>
+                <DialogDescription>Daftar tautan pendek yang telah Anda buat.</DialogDescription>
             </DialogHeader>
             <DialogBody>
                  <div className="rounded-lg border overflow-auto max-h-[60vh]">
@@ -288,12 +357,24 @@ export default function SettingsAdminPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="max-w-xs">
-                                            <div className="flex items-center gap-2">
-                                                <span>*****</span>
-                                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => showOriginalUrl(link.longUrl)}>
-                                                    <Eye className="h-4 w-4"/>
-                                                </Button>
-                                            </div>
+                                            {revealedUrlId === link.id ? (
+                                                 <div className="flex items-center gap-2">
+                                                    <Input value={link.longUrl} readOnly className="h-8 text-xs" />
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(link.longUrl)}>
+                                                        <Copy className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRevealedUrlId(null)}>
+                                                        <EyeOff className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span>*****</span>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRevealedUrlId(link.id)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <AlertDialog>
@@ -323,23 +404,6 @@ export default function SettingsAdminPage() {
                     </Table>
                 </div>
             </DialogBody>
-        </DialogContent>
-    </Dialog>
-
-    <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Tautan Asli</DialogTitle>
-                <DialogDescription>
-                    Ini adalah URL tujuan lengkap untuk tautan pendek yang dipilih.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-                <Input value={selectedLongUrl} readOnly className="bg-muted" />
-                 <Button className="w-full" onClick={() => copyToClipboard(selectedLongUrl)}>
-                    <Copy className="mr-2 h-4 w-4" /> Salin Tautan Asli
-                </Button>
-            </div>
         </DialogContent>
     </Dialog>
     </>
