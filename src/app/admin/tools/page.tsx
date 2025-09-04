@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,6 +27,7 @@ import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
 import { Textarea } from '@/components/ui/textarea';
 import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const shortLinkSchema = z.object({
@@ -105,6 +106,10 @@ export default function ToolsAdminPage() {
   const [loadingMenuConfig, setLoadingMenuConfig] = useState(true);
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
+  const [allAdmins, setAllAdmins] = useState<Staff[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
+  const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
+  const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
 
 
   const { toast } = useToast();
@@ -114,7 +119,10 @@ export default function ToolsAdminPage() {
     defaultValues: { longUrl: '', customSlug: '' },
   });
   
-  const addAdminForm = useForm<AddAdminFormValues>({ resolver: zodResolver(addAdminSchema) });
+  const addAdminForm = useForm<AddAdminFormValues>({ 
+    resolver: zodResolver(addAdminSchema),
+    defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
+  });
   const addressType = addAdminForm.watch('addressType');
 
   useEffect(() => {
@@ -150,12 +158,10 @@ export default function ToolsAdminPage() {
             if (savedItem) {
                 return { ...initialItem, ...savedItem };
             }
-            // New item found in code, add it to config
             configChanged = true;
             return { ...initialItem, visible: false, locked: false };
         });
 
-        // Ensure dashboard is always visible and unlocked
         const dashboardItem = mergedConfig.find(item => item.id === 'dashboard');
         if (dashboardItem) {
             if (!dashboardItem.visible || dashboardItem.locked) {
@@ -171,11 +177,19 @@ export default function ToolsAdminPage() {
         }
         setLoadingMenuConfig(false);
     });
+    
+    const adminsQuery = query(collection(db, 'staff'), where('role', '==', 'admin'));
+    const unsubAdmins = onSnapshot(adminsQuery, (snapshot) => {
+        const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
+        setAllAdmins(adminsData);
+        setLoadingAdmins(false);
+    });
 
     return () => {
         unsubSettings();
         unsubHistory();
         unsubMenuConfig();
+        unsubAdmins();
     };
   }, []);
 
@@ -196,6 +210,30 @@ export default function ToolsAdminPage() {
   const handleAddAdmin = async (values: AddAdminFormValues) => {
     setIsSubmitting(true);
     try {
+        // Check for uniqueness of email and phone
+        const emailQuery = query(collection(db, 'staff'), where('email', '==', values.email));
+        const phoneQuery = query(collection(db, 'staff'), where('phone', '==', values.phone));
+        const userEmailQuery = query(collection(db, 'users'), where('email', '==', values.email));
+        const userPhoneQuery = query(collection(db, 'users'), where('phone', '==', values.phone));
+
+        const [emailSnapshot, phoneSnapshot, userEmailSnapshot, userPhoneSnapshot] = await Promise.all([
+            getDocs(emailQuery),
+            getDocs(phoneQuery),
+            getDocs(userEmailQuery),
+            getDocs(userPhoneQuery)
+        ]);
+
+        if (!emailSnapshot.empty || !userEmailSnapshot.empty) {
+            addAdminForm.setError('email', { message: 'Email ini sudah terdaftar.' });
+            setIsSubmitting(false);
+            return;
+        }
+        if (!phoneSnapshot.empty || !userPhoneSnapshot.empty) {
+            addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' });
+            setIsSubmitting(false);
+            return;
+        }
+
         const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
         const newAdminData = {
             name: toTitleCase(values.name),
@@ -293,6 +331,11 @@ export default function ToolsAdminPage() {
   }
 
   const isSuperAdmin = currentAdmin?.email === 'admin@baronda.or.id';
+
+  const showUserDetail = (user: Staff) => {
+      setSelectedUserForDetail(user);
+      setIsUserDetailOpen(true);
+  }
 
 
   return (
@@ -438,6 +481,54 @@ export default function ToolsAdminPage() {
                     )}
                 </CardContent>
             </Card>
+             {isSuperAdmin && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Daftar Admin</CardTitle>
+                        <CardDescription>Lihat daftar semua administrator yang terdaftar.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <div className="rounded-lg border overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nama</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead className="text-right">Aksi</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {loadingAdmins ? (
+                                    Array.from({ length: 1 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                                        <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : allAdmins.length > 0 ? (
+                                    allAdmins.map((admin) => (
+                                    <TableRow key={admin.id}>
+                                        <TableCell>{admin.name}</TableCell>
+                                        <TableCell>{admin.email}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center h-24">Belum ada admin yang ditambahkan.</TableCell>
+                                    </TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     </div>
     
@@ -484,7 +575,7 @@ export default function ToolsAdminPage() {
                                                  </Button>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="max-w-xs whitespace-nowrap">
+                                        <TableCell className="max-w-xs break-normal whitespace-nowrap">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-mono text-xs truncate">
                                                     {revealedUrlId === link.id ? link.longUrl : '*****'}
@@ -599,6 +690,40 @@ export default function ToolsAdminPage() {
             </Form>
         </DialogContent>
     </Dialog>
+     <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
+      <DialogContent className="p-0 border-0 max-w-sm">
+       <DialogTitle className="sr-only">Detail Admin</DialogTitle>
+          {selectedUserForDetail && (
+              <Card className="border-0 shadow-none">
+                  <CardContent className="p-6 text-center">
+                      <Avatar className="h-24 w-24 border-4 border-muted mx-auto">
+                          <AvatarImage src={selectedUserForDetail.photoURL || undefined} />
+                          <AvatarFallback className="text-4xl">
+                              {(selectedUserForDetail.name.charAt(0))?.toUpperCase()}
+                          </AvatarFallback>
+                      </Avatar>
+                      <h2 className="text-xl font-bold mt-2">
+                          {selectedUserForDetail.name}
+                      </h2>
+                      <Badge variant="secondary" className="mt-1">Administrator</Badge>
+                      <div className="space-y-3 text-sm text-left border-t mt-4 pt-4">
+                          <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/><span>{selectedUserForDetail.email}</span></div>
+                          <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
+                          <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail}</span></div>
+                           {selectedUserForDetail.createdAt && (
+                             <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format(selectedUserForDetail.createdAt as Date, "d MMMM yyyy", { locale: id })}</span></div>
+                          )}
+                      </div>
+                  </CardContent>
+                   <DialogFooter className="p-4 border-t bg-muted/50">
+                        <Button type="button" variant="secondary" onClick={() => setIsUserDetailOpen(false)}>Tutup</Button>
+                  </DialogFooter>
+              </Card>
+          )}
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
+
+    
