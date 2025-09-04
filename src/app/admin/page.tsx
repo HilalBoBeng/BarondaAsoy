@@ -32,6 +32,7 @@ export default function AdminPage() {
     const [currentTime, setCurrentTime] = useState("");
     const [currentDate, setCurrentDate] = useState("");
     const [adminName, setAdminName] = useState<string | null>(null);
+    const [loadingName, setLoadingName] = useState(true);
 
     useEffect(() => {
         const getGreeting = () => {
@@ -55,6 +56,7 @@ export default function AdminPage() {
         } else {
             setAdminName("Admin");
         }
+        setLoadingName(false);
 
 
         return () => clearInterval(timer);
@@ -151,12 +153,12 @@ export default function AdminPage() {
     return (
         <div className="space-y-6">
             <div>
-                 {adminName ? (
+                 {loadingName ? (
+                    <Skeleton className="h-8 w-64" />
+                 ) : (
                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                         {greeting}, {adminName}!
                     </h1>
-                 ) : (
-                    <Skeleton className="h-8 w-64" />
                  )}
                 <p className="text-muted-foreground text-sm sm:text-base mt-1">
                     Selamat datang di Dasbor Admin Baronda.

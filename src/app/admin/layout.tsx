@@ -34,6 +34,22 @@ import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+const navItemsList = [
+    { href: "/admin", icon: Home, label: "Dasbor" },
+    { href: "/admin/profile", icon: UserIcon, label: "Profil Saya" },
+    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk" },
+    { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
+    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna" },
+    { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
+    { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
+    { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
+    { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
+    { href: "/admin/tools", icon: Wrench, label: "Lainnya" },
+    { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+    { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
+];
+
+
 export default function AdminLayout({
   children,
 }: {
@@ -54,20 +70,10 @@ export default function AdminLayout({
   const [isDetailPage, setIsDetailPage] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-    const navItems = [
-        { href: "/admin", icon: Home, label: "Dasbor" },
-        { href: "/admin/profile", icon: UserIcon, label: "Profil Saya" },
-        { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badge: badgeCounts.newReports },
-        { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-        { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badge: badgeCounts.pendingStaff },
-        { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
-        { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
-        { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
-        { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
-        { href: "/admin/tools", icon: Wrench, label: "Lainnya" },
-        { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-        { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
-    ];
+    const navItems = navItemsList.map(item => ({
+      ...item,
+      badge: item.href === '/admin/reports' ? badgeCounts.newReports : item.href === '/admin/users' ? badgeCounts.pendingStaff : 0
+    }))
 
   useEffect(() => {
     setIsClient(true);
@@ -105,22 +111,25 @@ export default function AdminLayout({
     const scheduleDetailMatch = pathname.match(scheduleDetailRegex);
     const honorDetailMatch = pathname.match(honorDetailRegex);
 
+    let newPageTitle = "Dasbor Admin";
+    let detailPage = false;
+    
     if (duesDetailMatch) {
-      setIsDetailPage(true);
-      setPageTitle('Riwayat Iuran');
+      detailPage = true;
+      newPageTitle = 'Riwayat Iuran';
     } else if (scheduleDetailMatch) {
-      setIsDetailPage(true);
-      setPageTitle('Detail Jadwal & QR Code');
+      detailPage = true;
+      newPageTitle = 'Detail Jadwal & QR Code';
     } else if (honorDetailMatch) {
-        setIsDetailPage(true);
-        setPageTitle('Detail Honorarium');
+        detailPage = true;
+        newPageTitle = 'Detail Honorarium';
+    } else {
+      const activeItem = navItemsList.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin'));
+      if(activeItem) newPageTitle = activeItem.label;
     }
-     else {
-      setIsDetailPage(false);
-      const activeItem = navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin'));
-      setPageTitle(activeItem?.label || 'Dasbor Admin');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+    setPageTitle(newPageTitle);
+    setIsDetailPage(detailPage);
   }, [pathname]);
 
   const handleLogout = () => {

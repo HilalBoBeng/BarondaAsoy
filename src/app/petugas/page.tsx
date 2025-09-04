@@ -55,6 +55,7 @@ export default function PetugasPage() {
   const [stats, setStats] = useState({ assignedReports: 0, completedReports: 0, points: 0 });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const [loadingName, setLoadingName] = useState(true);
   const router = useRouter();
 
 
@@ -78,6 +79,7 @@ export default function PetugasPage() {
     if (staffInfo.id && staffInfo.name) {
       setPetugasId(staffInfo.id);
       setPetugasName(staffInfo.name);
+      setLoadingName(false);
 
       // Fetch schedule
       const scheduleQuery = query(collection(db, "schedules"), where("officer", "==", staffInfo.name));
@@ -127,6 +129,7 @@ export default function PetugasPage() {
     } else {
         setLoading(false);
         setLoadingNotifications(false);
+        setLoadingName(false);
         return () => clearInterval(timer);
     }
   }, [toast]);
@@ -149,12 +152,12 @@ export default function PetugasPage() {
   return (
     <div className="space-y-6">
       <div>
-            {petugasName ? (
+            {loadingName ? (
+                <Skeleton className="h-8 w-64" />
+            ) : (
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                     {greeting}, {petugasName}!
                 </h1>
-            ) : (
-                <Skeleton className="h-8 w-64" />
             )}
             <p className="text-muted-foreground text-sm sm:text-base mt-1">
                 Ini adalah dasbor Anda. Silakan periksa jadwal dan laporan yang masuk.

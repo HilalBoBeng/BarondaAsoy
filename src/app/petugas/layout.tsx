@@ -41,6 +41,21 @@ interface MenuConfig {
   locked: boolean;
 }
 
+const navItemsList = [
+    { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
+    { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil Saya" },
+    { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
+    { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
+    { id: 'patrol-log', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
+    { id: 'dues', href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
+    { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
+    { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
+    { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
+    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
+    { id: 'emergency-contacts', href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+];
+
+
 function LoadingSkeleton() {
   return (
     <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
@@ -77,27 +92,13 @@ export default function PetugasLayout({
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
 
-  const initialNavItems = [
-    { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
-    { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil Saya" },
-    { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
-    { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
-    { id: 'patrol-log', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { id: 'dues', href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
-    { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
-    { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
-    { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
-    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
-    { id: 'emergency-contacts', href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-  ];
-
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
     if (badgeKey === 'newReports') return badgeCounts.newReports + badgeCounts.myReports;
     return badgeCounts[badgeKey as keyof typeof badgeCounts] || 0;
   }
   
-  const navItems = initialNavItems
+  const navItems = navItemsList
     .map(item => {
       const config = menuConfig.find(c => c.id === item.id);
       return { ...item, ...config, badge: getBadgeCount(item.badgeKey) };
@@ -121,13 +122,13 @@ export default function PetugasLayout({
     const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
     const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
       if (docSnap.exists()) {
-        const fullConfig = initialNavItems.map(initial => {
+        const fullConfig = navItemsList.map(initial => {
           const saved = docSnap.data().config?.find((c: MenuConfig) => c.id === initial.id);
           return { ...initial, ...saved };
         });
         setMenuConfig(fullConfig);
       } else {
-        setMenuConfig(initialNavItems.map(item => ({...item, visible: true, locked: false})));
+        setMenuConfig(navItemsList.map(item => ({...item, visible: true, locked: false})));
       }
       setLoadingConfig(false);
     });
@@ -148,21 +149,25 @@ export default function PetugasLayout({
           unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
   useEffect(() => {
-    if (loadingConfig || menuConfig.length === 0) return;
+    if (loadingConfig) return;
 
     const currentTopLevelPath = `/petugas/${pathname.split('/')[2] || ''}`;
-    const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
+    const currentNavItem = navItemsList.find(item => item.href === currentTopLevelPath);
     
-    if (currentNavItem && (currentNavItem.locked || !currentNavItem.visible)) {
-      setIsAccessDenied(true);
+    if (currentNavItem) {
+        const config = menuConfig.find(c => c.id === currentNavItem.id);
+        if (config && (config.locked || !config.visible)) {
+            setIsAccessDenied(true);
+        } else {
+            setIsAccessDenied(false);
+        }
     } else {
-      setIsAccessDenied(false);
+        setIsAccessDenied(false);
     }
-
+    
     setIsScanPage(pathname === '/petugas/scan');
     
     const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
@@ -172,15 +177,17 @@ export default function PetugasLayout({
     const isDetail = !!duesDetailMatch || isDuesRecord;
     setIsDetailPage(isDetail);
 
+    let newPageTitle = "Dasbor Petugas";
     if (duesDetailMatch) {
-        setPageTitle("Riwayat Iuran");
+        newPageTitle = "Riwayat Iuran";
     } else if (isDuesRecord) {
-        setPageTitle("Catat Iuran Warga");
+        newPageTitle = "Catat Iuran Warga";
     } else {
-        const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
-        setPageTitle(activeItem?.label || 'Dasbor Petugas');
+        const activeItem = navItemsList.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
+        if (activeItem) newPageTitle = activeItem.label;
     }
-  }, [pathname, navItems, loadingConfig, menuConfig]);
+    setPageTitle(newPageTitle);
+  }, [pathname, menuConfig, loadingConfig]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
