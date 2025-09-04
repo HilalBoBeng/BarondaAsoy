@@ -196,7 +196,21 @@ export default function AnnouncementsAdminPage() {
         {/* Mobile View */}
         <div className="sm:hidden space-y-4">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+            Array.from({ length: 3 }).map((_, i) => 
+                <Card key={i}>
+                    <CardHeader>
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/4 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6 mt-2" />
+                    </CardContent>
+                    <CardFooter>
+                        <Skeleton className="h-9 w-[88px] ml-auto" />
+                    </CardFooter>
+                </Card>
+            )
           ) : announcements.length > 0 ? (
             announcements.map((ann) => (
               <Card key={ann.id}>

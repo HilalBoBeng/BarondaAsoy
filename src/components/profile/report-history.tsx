@@ -144,7 +144,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
              {loading ? (
                 <div className="space-y-4">
                 {Array.from({ length: 3 }).map((_, i) => (
-                    <Card key={i}>
+                     <Card key={i}>
                         <CardContent className="p-4">
                            <div className="flex justify-between items-start mb-2 gap-2">
                                 <div className="flex-grow space-y-2">
