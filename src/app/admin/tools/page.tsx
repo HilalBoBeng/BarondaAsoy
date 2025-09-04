@@ -23,6 +23,7 @@ import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogD
 import { Switch } from '@/components/ui/switch';
 import { Label } from "@/components/ui/label";
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -44,18 +45,18 @@ interface MenuConfig {
   locked: boolean;
 }
 
-const initialMenuState: MenuConfig[] = [
-    { id: 'dashboard', label: 'Dasbor', visible: true, locked: true },
-    { id: 'profile', label: 'Profil Saya', visible: true, locked: false },
-    { id: 'reports', label: 'Laporan Warga', visible: true, locked: false },
-    { id: 'schedule', label: 'Jadwal Saya', visible: true, locked: false },
-    { id: 'patrol-log', label: 'Patroli & Log', visible: true, locked: false },
-    { id: 'dues', label: 'Iuran Warga', visible: true, locked: false },
-    { id: 'honor', label: 'Honor Saya', visible: true, locked: false },
-    { id: 'announcements', label: 'Pengumuman', visible: true, locked: false },
-    { id: 'notifications', label: 'Notifikasi', visible: true, locked: false },
-    { id: 'tools', label: 'Lainnya', visible: true, locked: false },
-    { id: 'emergency-contacts', label: 'Kontak Darurat', visible: true, locked: false },
+const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
+    { id: 'dashboard', label: 'Dasbor' },
+    { id: 'profile', label: 'Profil Saya' },
+    { id: 'reports', label: 'Laporan Warga' },
+    { id: 'schedule', label: 'Jadwal Saya' },
+    { id: 'patrol-log', label: 'Patroli & Log' },
+    { id: 'dues', label: 'Iuran Warga' },
+    { id: 'honor', label: 'Honor Saya' },
+    { id: 'announcements', label: 'Pengumuman' },
+    { id: 'notifications', label: 'Notifikasi' },
+    { id: 'tools', label: 'Lainnya' },
+    { id: 'emergency-contacts', label: 'Kontak Darurat' },
 ];
 
 export default function ToolsAdminPage() {
@@ -99,15 +100,29 @@ export default function ToolsAdminPage() {
     const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
     const unsubMenuConfig = onSnapshot(menuConfigRef, (docSnap) => {
         if (docSnap.exists()) {
-            const data = docSnap.data().config;
+            const savedConfig = docSnap.data().config;
             const mergedConfig = initialMenuState.map(initialItem => {
-                const savedItem = data.find((d: MenuConfig) => d.id === initialItem.id);
-                return savedItem ? { ...initialItem, ...savedItem } : initialItem;
+                const savedItem = savedConfig.find((d: MenuConfig) => d.id === initialItem.id);
+                if (savedItem) {
+                    return { ...initialItem, ...savedItem };
+                }
+                // Default for new, unsaved menu items
+                return { 
+                    ...initialItem, 
+                    visible: initialItem.id === 'dashboard', // Dashboard is always visible
+                    locked: initialItem.id === 'dashboard', // Dashboard is always locked (cannot be hidden/locked)
+                };
             });
             setMenuConfig(mergedConfig);
         } else {
-            setMenuConfig(initialMenuState);
-            setDoc(menuConfigRef, { config: initialMenuState });
+            // First time setup
+            const defaultConfig = initialMenuState.map(item => ({
+                ...item,
+                visible: item.id === 'dashboard',
+                locked: item.id === 'dashboard',
+            }));
+            setMenuConfig(defaultConfig);
+            setDoc(menuConfigRef, { config: defaultConfig });
         }
         setLoadingMenuConfig(false);
     });
