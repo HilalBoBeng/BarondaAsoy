@@ -56,7 +56,7 @@ export default function AdminPage() {
         } else {
             setAdminName("Admin");
         }
-        setTimeout(() => setLoadingName(false), 3000);
+        setLoadingName(false);
 
 
         return () => clearInterval(timer);
@@ -82,7 +82,7 @@ export default function AdminPage() {
                 setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
             }
         }).finally(() => {
-            if(mounted) setTimeout(() => setLoadingStats(false), 3000);
+            if(mounted) setLoadingStats(false);
         });
 
         // Fetch recent reports
@@ -95,7 +95,7 @@ export default function AdminPage() {
                     createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID')
                 })) as Report[];
                 setRecentReports(reports);
-                setTimeout(() => setLoadingReports(false), 3000);
+                setLoadingReports(false);
             }
         });
         
@@ -109,7 +109,7 @@ export default function AdminPage() {
                     createdAt: doc.data().createdAt?.toDate().toLocaleString('id-ID', {dateStyle: 'medium', timeStyle: 'short'})
                 })) as PatrolLog[];
                 setRecentPatrolLogs(logs);
-                setTimeout(() => setLoadingPatrolLogs(false), 3000);
+                setLoadingPatrolLogs(false);
             }
         });
         
@@ -119,7 +119,7 @@ export default function AdminPage() {
             if(mounted) {
                 const notifsData = snapshot.docs.map(doc => doc.data() as Notification);
                 setNotifications(notifsData);
-                setTimeout(() => setLoadingNotifications(false), 3000);
+                setLoadingNotifications(false);
             }
         });
 

@@ -149,7 +149,7 @@ export default function MainDashboardView() {
           } else {
             setUserInfo(null);
           }
-          setTimeout(() => setLoading(false), 3000);
+          setLoading(false);
         });
 
         const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
@@ -176,7 +176,7 @@ export default function MainDashboardView() {
       } else {
         setUserInfo(null);
         setAllNotifications([]);
-        setTimeout(() => setLoading(false), 3000);
+        setLoading(false);
       }
     });
 

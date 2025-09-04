@@ -73,29 +73,44 @@ export default function AttendancePage() {
   }, []);
 
   const calculatePunctuality = (schedule: ScheduleEntry) => {
-    if (!schedule.patrolStartTime || !schedule.time) return { start: null, end: null };
-
-    const [startTimeStr] = schedule.time.split(' - ');
-    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+    let startStatus: { text: string; color: string; } | null = null;
+    let endStatus: { text: string; color: string; } | null = null;
 
     const scheduleDate = schedule.date as Date;
-    const expectedStartTime = new Date(scheduleDate);
-    expectedStartTime.setHours(startHour, startMinute, 0, 0);
+    const [startTimeStr, endTimeStr] = schedule.time.split(' - ');
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+    const [endHour, endMinute] = endTimeStr.split(':').map(Number);
 
-    const actualStartTime = schedule.patrolStartTime as Date;
-    const diffMinutes = Math.round((actualStartTime.getTime() - expectedStartTime.getTime()) / 60000);
+    if (schedule.patrolStartTime) {
+      const expectedStartTime = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), startHour, startMinute);
+      const actualStartTime = schedule.patrolStartTime as Date;
+      const diffStartMinutes = Math.round((actualStartTime.getTime() - expectedStartTime.getTime()) / 60000);
 
-    let startStatus;
-    if (diffMinutes <= 0) {
-      startStatus = { text: `Lebih Cepat ${-diffMinutes} mnt`, color: 'text-green-600' };
-    } else {
-      startStatus = { text: `Terlambat ${diffMinutes} mnt`, color: 'text-red-600' };
+      if (diffStartMinutes <= 0) {
+        startStatus = { text: `Lebih Cepat ${-diffStartMinutes} mnt`, color: 'text-green-600' };
+      } else {
+        startStatus = { text: `Terlambat ${diffStartMinutes} mnt`, color: 'text-red-600' };
+      }
+      if (diffStartMinutes === 0) {
+        startStatus = { text: 'Tepat Waktu', color: 'text-green-600' };
+      }
     }
-     if (diffMinutes === 0) {
-      startStatus = { text: 'Tepat Waktu', color: 'text-green-600' };
+
+    if (schedule.patrolEndTime) {
+      const expectedEndTime = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), endHour, endMinute);
+      const actualEndTime = schedule.patrolEndTime as Date;
+      const diffEndMinutes = Math.round((actualEndTime.getTime() - expectedEndTime.getTime()) / 60000);
+
+       if (diffEndMinutes < -5) { // pulang lebih cepat lebih dari 5 menit
+        endStatus = { text: `Lebih Cepat ${-diffEndMinutes} mnt`, color: 'text-yellow-600' };
+      } else if (diffEndMinutes > 5) { // pulang lebih lama lebih dari 5 menit (lembur)
+        endStatus = { text: `Lebih Lama ${diffEndMinutes} mnt`, color: 'text-blue-600' };
+      } else {
+        endStatus = { text: 'Tepat Waktu', color: 'text-green-600' };
+      }
     }
 
-    return { start: startStatus, end: null }; // End logic can be added later if needed
+    return { start: startStatus, end: endStatus };
   };
 
   const filteredSchedules = useMemo(() => {
@@ -192,16 +207,22 @@ export default function AttendancePage() {
   };
 
   const renderPunctuality = (schedule: ScheduleEntry) => {
-    const punctuality = calculatePunctuality(schedule);
-    if (!punctuality.start) return <TableCell>-</TableCell>;
-
-    const Icon = punctuality.start.text.includes('Cepat') || punctuality.start.text.includes('Tepat') ? CheckCircle : AlertCircle;
-    
+    const { start, end } = calculatePunctuality(schedule);
     return (
         <TableCell>
-            <div className={cn("flex items-center gap-1 text-xs", punctuality.start.color)}>
-                <Icon className="h-3 w-3" />
-                <span>{punctuality.start.text}</span>
+            <div className="flex flex-col gap-1">
+                {start ? (
+                    <div className={cn("flex items-center gap-1 text-xs", start.color)}>
+                        <CheckCircle className="h-3 w-3" />
+                        <span>Masuk: {start.text}</span>
+                    </div>
+                ) : <span className="text-xs text-muted-foreground">-</span>}
+                {end ? (
+                     <div className={cn("flex items-center gap-1 text-xs", end.color)}>
+                        <Clock className="h-3 w-3" />
+                        <span>Pulang: {end.text}</span>
+                    </div>
+                ): <span className="text-xs text-muted-foreground">-</span>}
             </div>
         </TableCell>
     )

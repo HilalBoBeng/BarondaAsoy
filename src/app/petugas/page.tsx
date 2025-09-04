@@ -79,7 +79,7 @@ export default function PetugasPage() {
     if (staffInfo.id && staffInfo.name) {
       setPetugasId(staffInfo.id);
       setPetugasName(staffInfo.name);
-      setTimeout(() => setLoadingName(false), 3000);
+      setLoadingName(false);
 
       // Fetch schedule
       const scheduleQuery = query(collection(db, "schedules"), where("officer", "==", staffInfo.name));
@@ -89,7 +89,7 @@ export default function PetugasPage() {
           .sort((a, b) => (b.date as Timestamp).toMillis() - (a.date as Timestamp).toMillis());
         const todaySchedule = allSchedules.find(schedule => isToday(schedule.date instanceof Timestamp ? schedule.date.toDate() : schedule.date as Date));
         setScheduleToday(todaySchedule || null);
-        setTimeout(() => setLoading(false), 3000);
+        setLoading(false);
       }, (error) => {
           console.error("Error fetching schedule:", error);
           toast({variant: "destructive", title: "Gagal", description: "Tidak dapat memuat jadwal."})
@@ -117,7 +117,7 @@ export default function PetugasPage() {
         notifs.sort((a, b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis());
         const unreadNotifs = notifs.filter(n => !n.read);
         setNotifications(unreadNotifs);
-        setTimeout(() => setLoadingNotifications(false), 3000);
+        setLoadingNotifications(false);
       });
 
       return () => {
