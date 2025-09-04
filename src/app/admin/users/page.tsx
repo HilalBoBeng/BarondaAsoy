@@ -292,8 +292,9 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">Warga</TabsTrigger>
+            <TabsTrigger value="staff">Staf</TabsTrigger>
             <TabsTrigger value="pending-staff">
                 Persetujuan 
                 {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
@@ -346,6 +347,56 @@ export default function UsersAdminPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center h-24">Belum ada warga terdaftar.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="staff" className="mt-4">
+            <div className="rounded-lg border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Staf</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><div className="flex items-center gap-4"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-40" /></div></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto rounded-md" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredStaff.length > 0 ? (
+                    filteredStaff.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-4">
+                            <Avatar><AvatarImage src={s.photoURL || undefined} /><AvatarFallback>{s.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                            <p className="font-medium">{s.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={'secondary'} className={getStaffStatus(s).className}>
+                            {getStaffStatus(s).text}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                           <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
+                              <MoreVertical className="h-4 w-4" />
+                           </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center h-24">Belum ada staf aktif.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -566,3 +617,5 @@ export default function UsersAdminPage() {
     </>
   );
 }
+
+    
