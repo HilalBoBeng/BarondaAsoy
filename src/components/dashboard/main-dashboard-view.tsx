@@ -149,7 +149,7 @@ export default function MainDashboardView() {
           } else {
             setUserInfo(null);
           }
-          setLoading(false);
+          setTimeout(() => setLoading(false), 3000);
         });
 
         const q = query(collection(db, "notifications"), where("userId", "==", currentUser.uid));
@@ -176,7 +176,7 @@ export default function MainDashboardView() {
       } else {
         setUserInfo(null);
         setAllNotifications([]);
-        setLoading(false);
+        setTimeout(() => setLoading(false), 3000);
       }
     });
 
@@ -471,7 +471,10 @@ export default function MainDashboardView() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 {loading ? (
-                    <Skeleton className="h-8 w-64" />
+                    <>
+                        <Skeleton className="h-8 w-64 mb-2" />
+                        <Skeleton className="h-5 w-72" />
+                    </>
                 ) : (
                     <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
                         {greeting}, {user?.displayName || 'Warga'}!

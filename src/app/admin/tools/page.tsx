@@ -278,7 +278,7 @@ export default function ToolsAdminPage() {
         }
         
         const verificationId = nanoid();
-        const expiryTime = Date.now() + 5 * 60 * 1000;
+        const expiryTime = Date.now() + 15 * 60 * 1000;
         localStorage.setItem('verificationId', verificationId);
         localStorage.setItem('verificationExpiry', expiryTime.toString());
 
@@ -295,7 +295,7 @@ export default function ToolsAdminPage() {
         if (!result.success) throw new Error(result.message);
         
         setSubmissionStatus('waiting');
-        setCountdown(300); // 5 minutes
+        setCountdown(900); // 15 minutes
 
     } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman verifikasi gagal. ${error instanceof Error ? error.message : ''}`});
