@@ -48,17 +48,6 @@ const actionReasonSchema = z.object({
 });
 type ActionReasonFormValues = z.infer<typeof actionReasonSchema>;
 
-const addAdminSchema = z.object({
-    name: z.string().min(1, "Nama tidak boleh kosong."),
-    email: z.string().email("Format email tidak valid."),
-    confirmEmail: z.string().email("Format email tidak valid."),
-    phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
-    addressDetail: z.string().min(1, "Alamat tidak boleh kosong."),
-}).refine(data => data.email === data.confirmEmail, {
-    message: "Konfirmasi email tidak cocok.",
-    path: ["confirmEmail"],
-});
-type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -69,25 +58,29 @@ export default function UsersAdminPage() {
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
 
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [selectedUserForAction, setSelectedUserForAction] = useState<AppUser | Staff | null>(null);
   const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | 'approve' | 'reject' | 'addAdmin' | null>(null);
 
   const actionReasonForm = useForm<ActionReasonFormValues>({ resolver: zodResolver(actionReasonSchema) });
-  const addAdminForm = useForm<AddAdminFormValues>({ resolver: zodResolver(addAdminSchema) });
   
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<AppUser | Staff | null>(null);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [zoomedImageUrl, setZoomedImageUrl] = useState('');
+  const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
 
 
   useEffect(() => {
     setLoading(true);
     const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
     const staffQuery = query(collection(db, "staff"), orderBy("createdAt", "desc"));
+    
+    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (info) {
+        setCurrentAdmin(info);
+    }
 
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({
@@ -104,7 +97,12 @@ export default function UsersAdminPage() {
             ...doc.data(),
             createdAt: doc.data().createdAt?.toDate() || new Date()
         })) as Staff[];
-        setStaff(allStaff.filter(s => s.status === 'active' || s.status === 'suspended'));
+        
+        const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
+        const adminUsers = activeStaff.filter(s => (s as any).role === 'admin');
+        const regularStaff = activeStaff.filter(s => (s as any).role !== 'admin');
+        
+        setStaff([...adminUsers, ...regularStaff]); // Admins on top
         setPendingStaff(allStaff.filter(s => s.status === 'pending'));
         setLoading(false);
     }, (error) => {
@@ -138,42 +136,6 @@ export default function UsersAdminPage() {
     } finally {
         setIsSubmitting(false);
         setIsActionDialogOpen(false);
-    }
-  };
-
-  const handleAddAdmin = async (values: AddAdminFormValues) => {
-    setIsSubmitting(true);
-    try {
-        // Since we are adding an admin, we can directly create the record
-        // with 'active' status and send the approval email which contains the access code.
-        const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-        const newAdminData = {
-            name: toTitleCase(values.name),
-            email: values.email,
-            phone: values.phone,
-            addressType: 'luar_kilongan',
-            addressDetail: values.addressDetail,
-            status: 'active', // Directly active
-            accessCode: accessCode,
-            createdAt: serverTimestamp(),
-            points: 0,
-            role: 'admin', // Differentiate admin from regular staff
-        };
-        
-        const docRef = doc(collection(db, 'staff'));
-        await setDoc(docRef, newAdminData);
-
-        // Send approval email which contains the access code.
-        await approveOrRejectStaff({ staffId: docRef.id, approved: true });
-
-        toast({ title: "Admin Berhasil Dibuat", description: `Admin baru ${values.name} telah dibuat dan email berisi kode akses telah dikirim.`});
-        setIsAddAdminOpen(false);
-        addAdminForm.reset();
-
-    } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: `Gagal membuat admin baru. ${error instanceof Error ? error.message : ''}`});
-    } finally {
-        setIsSubmitting(false);
     }
   };
 
@@ -265,6 +227,7 @@ export default function UsersAdminPage() {
   }
 
   const getStaffStatus = (staff: Staff) => {
+    if ((staff as any).role === 'admin') return { text: 'Admin', className: 'bg-primary/20 text-primary' };
     if (staff.status === 'suspended') return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
     if (staff.status === 'pending') return { text: 'Pending', className: 'bg-blue-100 text-blue-800' };
     return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
@@ -371,11 +334,6 @@ export default function UsersAdminPage() {
           </TabsContent>
 
           <TabsContent value="staff" className="mt-4">
-             <div className="flex justify-end mb-4">
-                <Button onClick={() => setIsAddAdminOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Tambah Admin
-                </Button>
-            </div>
              <div className="rounded-lg border overflow-x-auto">
                 <Table>
                     <TableHeader>
@@ -471,7 +429,7 @@ export default function UsersAdminPage() {
 
     <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
       <DialogContent className="p-0 border-0 max-w-sm">
-        <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
+       <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
           {selectedUserForDetail && (
               <Card className="border-0 shadow-none">
                   <CardContent className="p-6 text-center">
@@ -490,10 +448,7 @@ export default function UsersAdminPage() {
                       <div className="space-y-3 text-sm text-left border-t mt-4 pt-4">
                           <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
                           <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
-                           {'accessCode' in selectedUserForDetail && (
-                              <div className="flex items-start gap-3"><KeyRound className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.accessCode}</span></div>
-                          )}
-                          {'points' in selectedUserForDetail && (
+                           {'points' in selectedUserForDetail && (
                               <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
                           )}
                           {'createdAt' in selectedUserForDetail && selectedUserForDetail.createdAt && (
@@ -516,14 +471,20 @@ export default function UsersAdminPage() {
                                       </Button>
                                   ) : (
                                       <>
-                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
-                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
+                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
+                                            <ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan
+                                          </Button>
+                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
+                                            <ShieldX className="mr-2 h-4 w-4"/> Blokir
+                                          </Button>
                                       </>
                                   )}
                               </div>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"><Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini</Button>
+                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.role === 'admin' && selectedUserForDetail.id !== currentAdmin?.id}>
+                                        <Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini
+                                      </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                       <AlertDialogHeader>
@@ -548,7 +509,7 @@ export default function UsersAdminPage() {
     <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>
+                 <DialogTitle>
                     {actionType === 'block' ? 'Blokir' :
                      actionType === 'suspend' ? 'Tangguhkan' :
                      actionType === 'reject' ? 'Tolak Pendaftaran' :
@@ -621,49 +582,10 @@ export default function UsersAdminPage() {
         </DialogContent>
     </Dialog>
     
-     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Tambah Admin Baru</DialogTitle>
-                <DialogDescription>
-                    Isi detail di bawah ini untuk membuat akun admin baru. Kode akses akan dikirim ke email yang didaftarkan.
-                </DialogDescription>
-            </DialogHeader>
-            <Form {...addAdminForm}>
-                <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
-                     <DialogBody className="space-y-4">
-                        <FormField control={addAdminForm.control} name="name" render={({ field }) => (
-                            <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="confirmEmail" render={({ field }) => (
-                            <FormItem><FormLabel>Konfirmasi Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="phone" render={({ field }) => (
-                            <FormItem><FormLabel>Nomor HP</FormLabel><FormControl><Input {...field} inputMode="numeric" /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="addressDetail" render={({ field }) => (
-                            <FormItem><FormLabel>Alamat</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                    </DialogBody>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Buat Admin
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-    </Dialog>
-
     <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
         <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
-             <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
-             <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
+            <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
+            <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
         </DialogContent>
     </Dialog>
     </>

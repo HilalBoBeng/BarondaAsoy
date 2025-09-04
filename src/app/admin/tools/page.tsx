@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,6 +23,8 @@ import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogD
 import { Switch } from '@/components/ui/switch';
 import { Label } from "@/components/ui/label";
 import { Badge } from '@/components/ui/badge';
+import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const shortLinkSchema = z.object({
@@ -44,6 +46,26 @@ interface MenuConfig {
   visible: boolean;
   locked: boolean;
 }
+
+const toTitleCase = (str: string) => {
+  return str.replace(
+    /\w\S*/g,
+    (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+  );
+};
+
+const addAdminSchema = z.object({
+    name: z.string().min(1, "Nama tidak boleh kosong."),
+    email: z.string().email("Format email tidak valid."),
+    confirmEmail: z.string().email("Format email tidak valid."),
+    phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
+    addressDetail: z.string().min(1, "Alamat tidak boleh kosong."),
+}).refine(data => data.email === data.confirmEmail, {
+    message: "Konfirmasi email tidak cocok.",
+    path: ["confirmEmail"],
+});
+type AddAdminFormValues = z.infer<typeof addAdminSchema>;
+
 
 const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
     { id: 'dashboard', label: 'Dasbor' },
@@ -70,6 +92,8 @@ export default function ToolsAdminPage() {
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
   const [loadingMenuConfig, setLoadingMenuConfig] = useState(true);
+  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
+
 
   const { toast } = useToast();
 
@@ -78,6 +102,8 @@ export default function ToolsAdminPage() {
     defaultValues: { longUrl: '', customSlug: '' },
   });
   
+  const addAdminForm = useForm<AddAdminFormValues>({ resolver: zodResolver(addAdminSchema) });
+
   useEffect(() => {
     const settingsRef = doc(db, 'app_settings', 'config');
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
@@ -105,19 +131,13 @@ export default function ToolsAdminPage() {
             if (savedItem) {
                 return { ...initialItem, ...savedItem };
             }
-            // Default new menu items to not visible and not locked
-            return { 
-                ...initialItem, 
-                visible: initialItem.id === 'dashboard', 
-                locked: initialItem.id === 'dashboard', 
-            };
+            return { ...initialItem, visible: false, locked: false };
         });
 
-        // Ensure dashboard is always visible and unlocked
         const dashboardItem = mergedConfig.find(item => item.id === 'dashboard');
         if (dashboardItem) {
             dashboardItem.visible = true;
-            dashboardItem.locked = false; // "Unlocked" in the sense that it cannot be locked by admin
+            dashboardItem.locked = false;
         }
         
         setMenuConfig(mergedConfig);
@@ -147,6 +167,40 @@ export default function ToolsAdminPage() {
         setLoadingMaintenance(false);
     }
   }
+  
+  const handleAddAdmin = async (values: AddAdminFormValues) => {
+    setIsSubmitting(true);
+    try {
+        const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const newAdminData = {
+            name: toTitleCase(values.name),
+            email: values.email,
+            phone: values.phone,
+            addressType: 'luar_kilongan',
+            addressDetail: values.addressDetail,
+            status: 'active',
+            accessCode: accessCode,
+            createdAt: serverTimestamp(),
+            points: 0,
+            role: 'admin',
+        };
+        
+        const docRef = doc(collection(db, 'staff'));
+        await setDoc(docRef, newAdminData);
+
+        await approveOrRejectStaff({ staffId: docRef.id, approved: true });
+
+        toast({ title: "Admin Berhasil Dibuat", description: `Admin baru ${values.name} telah dibuat dan email berisi kode akses telah dikirim.`});
+        setIsAddAdminOpen(false);
+        addAdminForm.reset();
+
+    } catch (error) {
+        toast({ variant: "destructive", title: "Gagal", description: `Gagal membuat admin baru. ${error instanceof Error ? error.message : ''}`});
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
 
   const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
       const newConfig = menuConfig.map(item => 
@@ -297,6 +351,18 @@ export default function ToolsAdminPage() {
                         </div>
                         {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                     </div>
+                     <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                            <PlusCircle className="h-5 w-5 text-muted-foreground" />
+                            <div className="space-y-0.5">
+                                <Label htmlFor="maintenance-mode">Manajemen Admin</Label>
+                                <p className="text-xs text-muted-foreground">Tambah admin baru untuk membantu mengelola aplikasi.</p>
+                            </div>
+                        </div>
+                        <Button onClick={() => setIsAddAdminOpen(true)}>
+                            Tambah Admin
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
             <Card>
@@ -310,7 +376,7 @@ export default function ToolsAdminPage() {
                             {menuConfig.map((item) => (
                                 <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                                     <span className="font-medium text-sm">{item.label}</span>
-                                    <div className="flex items-center gap-4">
+                                     <div className="flex items-center gap-4">
                                       {item.id !== 'dashboard' ? (
                                         <>
                                           <div className="flex items-center space-x-2">
@@ -432,6 +498,45 @@ export default function ToolsAdminPage() {
                     </Table>
                 </div>
             </DialogBody>
+        </DialogContent>
+    </Dialog>
+
+     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Tambah Admin Baru</DialogTitle>
+                <DialogDescription>
+                    Isi detail di bawah ini untuk membuat akun admin baru. Kode akses akan dikirim ke email yang didaftarkan.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...addAdminForm}>
+                <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
+                     <DialogBody className="space-y-4">
+                        <FormField control={addAdminForm.control} name="name" render={({ field }) => (
+                            <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                         <FormField control={addAdminForm.control} name="email" render={({ field }) => (
+                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                         <FormField control={addAdminForm.control} name="confirmEmail" render={({ field }) => (
+                            <FormItem><FormLabel>Konfirmasi Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                         <FormField control={addAdminForm.control} name="phone" render={({ field }) => (
+                            <FormItem><FormLabel>Nomor HP</FormLabel><FormControl><Input {...field} inputMode="numeric" /></FormControl><FormMessage /></FormItem>
+                        )} />
+                         <FormField control={addAdminForm.control} name="addressDetail" render={({ field }) => (
+                            <FormItem><FormLabel>Alamat</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Buat Admin
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
         </DialogContent>
     </Dialog>
     </>

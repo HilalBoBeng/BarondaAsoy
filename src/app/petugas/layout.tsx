@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotPermittedPage from "@/app/not-permitted/page";
-import { Dialog, DialogContent, DialogDescription, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 
 interface MenuConfig {
@@ -148,6 +148,7 @@ export default function PetugasLayout({
           unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
         }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
   useEffect(() => {
@@ -179,7 +180,6 @@ export default function PetugasLayout({
         const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
         setPageTitle(activeItem?.label || 'Dasbor Petugas');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, navItems, loadingConfig]);
 
   const handleLogout = () => {
@@ -190,12 +190,7 @@ export default function PetugasLayout({
   };
   
   if (!isClient || isLoggingOut || loadingConfig) {
-      return (
-        <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
-            <Image src="https://iili.io/KJ4aGxp.png" alt="Loading Logo" width={120} height={120} className="animate-logo-pulse" priority />
-            {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
-        </div>
-      );
+      return <LoadingSkeleton />;
   }
   
   const NavHeader = () => (
@@ -270,7 +265,11 @@ export default function PetugasLayout({
     )
   }
 
-  const PageContent = isAccessDenied ? <NotPermittedPage /> : children;
+  const PageContent = isAccessDenied ? (
+      <Suspense fallback={<LoadingSkeleton />}>
+        <NotPermittedPage />
+      </Suspense>
+    ) : children;
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -337,6 +336,7 @@ export default function PetugasLayout({
         <DialogContent>
             <DialogHeader>
                 <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
+                <DialogDescription className="sr-only">Dialog</DialogDescription>
             </DialogHeader>
         </DialogContent>
       </Dialog>
