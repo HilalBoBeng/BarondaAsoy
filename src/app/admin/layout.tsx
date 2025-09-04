@@ -21,6 +21,7 @@ import {
   ClipboardList,
   User as UserIcon,
   Wrench,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -45,6 +46,7 @@ const navItemsList = [
     { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
     { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
     { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
+    { href: "/admin/activity-log", icon: History, label: "Log Aktivitas Admin" },
     { href: "/admin/tools", icon: Wrench, label: "Lainnya" },
     { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
     { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
@@ -84,7 +86,6 @@ export default function AdminLayout({
       return;
     }
     
-    // Handle Super Admin case (no Firestore doc)
     if (storedStaffInfo.email === 'admin@baronda.or.id') {
         const superAdminData = {
             id: 'super_admin',
@@ -93,11 +94,15 @@ export default function AdminLayout({
             role: 'super_admin',
         } as Staff;
         setAdminInfo(superAdminData);
-    } else if (storedStaffInfo.id) { // Handle regular admin
+    } else if (storedStaffInfo.id) {
         const staffDocRef = doc(db, "staff", storedStaffInfo.id);
         const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+                if (staffData.role !== 'admin') {
+                    handleLogout(true);
+                    return;
+                }
                 setAdminInfo(staffData);
                 localStorage.setItem('staffInfo', JSON.stringify(staffData));
             } else {
@@ -106,7 +111,7 @@ export default function AdminLayout({
             }
         });
         return () => unsubStaff();
-    } else { // Invalid state, redirect
+    } else {
         router.replace('/auth/staff-login');
         return;
     }
@@ -188,7 +193,10 @@ export default function AdminLayout({
         <div className="flex flex-col">
             <p className="font-bold text-base truncate">{adminInfo.name}</p>
             <p className="text-sm text-muted-foreground truncate">{adminInfo.email}</p>
-            <Badge variant="secondary" className={cn("mt-2 w-fit", adminInfo.role === 'super_admin' && "bg-purple-600 text-white hover:bg-purple-700")}>
+            <Badge variant="secondary" className={cn(
+                "mt-2 w-fit", 
+                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-primary/80 text-primary-foreground hover:bg-primary/90"
+                )}>
               {adminInfo.role === 'super_admin' ? 'Super Admin' : 'Administrator'}
             </Badge>
         </div>

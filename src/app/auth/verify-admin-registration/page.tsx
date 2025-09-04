@@ -30,7 +30,7 @@ function VerificationContent() {
         const result = await verifyAdminToken({ token });
         if (result.success) {
           setStatus('success');
-          setMessage(result.message + ' Anda akan dialihkan ke halaman login.');
+          setMessage(result.message + ' Anda akan dialihkan ke halaman login dalam 5 detik...');
           setTimeout(() => router.push('/auth/staff-login'), 5000);
         } else {
           throw new Error(result.message);

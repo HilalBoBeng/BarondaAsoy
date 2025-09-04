@@ -3,14 +3,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, updateDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, orderBy, getDocs, updateDoc, writeBatch, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound, Calendar } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound, Calendar, History } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -100,8 +100,8 @@ export default function UsersAdminPage() {
         })) as Staff[];
         
         const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
-        const regularStaff = activeStaff.filter(s => s.role !== 'admin');
-        const adminUsers = allStaff.filter(s => s.role === 'admin');
+        const regularStaff = activeStaff.filter(s => s.role !== 'admin' && s.role !== 'super_admin');
+        const adminUsers = allStaff.filter(s => s.role === 'admin' || s.role === 'super_admin');
         
         setStaff(regularStaff);
         setAdmins(adminUsers);
@@ -118,6 +118,16 @@ export default function UsersAdminPage() {
     };
   }, []);
 
+  const createLog = async (action: string, target: string) => {
+      if (!currentAdmin) return;
+      await addDoc(collection(db, 'admin_logs'), {
+          adminId: currentAdmin.id,
+          adminName: currentAdmin.name,
+          action: `${action}: ${target}`,
+          timestamp: serverTimestamp(),
+      });
+  };
+  
   const handleStaffApproval = async (staffMember: Staff, approved: boolean, reason?: string) => {
     setIsSubmitting(true);
     try {
@@ -129,6 +139,7 @@ export default function UsersAdminPage() {
 
         if (result.success) {
             toast({ title: "Berhasil", description: result.message });
+            await createLog(approved ? 'Menyetujui Staf' : 'Menolak Staf', staffMember.name);
         } else {
             throw new Error(result.message);
         }
@@ -155,18 +166,21 @@ export default function UsersAdminPage() {
     const isUserType = 'uid' in selectedUserForAction;
     const collectionName = isUserType ? 'users' : 'staff';
     const docId = isUserType ? selectedUserForAction.uid : selectedUserForAction.id;
+    const userName = 'displayName' in selectedUserForAction ? selectedUserForAction.displayName : selectedUserForAction.name;
     const userRef = doc(db, collectionName, docId);
 
     try {
         if (actionType === 'delete') {
             await deleteDoc(userRef);
             toast({ title: 'Berhasil', description: `Data pengguna berhasil dihapus.` });
+            await createLog(`Menghapus ${isUserType ? 'Warga' : 'Staf'}`, userName || docId);
         } else if (actionType === 'approve' && !isUserType) {
             handleStaffApproval(selectedUserForAction as Staff, true);
         } else if (actionType === 'reject' && !isUserType) {
             handleStaffApproval(selectedUserForAction as Staff, false, values.reason);
         } else {
             let updateData: any = { suspensionReason: values.reason };
+            let logAction = '';
             if (actionType === 'suspend') {
                 if (!values.duration) {
                     toast({ variant: 'destructive', title: 'Gagal', description: 'Durasi penangguhan harus dipilih.' });
@@ -183,13 +197,16 @@ export default function UsersAdminPage() {
                 updateData.suspensionEndDate = endDate ? Timestamp.fromDate(endDate) : null;
                 updateData[isUserType ? 'isSuspended' : 'status'] = isUserType ? true : 'suspended';
                 updateData.isBlocked = false;
+                logAction = `Menangguhkan ${isUserType ? 'Warga' : 'Staf'}`;
             } else if (actionType === 'block') {
                 updateData.isBlocked = true;
                 updateData.isSuspended = false;
                 updateData.suspensionEndDate = null;
+                 logAction = `Memblokir ${isUserType ? 'Warga' : 'Staf'}`;
             }
             await updateDoc(userRef, updateData);
             toast({ title: 'Berhasil', description: `Pengguna berhasil di${actionType === 'suspend' ? 'tangguhkan' : 'blokir'}.` });
+            await createLog(logAction, userName || docId);
         }
         setIsActionDialogOpen(false);
         if (isUserDetailOpen) setIsUserDetailOpen(false);
@@ -204,6 +221,7 @@ export default function UsersAdminPage() {
       const isUserType = 'uid' in user;
       const collectionName = isUserType ? 'users' : 'staff';
       const docId = isUserType ? user.uid : user.id;
+      const userName = 'displayName' in user ? user.displayName : user.name;
       const userRef = doc(db, collectionName, docId);
       const statusField = isUserType ? 'isSuspended' : 'status';
       const statusValue = isUserType ? false : 'active';
@@ -216,7 +234,8 @@ export default function UsersAdminPage() {
             suspensionEndDate: null,
         });
         toast({ title: 'Berhasil', description: 'Batasan pengguna telah dicabut.' });
-        if (isUserDetailOpen) setIsUserDetailOpen(false); // Close detail view on success
+        await createLog('Mencabut Batasan', userName || docId);
+        if (isUserDetailOpen) setIsUserDetailOpen(false);
       } catch (error) {
          toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencabut batasan.' });
       }
@@ -229,7 +248,8 @@ export default function UsersAdminPage() {
   }
 
   const getStaffStatus = (staff: Staff) => {
-    if ((staff as any).role === 'admin') return { text: 'Admin', className: 'bg-primary/20 text-primary' };
+    if (staff.role === 'super_admin') return { text: 'Super Admin', className: 'bg-purple-600 text-white hover:bg-purple-700' };
+    if (staff.role === 'admin') return { text: 'Admin', className: 'bg-primary/80 text-primary-foreground hover:bg-primary/90' };
     if (staff.status === 'suspended') return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
     if (staff.status === 'pending') return { text: 'Pending', className: 'bg-blue-100 text-blue-800' };
     return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
@@ -345,7 +365,7 @@ export default function UsersAdminPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>Peran</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -477,10 +497,10 @@ export default function UsersAdminPage() {
                                       </Button>
                                   ) : (
                                       <>
-                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
+                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'super_admin' || (selectedUserForDetail as Staff)?.role === 'admin'}>
                                             <ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan
                                           </Button>
-                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
+                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'super_admin' || (selectedUserForDetail as Staff)?.role === 'admin'}>
                                             <ShieldX className="mr-2 h-4 w-4"/> Blokir
                                           </Button>
                                       </>
@@ -488,7 +508,7 @@ export default function UsersAdminPage() {
                               </div>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id}>
+                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id || (selectedUserForDetail as Staff)?.role === 'super_admin'}>
                                         <Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini
                                       </Button>
                                   </AlertDialogTrigger>
@@ -597,5 +617,3 @@ export default function UsersAdminPage() {
     </>
   );
 }
-
-    

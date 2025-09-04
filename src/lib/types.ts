@@ -91,7 +91,7 @@ export interface Staff {
   lastCodeChangeTimestamp?: Timestamp;
   createdAt?: Timestamp | Date;
   expiresAt?: Timestamp;
-  role?: 'petugas' | 'admin';
+  role?: 'petugas' | 'admin' | 'super_admin';
   photoURL?: string | null;
 }
 
@@ -157,4 +157,12 @@ export interface Honorarium {
     issueDate: Timestamp | Date;
     status: 'Dibayarkan' | 'Tertunda' | 'Dipotong' | 'Batal';
     notes?: string; // For 'Dipotong' or 'Batal'
+}
+
+export interface AdminLog {
+    id: string;
+    adminId: string;
+    adminName: string;
+    action: string;
+    timestamp: Timestamp | Date;
 }
