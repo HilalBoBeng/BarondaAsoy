@@ -75,27 +75,41 @@ export default function AdminLayout({
       badge: item.href === '/admin/reports' ? badgeCounts.newReports : item.href === '/admin/users' ? badgeCounts.pendingStaff : 0
     }))
 
- useEffect(() => {
+  useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    if (localStorage.getItem('userRole') !== 'admin' || !storedStaffInfo.id) {
+    if (localStorage.getItem('userRole') !== 'admin') {
       router.replace('/auth/staff-login');
       return;
     }
-
-    const staffDocRef = doc(db, "staff", storedStaffInfo.id);
-    const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-            setAdminInfo(staffData);
-            localStorage.setItem('staffInfo', JSON.stringify(staffData)); // Keep localStorage in sync
-        } else {
-            // This case might happen if admin is deleted from another session
-            toast({ variant: "destructive", title: "Akses Ditolak", description: "Data admin tidak ditemukan." });
-            handleLogout(true);
-        }
-    });
+    
+    // Handle Super Admin case (no Firestore doc)
+    if (storedStaffInfo.email === 'admin@baronda.or.id') {
+        const superAdminData = {
+            id: 'super_admin',
+            name: 'Admin Utama',
+            email: 'admin@baronda.or.id',
+            role: 'admin',
+        } as Staff;
+        setAdminInfo(superAdminData);
+    } else if (storedStaffInfo.id) { // Handle regular admin
+        const staffDocRef = doc(db, "staff", storedStaffInfo.id);
+        const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+                setAdminInfo(staffData);
+                localStorage.setItem('staffInfo', JSON.stringify(staffData));
+            } else {
+                toast({ variant: "destructive", title: "Akses Ditolak", description: "Data admin tidak ditemukan." });
+                handleLogout(true);
+            }
+        });
+        return () => unsubStaff();
+    } else { // Invalid state, redirect
+        router.replace('/auth/staff-login');
+        return;
+    }
 
     const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
     const pendingStaffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
@@ -104,7 +118,6 @@ export default function AdminLayout({
     const unsubStaffPending = onSnapshot(pendingStaffQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingStaff: snap.size})));
     
     return () => {
-      unsubStaff();
       unsubReports();
       unsubStaffPending();
     }
