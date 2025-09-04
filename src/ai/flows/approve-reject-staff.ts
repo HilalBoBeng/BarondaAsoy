@@ -113,16 +113,6 @@ const approveOrRejectStaffFlow = ai.defineFlow(
     const staffRef = adminDb.collection('staff').doc(staffId);
     
     try {
-      // Auto-delete expired pending staff
-      const now = Timestamp.now();
-      const expiredQuery = adminDb.collection('staff').where('status', '==', 'pending').where('expiresAt', '<', now);
-      const expiredSnapshot = await expiredQuery.get();
-      if (!expiredSnapshot.empty) {
-        const batch = adminDb.batch();
-        expiredSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-      }
-      
       const staffDoc = await staffRef.get();
       if (!staffDoc.exists) {
         return { success: false, message: 'Data staf tidak ditemukan atau mungkin telah kedaluwarsa.' };
