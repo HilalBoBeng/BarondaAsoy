@@ -66,11 +66,11 @@ export default function PetugasProfilePage() {
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
+        if (field === 'photoURL') return true;
         if (!staffInfo) return false;
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
-        const cooldownDays = field === 'photoURL' ? 1 : 7;
-        return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
+        return isBefore(lastUpdateDate, subDays(new Date(), 7));
     }, [lastUpdated, staffInfo]);
 
     useEffect(() => {

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { adminDb } from '@/lib/firebase/admin';
 import nodemailer from 'nodemailer';
 import type { Staff } from '@/lib/types';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 const StaffApprovalInputSchema = z.object({
   staffId: z.string().describe('The ID of the staff member to approve/reject.'),
@@ -112,14 +113,28 @@ const approveOrRejectStaffFlow = ai.defineFlow(
     const staffRef = adminDb.collection('staff').doc(staffId);
     
     try {
+      // Auto-delete expired pending staff
+      const now = Timestamp.now();
+      const expiredQuery = adminDb.collection('staff').where('status', '==', 'pending').where('expiresAt', '<', now);
+      const expiredSnapshot = await expiredQuery.get();
+      if (!expiredSnapshot.empty) {
+        const batch = adminDb.batch();
+        expiredSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
+      
       const staffDoc = await staffRef.get();
       if (!staffDoc.exists) {
-        return { success: false, message: 'Data staf tidak ditemukan.' };
+        return { success: false, message: 'Data staf tidak ditemukan atau mungkin telah kedaluwarsa.' };
       }
       const staffData = staffDoc.data() as Staff;
 
       if (approved) {
-        await staffRef.update({ status: 'active', points: 0 });
+        await staffRef.update({ 
+            status: 'active', 
+            points: 0,
+            expiresAt: FieldValue.delete() // Remove expiration on approval
+        });
         await sendApprovalEmail(staffData);
         return { success: true, message: `${staffData.name} telah disetujui.` };
       } else {

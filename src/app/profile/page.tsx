@@ -66,10 +66,10 @@ export default function ProfilePage() {
   }
 
   const canEditField = useCallback((field: FieldName) => {
+    if (field === 'photoURL') return true; // Always allow photo change
     const lastUpdateDate = lastUpdated[field];
     if (!lastUpdateDate) return true;
-    const cooldownDays = field === 'photoURL' ? 1 : 7;
-    return isBefore(lastUpdateDate, subDays(new Date(), cooldownDays));
+    return isBefore(lastUpdateDate, subDays(new Date(), 7));
   }, [lastUpdated]);
 
 
@@ -173,8 +173,8 @@ export default function ProfilePage() {
   }, [auth, router, toast]);
 
   const handleEditClick = (field: FieldName) => {
-    if (field === 'displayName') return; // Disable name editing
-    if (field !== 'photoURL' && !canEditField(field)) {
+    if (field === 'displayName') return;
+    if (!canEditField(field)) {
         toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.` });
         return;
     }
@@ -333,7 +333,6 @@ export default function ProfilePage() {
   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
     const Icon = fieldIcons[field];
     const canEdit = canEditField(field);
-    const cooldownDays = field === 'photoURL' ? 1 : 7;
     const lastUpdateDate = lastUpdated[field];
 
     return (
@@ -345,7 +344,7 @@ export default function ProfilePage() {
                     <p className="font-medium">{value || 'Belum diisi'}</p>
                      {!canEdit && lastUpdateDate && (
                         <p className="text-xs text-muted-foreground italic mt-1">
-                            Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdateDate, cooldownDays), { addSuffix: true, locale: id })}
+                            Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdateDate, 7), { addSuffix: true, locale: id })}
                         </p>
                     )}
                 </div>
@@ -475,11 +474,6 @@ export default function ProfilePage() {
             <DialogContent className="rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
-                     {editingField === 'photoURL' && (
-                        <CardDescription>
-                            Setelah disimpan, Anda baru bisa mengganti foto lagi setelah 24 jam.
-                        </CardDescription>
-                     )}
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">

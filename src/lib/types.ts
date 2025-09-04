@@ -90,6 +90,9 @@ export interface Staff {
   points?: number;
   lastCodeChangeTimestamp?: Timestamp;
   createdAt?: Timestamp | Date;
+  expiresAt?: Timestamp;
+  role?: 'petugas' | 'admin';
+  photoURL?: string | null;
 }
 
 export interface Notification {

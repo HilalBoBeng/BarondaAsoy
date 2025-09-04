@@ -141,6 +141,7 @@ const verifyOtpFlow = ai.defineFlow(
          }
          const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
          const staffDocRef = adminDb.collection('staff').doc();
+         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Expires in 15 minutes
          batch.set(staffDocRef, {
             name: name,
             email: email,
@@ -150,6 +151,7 @@ const verifyOtpFlow = ai.defineFlow(
             status: 'pending',
             accessCode: accessCode,
             createdAt: FieldValue.serverTimestamp(),
+            expiresAt: Timestamp.fromDate(expiresAt),
          });
          await batch.commit();
          return { success: true, message: 'Verifikasi berhasil! Pendaftaran Anda akan ditinjau oleh Admin.' };
