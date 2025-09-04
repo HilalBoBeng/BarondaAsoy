@@ -53,6 +53,7 @@ export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [pendingStaff, setPendingStaff] = useState<Staff[]>([]);
+  const [admins, setAdmins] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -99,10 +100,11 @@ export default function UsersAdminPage() {
         })) as Staff[];
         
         const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
-        // Filter out admins from the active staff list
-        const regularStaff = activeStaff.filter(s => (s as any).role !== 'admin');
+        const regularStaff = activeStaff.filter(s => s.role !== 'admin');
+        const adminUsers = allStaff.filter(s => s.role === 'admin');
         
         setStaff(regularStaff);
+        setAdmins(adminUsers);
         setPendingStaff(allStaff.filter(s => s.status === 'pending'));
         setLoading(false);
     }, (error) => {
@@ -256,6 +258,10 @@ export default function UsersAdminPage() {
   const filteredPendingStaff = useMemo(() =>
     pendingStaff.filter(s => s.name?.toLowerCase().includes(searchTerm.toLowerCase())),
   [pendingStaff, searchTerm]);
+  
+  const filteredAdmins = useMemo(() =>
+    admins.filter(a => a.name?.toLowerCase().includes(searchTerm.toLowerCase())),
+  [admins, searchTerm]);
 
   return (
     <>
@@ -277,7 +283,7 @@ export default function UsersAdminPage() {
         <Tabs defaultValue="users">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">Warga</TabsTrigger>
-            <TabsTrigger value="staff">Staf Aktif</TabsTrigger>
+            <TabsTrigger value="staff">Staf & Admin</TabsTrigger>
             <TabsTrigger value="pending-staff">
                 Persetujuan Staf {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
             </TabsTrigger>
@@ -352,8 +358,8 @@ export default function UsersAdminPage() {
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
-                         ) : filteredStaff.length > 0 ? (
-                            filteredStaff.map((s) => (
+                         ) : [...filteredAdmins, ...filteredStaff].length > 0 ? (
+                            [...filteredAdmins, ...filteredStaff].map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
                                     <TableCell>
@@ -482,7 +488,7 @@ export default function UsersAdminPage() {
                               </div>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.role === 'admin' && selectedUserForDetail.id !== currentAdmin?.id}>
+                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id}>
                                         <Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini
                                       </Button>
                                   </AlertDialogTrigger>
@@ -591,3 +597,5 @@ export default function UsersAdminPage() {
     </>
   );
 }
+
+    

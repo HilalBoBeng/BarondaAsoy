@@ -32,6 +32,7 @@ import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotPermittedPage from "@/app/not-permitted/page";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { Staff } from "@/lib/types";
 
 
 interface MenuConfig {
@@ -80,8 +81,7 @@ export default function PetugasLayout({
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [staffName, setStaffName] = useState("Petugas");
-  const [staffEmail, setStaffEmail] = useState("petugas@baronda.app");
+  const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, newHonors: 0 });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
@@ -108,16 +108,24 @@ export default function PetugasLayout({
 
   useEffect(() => {
     setIsClient(true);
-    const userRole = localStorage.getItem('userRole');
-    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-
-    if (userRole !== 'petugas') {
+    const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    
+    if (localStorage.getItem('userRole') !== 'petugas' || !storedStaffInfo.id) {
       router.replace('/auth/staff-login');
       return;
-    } 
-      
-    if (staffInfo.name) setStaffName(staffInfo.name);
-    if (staffInfo.email) setStaffEmail(staffInfo.email);
+    }
+
+    const staffDocRef = doc(db, "staff", storedStaffInfo.id);
+    const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+            setStaffInfo(staffData);
+            localStorage.setItem('staffInfo', JSON.stringify(staffData));
+        } else {
+            toast({ variant: "destructive", title: "Akses Ditolak", description: "Data petugas tidak ditemukan." });
+            handleLogout(true);
+        }
+    });
 
     const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
     const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
@@ -133,22 +141,21 @@ export default function PetugasLayout({
       setLoadingConfig(false);
     });
 
-    if (staffInfo.id) {
-        const reportsRef = collection(db, 'reports');
-        const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
-        const myReportsQuery = query(reportsRef, where('handlerId', '==', staffInfo.id), where('status', '==', 'in_progress'));
-        const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', staffInfo.id), where('status', '==', 'Pending'));
-        const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', staffInfo.id), where('status', '==', 'Tertunda'));
+    const reportsRef = collection(db, 'reports');
+    const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
+    const myReportsQuery = query(reportsRef, where('handlerId', '==', storedStaffInfo.id), where('status', '==', 'in_progress'));
+    const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', storedStaffInfo.id), where('status', '==', 'Pending'));
+    const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', storedStaffInfo.id), where('status', '==', 'Tertunda'));
 
-        const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
-        const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
-        const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
-        const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
-        
-        return () => {
-          unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
-        }
+    const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+    const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
+    const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
+    const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
+    
+    return () => {
+      unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
   useEffect(() => {
@@ -189,14 +196,14 @@ export default function PetugasLayout({
     setPageTitle(newPageTitle);
   }, [pathname, menuConfig, loadingConfig]);
 
-  const handleLogout = () => {
-    setIsLoggingOut(true);
+  const handleLogout = (silent = false) => {
+    if (!silent) setIsLoggingOut(true);
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
-    setTimeout(() => { router.push('/'); }, 1500);
+    setTimeout(() => { router.push('/'); }, silent ? 0 : 1500);
   };
   
-  if (!isClient || isLoggingOut || loadingConfig) {
+  if (!isClient || isLoggingOut || loadingConfig || !staffInfo) {
       return <LoadingSkeleton />;
   }
 
@@ -215,12 +222,12 @@ export default function PetugasLayout({
   const NavHeader = () => (
     <div className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-12 w-12">
-            <AvatarImage src={undefined} />
-            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffName.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={staffInfo?.photoURL || undefined} />
+            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-            <p className="font-bold text-base truncate">{staffName}</p>
-            <p className="text-sm text-muted-foreground truncate">{staffEmail}</p>
+            <p className="font-bold text-base truncate">{staffInfo.name}</p>
+            <p className="text-sm text-muted-foreground truncate">{staffInfo.email}</p>
             <Badge variant="secondary" className="mt-2 w-fit">Petugas</Badge>
         </div>
     </div>
@@ -268,7 +275,7 @@ export default function PetugasLayout({
         })}
       </nav>
       <div className="mt-auto p-4">
-         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout} disabled={isLoggingOut}>
+         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={() => handleLogout()} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
             {isLoggingOut ? 'Keluar...' : 'Keluar'}
           </Button>
@@ -356,3 +363,5 @@ export default function PetugasLayout({
     </div>
   );
 }
+
+    

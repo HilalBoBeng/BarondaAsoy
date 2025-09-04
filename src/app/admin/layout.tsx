@@ -33,6 +33,7 @@ import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/fire
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Staff } from "@/lib/types";
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: "Dasbor" },
@@ -59,8 +60,7 @@ export default function AdminLayout({
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [adminName, setAdminName] = useState("Admin");
-  const [adminEmail, setAdminEmail] = useState("admin@baronda.or.id");
+  const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({
     newReports: 0,
     pendingStaff: 0,
@@ -75,32 +75,40 @@ export default function AdminLayout({
       badge: item.href === '/admin/reports' ? badgeCounts.newReports : item.href === '/admin/users' ? badgeCounts.pendingStaff : 0
     }))
 
-  useEffect(() => {
+ useEffect(() => {
     setIsClient(true);
-    const userRole = localStorage.getItem('userRole');
-    const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-
-    if (userRole !== 'admin') {
+    const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    
+    if (localStorage.getItem('userRole') !== 'admin' || !storedStaffInfo.id) {
       router.replace('/auth/staff-login');
-    } else {
-        if (staffInfo.name) {
-            setAdminName(staffInfo.name);
-        }
-        if (staffInfo.email) {
-            setAdminEmail(staffInfo.email);
-        }
-
-        const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
-        const staffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
-        
-        const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
-        const unsubStaff = onSnapshot(staffQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingStaff: snap.size})));
-        
-        return () => {
-          unsubReports();
-          unsubStaff();
-        }
+      return;
     }
+
+    const staffDocRef = doc(db, "staff", storedStaffInfo.id);
+    const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+            setAdminInfo(staffData);
+            localStorage.setItem('staffInfo', JSON.stringify(staffData)); // Keep localStorage in sync
+        } else {
+            // This case might happen if admin is deleted from another session
+            toast({ variant: "destructive", title: "Akses Ditolak", description: "Data admin tidak ditemukan." });
+            handleLogout(true);
+        }
+    });
+
+    const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
+    const pendingStaffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
+    
+    const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+    const unsubStaffPending = onSnapshot(pendingStaffQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingStaff: snap.size})));
+    
+    return () => {
+      unsubStaff();
+      unsubReports();
+      unsubStaffPending();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
   useEffect(() => {
@@ -132,17 +140,17 @@ export default function AdminLayout({
     setIsDetailPage(detailPage);
   }, [pathname]);
 
-  const handleLogout = () => {
-    setIsLoggingOut(true);
+  const handleLogout = (silent = false) => {
+    if (!silent) setIsLoggingOut(true);
     localStorage.removeItem('userRole');
     localStorage.removeItem('staffInfo');
 
     setTimeout(() => {
         router.push('/');
-    }, 1500); 
+    }, silent ? 0 : 1500); 
   };
   
-  if (!isClient || isLoggingOut) {
+  if (!isClient || isLoggingOut || !adminInfo) {
       return (
         <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
             <Image 
@@ -161,13 +169,15 @@ export default function AdminLayout({
   const NavHeader = () => (
     <div className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-12 w-12">
-            <AvatarImage src={undefined} />
-            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{adminName.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={adminInfo?.photoURL || undefined} />
+            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{adminInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-            <p className="font-bold text-base truncate">{adminName}</p>
-            <p className="text-sm text-muted-foreground truncate">{adminEmail}</p>
-            <Badge variant="secondary" className="mt-2 w-fit">Administrator</Badge>
+            <p className="font-bold text-base truncate">{adminInfo.name}</p>
+            <p className="text-sm text-muted-foreground truncate">{adminInfo.email}</p>
+            <Badge variant="secondary" className="mt-2 w-fit">
+              {adminInfo.role === 'admin' ? 'Administrator' : 'Super Admin'}
+            </Badge>
         </div>
     </div>
   );
@@ -194,7 +204,7 @@ export default function AdminLayout({
         ))}
       </nav>
       <div className="mt-auto p-4">
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={handleLogout} disabled={isLoggingOut}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={() => handleLogout()} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar
         </Button>
@@ -270,3 +280,5 @@ export default function AdminLayout({
     </div>
   );
 }
+
+    
