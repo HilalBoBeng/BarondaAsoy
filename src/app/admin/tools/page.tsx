@@ -239,7 +239,8 @@ export default function ToolsAdminPage() {
             email: values.email,
             phone: values.phone,
             addressType: values.addressType,
-            addressDetail: values.addressType === 'kilongan' ? 'Kilongan' : values.addressDetail || ''
+            addressDetail: values.addressType === 'kilongan' ? 'Kilongan' : values.addressDetail || '',
+            baseUrl: window.location.origin,
         });
         
         if (!result.success) throw new Error(result.message);
@@ -637,7 +638,7 @@ export default function ToolsAdminPage() {
     </Dialog>
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(submissionStatus === 'sending') e.preventDefault()}}>
             <DialogHeader>
                 <DialogTitle>Tambah Admin Baru</DialogTitle>
                 <DialogDescription>

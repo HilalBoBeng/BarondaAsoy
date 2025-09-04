@@ -16,6 +16,7 @@ const SendAdminVerificationEmailInputSchema = z.object({
   phone: z.string(),
   addressType: z.enum(['kilongan', 'luar_kilongan']),
   addressDetail: z.string(),
+  baseUrl: z.string().url(),
 });
 export type SendAdminVerificationEmailInput = z.infer<typeof SendAdminVerificationEmailInputSchema>;
 
@@ -35,7 +36,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
     inputSchema: SendAdminVerificationEmailInputSchema,
     outputSchema: SendAdminVerificationEmailOutputSchema,
   },
-  async (newAdminData) => {
+  async ({ baseUrl, ...newAdminData }) => {
     try {
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
@@ -56,7 +57,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
         },
       });
 
-      const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/verify-admin-registration?token=${token}`;
+      const verificationLink = `${baseUrl}/auth/verify-admin-registration?token=${token}`;
 
       const mailOptions = {
         from: '"Baronda" <bobeng.icu@gmail.com>',
