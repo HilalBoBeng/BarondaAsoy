@@ -292,7 +292,7 @@ export default function PetugasLayout({
   }
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+    <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
         <div className="flex h-auto items-center border-b px-2 lg:h-auto lg:px-4 py-2">
           <NavHeader />
