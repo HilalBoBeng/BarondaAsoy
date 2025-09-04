@@ -67,7 +67,7 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
       return (
         <div className="flex space-x-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="min-w-[300px] w-[300px]">
+            <Card key={i} className="min-w-[280px] w-[280px]">
               <CardHeader>
                 <Skeleton className="h-6 w-3/4" />
               </CardHeader>
@@ -96,7 +96,7 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
     return (
        <div className="flex space-x-4 overflow-x-auto pb-4 -mx-1 px-1">
         {announcements.map((announcement) => (
-            <Card key={announcement.id} className="min-w-[300px] w-[300px] flex flex-col hover:shadow-lg transition-shadow">
+            <Card key={announcement.id} className="min-w-[280px] w-[280px] flex flex-col hover:shadow-lg transition-shadow">
                 <CardHeader>
                     <CardTitle className="text-base line-clamp-2">{announcement.title}</CardTitle>
                 </CardHeader>

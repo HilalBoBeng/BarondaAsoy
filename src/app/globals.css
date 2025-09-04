@@ -6,6 +6,7 @@
 body {
   font-family: 'PT Sans', sans-serif;
   overflow-x: hidden;
+  min-width: 350px;
 }
 
 @layer base {
@@ -41,5 +42,3 @@ body {
     @apply bg-background text-foreground;
   }
 }
-
-    
