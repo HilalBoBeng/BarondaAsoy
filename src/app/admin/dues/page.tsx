@@ -143,8 +143,7 @@ export default function DuesAdminPage() {
   };
   
   const canBroadcast = useMemo(() => {
-    if (filterStatus === 'paid') return false;
-    return unpaidUsers.length > 0;
+    return filterStatus === 'unpaid' && unpaidUsers.length > 0;
   }, [filterStatus, unpaidUsers]);
 
 
@@ -208,7 +207,7 @@ export default function DuesAdminPage() {
                   <AlertDialogHeader>
                       <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
                       <AlertDialogDescription>
-                          Anda akan mengirimkan notifikasi pengingat ke semua warga yang belum membayar iuran untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
+                          Anda akan mengirimkan notifikasi pengingat ke {unpaidUsers.length} warga yang belum membayar untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
                       </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

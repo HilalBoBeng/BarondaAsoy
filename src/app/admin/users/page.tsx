@@ -25,8 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { add } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { format } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
@@ -325,8 +324,6 @@ export default function UsersAdminPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama</TableHead>
-                            <TableHead>Poin</TableHead>
-                            <TableHead>Kode Akses</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
@@ -336,8 +333,6 @@ export default function UsersAdminPage() {
                              Array.from({ length: 2 }).map((_, i) => (
                                 <TableRow key={i}>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
@@ -346,24 +341,6 @@ export default function UsersAdminPage() {
                             filteredStaff.map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center font-bold">
-                                            <Star className="h-4 w-4 mr-1 text-yellow-500 fill-yellow-400" />
-                                            {s.points || 0}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            {visibleAccessCodes[s.id] ? (
-                                                <span className="font-mono">{s.accessCode}</span>
-                                            ) : (
-                                                <span className="font-mono">*****</span>
-                                            )}
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleAccessCodeVisibility(s.id)}>
-                                                {visibleAccessCodes[s.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
-                                            </Button>
-                                        </div>
-                                    </TableCell>
                                     <TableCell>
                                         <Badge variant={'secondary'} className={getStaffStatus(s).className}>
                                           {getStaffStatus(s).text}
@@ -378,7 +355,7 @@ export default function UsersAdminPage() {
                             ))
                          ) : (
                              <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">Belum ada staf aktif.</TableCell>
+                                <TableCell colSpan={3} className="h-24 text-center">Belum ada staf aktif.</TableCell>
                             </TableRow>
                          )}
                     </TableBody>
@@ -392,7 +369,7 @@ export default function UsersAdminPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama</TableHead>
-                            <TableHead>Terdaftar Sejak</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -401,7 +378,7 @@ export default function UsersAdminPage() {
                              Array.from({ length: 1 }).map((_, i) => (
                                 <TableRow key={i}>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
@@ -409,7 +386,11 @@ export default function UsersAdminPage() {
                             filteredPendingStaff.map((s) => (
                                 <TableRow key={s.id}>
                                     <TableCell>{s.name}</TableCell>
-                                    <TableCell>{s.createdAt ? format(s.createdAt, "d MMM yyyy", { locale: id }) : 'N/A'}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={'secondary'} className={getStaffStatus(s).className}>
+                                        {getStaffStatus(s).text}
+                                      </Badge>
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
                                           <MoreVertical className="h-4 w-4" />
@@ -432,74 +413,81 @@ export default function UsersAdminPage() {
     </Card>
 
     <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-        <DialogContent>
-            {selectedUserForDetail && (
-                <>
-                <DialogHeader>
-                    <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
-                </DialogHeader>
-                <DialogBody>
-                   <div className="flex flex-col items-center text-center">
-                       <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)}>
-                            <Avatar className="h-24 w-24 border-4 border-muted">
-                                <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
-                                <AvatarFallback className="text-4xl">
-                                    {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                        </button>
-                        <h2 className="text-xl font-bold mt-2">
-                            {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
-                        </h2>
-                        <p className="text-sm text-muted-foreground">{selectedUserForDetail.email}</p>
-                   </div>
-                   <div className="space-y-3 text-sm border-t border-b py-4 mt-4">
-                       <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
-                       <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
-                   </div>
-                </DialogBody>
-                <DialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch">
-                   {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
-                     <div className="flex gap-2">
-                        <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
-                        <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'approve')}>Setujui</Button>
-                     </div>
-                   ) : (
-                    <>
-                      <div className="flex gap-2 justify-end">
-                        {('isBlocked' in selectedUserForDetail && (selectedUserForDetail.isBlocked || selectedUserForDetail.isSuspended)) || ('status' in selectedUserForDetail && selectedUserForDetail.status === 'suspended') ? (
-                          <Button variant="outline" onClick={() => handleRemoveRestriction(selectedUserForDetail)} className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
-                              <ShieldCheck className="mr-2 h-4 w-4" /> Cabut Batasan
-                          </Button>
-                        ) : (
-                          <>
-                            <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
-                            <Button variant="destructive" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
-                          </>
-                        )}
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+           <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
+        </DialogHeader>
+          {selectedUserForDetail && (
+              <Card className="border-0 shadow-none">
+                  <CardContent className="p-0">
+                      <div className="flex flex-col items-center text-center">
+                          <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)}>
+                              <Avatar className="h-24 w-24 border-4 border-muted">
+                                  <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
+                                  <AvatarFallback className="text-4xl">
+                                      {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
+                                  </AvatarFallback>
+                              </Avatar>
+                          </button>
+                          <h2 className="text-xl font-bold mt-2">
+                              {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
+                          </h2>
+                          <p className="text-sm text-muted-foreground">{selectedUserForDetail.email}</p>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" className="w-full mt-2"><Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus Pengguna Ini?</AlertDialogTitle>
-                              <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Semua data terkait pengguna ini akan dihapus.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => openActionDialog(selectedUserForDetail, 'delete')}>Ya, Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                   )}
-                </DialogFooter>
-                </>
-            )}
-        </DialogContent>
+                      <div className="space-y-3 text-sm border-t mt-4 pt-4">
+                          <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
+                          <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
+                           {'accessCode' in selectedUserForDetail && (
+                              <div className="flex items-start gap-3"><Key className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.accessCode}</span></div>
+                          )}
+                          {'points' in selectedUserForDetail && (
+                              <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
+                          )}
+                      </div>
+                  </CardContent>
+                  <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4">
+                      {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
+                          <div className="flex gap-2">
+                              <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
+                              <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'approve')}>Setujui</Button>
+                          </div>
+                      ) : (
+                          <>
+                              <div className="flex gap-2 justify-end">
+                                  {('isBlocked' in selectedUserForDetail && (selectedUserForDetail.isBlocked || selectedUserForDetail.isSuspended)) || ('status' in selectedUserForDetail && selectedUserForDetail.status === 'suspended') ? (
+                                      <Button variant="outline" onClick={() => handleRemoveRestriction(selectedUserForDetail)} className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700">
+                                          <ShieldCheck className="mr-2 h-4 w-4" /> Cabut Batasan
+                                      </Button>
+                                  ) : (
+                                      <>
+                                          <Button variant="outline" className="bg-yellow-500 border-yellow-500 text-white hover:bg-yellow-600" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
+                                          <Button variant="destructive" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
+                                      </>
+                                  )}
+                              </div>
+                              <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="destructive" className="w-full mt-2"><Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini</Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                          <AlertDialogTitle>Hapus Pengguna Ini?</AlertDialogTitle>
+                                          <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Semua data terkait pengguna ini akan dihapus.</AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => openActionDialog(selectedUserForDetail, 'delete')}>Ya, Hapus</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                              </AlertDialog>
+                          </>
+                      )}
+                  </CardFooter>
+              </Card>
+          )}
+      </DialogContent>
     </Dialog>
+
     
     <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
         <DialogContent>
