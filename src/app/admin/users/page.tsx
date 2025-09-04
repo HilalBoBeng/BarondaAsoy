@@ -74,7 +74,11 @@ export default function UsersAdminPage() {
     
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info) {
-        setCurrentAdmin(info);
+        if (info.email === 'admin@baronda.or.id') {
+            setCurrentAdmin({ ...info, id: 'super_admin' });
+        } else {
+            setCurrentAdmin(info);
+        }
     }
 
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
@@ -288,9 +292,8 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="users">Warga</TabsTrigger>
-            <TabsTrigger value="staff">Staf</TabsTrigger>
             <TabsTrigger value="pending-staff">
                 Persetujuan 
                 {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
@@ -321,7 +324,10 @@ export default function UsersAdminPage() {
                       <TableRow key={user.uid}>
                         <TableCell>
                           <div className="flex items-center gap-4">
-                            <Avatar><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                            <Avatar>
+                                <AvatarImage src={user.photoURL || undefined} />
+                                <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
                             <p className="font-medium">{user.displayName || 'Tanpa Nama'}</p>
                           </div>
                         </TableCell>
@@ -345,56 +351,6 @@ export default function UsersAdminPage() {
                 </TableBody>
               </Table>
             </div>
-          </TabsContent>
-
-          <TabsContent value="staff" className="mt-4">
-             <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nama</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                         {loading ? (
-                             Array.from({ length: 2 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><div className="flex items-center gap-4"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-40" /></div></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                                    <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
-                                </TableRow>
-                            ))
-                         ) : filteredStaff.length > 0 ? (
-                            filteredStaff.map((s) => (
-                                <TableRow key={s.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-4">
-                                            <Avatar><AvatarImage src={s.photoURL || undefined} /><AvatarFallback>{s.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                                            <p className="font-medium">{s.name}</p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={'secondary'} className={getStaffStatus(s).className}>
-                                          {getStaffStatus(s).text}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                       <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
-                                          <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                         ) : (
-                             <TableRow>
-                                <TableCell colSpan={3} className="text-center h-24">Belum ada staf aktif.</TableCell>
-                            </TableRow>
-                         )}
-                    </TableBody>
-                </Table>
-             </div>
           </TabsContent>
 
           <TabsContent value="pending-staff" className="mt-4">
@@ -483,8 +439,8 @@ export default function UsersAdminPage() {
                   <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4 border-t bg-muted/50 p-6">
                       {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
                           <div className="flex gap-2">
-                              <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
-                              <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => handleStaffApproval(selectedUserForDetail, true)}>Setujui</Button>
+                               <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
+                               <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => handleStaffApproval(selectedUserForDetail as Staff, true)}>Setujui</Button>
                           </div>
                       ) : (
                           <>
