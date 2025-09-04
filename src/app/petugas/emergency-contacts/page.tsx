@@ -139,7 +139,7 @@ export default function EmergencyContactsPetugasPage() {
           {/* Mobile View */}
           <div className="sm:hidden grid grid-cols-1 gap-4">
               {loading ? (
-                  Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+                  Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader><CardContent><Skeleton className="h-6 w-1/2" /><Skeleton className="h-9 w-full mt-2" /></CardContent></Card>)
               ) : contacts.length > 0 ? (
                   contacts.map((contact) => (
                       <Card key={contact.id}>

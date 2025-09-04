@@ -157,12 +157,12 @@ export default function AnnouncementsPetugasPage() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-grow">
           <CardTitle>Manajemen Pengumuman</CardTitle>
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
             <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Buat
@@ -192,7 +192,7 @@ export default function AnnouncementsPetugasPage() {
         {/* Mobile View */}
         <div className="sm:hidden space-y-4">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+            Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardHeader><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/4 mt-2" /></CardHeader><CardContent><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6 mt-2" /></CardContent><CardFooter><Skeleton className="h-9 w-[88px] ml-auto" /></CardFooter></Card>)
           ) : announcements.length > 0 ? (
             announcements.map((ann) => (
               <Card key={ann.id}>

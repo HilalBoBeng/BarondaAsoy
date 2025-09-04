@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Landmark } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -120,7 +121,22 @@ export default function RecordDuesPage() {
   return (
     <Card>
       <CardHeader>
+        <CardTitle>Catat Iuran Warga</CardTitle>
+        <CardDescription>Gunakan formulir ini untuk mencatat pembayaran iuran keamanan dari warga.</CardDescription>
       </CardHeader>
+      {loading ? (
+        <CardContent className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+          <CardFooter className="p-0 pt-4">
+            <Skeleton className="h-10 w-full" />
+          </CardFooter>
+        </CardContent>
+      ) : (
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
@@ -202,6 +218,7 @@ export default function RecordDuesPage() {
           </CardFooter>
         </form>
       </Form>
+      )}
     </Card>
   );
 }
