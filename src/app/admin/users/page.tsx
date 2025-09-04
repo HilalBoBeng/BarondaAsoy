@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -25,7 +25,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { add } from 'date-fns';
 import { cn } from '@/lib/utils';
-
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const rejectionSchema = z.object({
     rejectionReason: z.string().min(10, 'Alasan penolakan minimal 10 karakter.'),
@@ -55,10 +56,14 @@ export default function UsersAdminPage() {
 
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [selectedUserForAction, setSelectedUserForAction] = useState<AppUser | Staff | null>(null);
-  const [actionType, setActionType] = useState<'suspend' | 'block' | null>(null);
+  const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | null>(null);
 
   const rejectionForm = useForm<RejectionFormValues>({ resolver: zodResolver(rejectionSchema) });
   const actionReasonForm = useForm<ActionReasonFormValues>({ resolver: zodResolver(actionReasonSchema) });
+  
+  const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
+  const [selectedUserForDetail, setSelectedUserForDetail] = useState<AppUser | null>(null);
+
 
   useEffect(() => {
     setLoading(true);
@@ -69,7 +74,7 @@ export default function UsersAdminPage() {
         const usersData = snapshot.docs.map(doc => ({
             uid: doc.id,
             ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate().toLocaleDateString('id-ID') || 'N/A'
+            createdAt: doc.data().createdAt?.toDate() || new Date()
         })) as AppUser[];
         setUsers(usersData);
     }, (error) => console.error("Error fetching users:", error));
@@ -89,17 +94,6 @@ export default function UsersAdminPage() {
         unsubStaff();
     };
   }, []);
-  
-  const handleDeleteUser = async (uid: string) => {
-    try {
-        await deleteDoc(doc(db, 'users', uid));
-        toast({ title: "Berhasil", description: "Akun warga berhasil dihapus." });
-    } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: "Gagal menghapus akun warga." });
-        console.error("Error deleting user: ", error);
-    }
-  }
-
 
   const handleStaffApproval = async (staffMember: Staff, approved: boolean, reason?: string) => {
     setIsSubmitting(true);
@@ -136,8 +130,8 @@ export default function UsersAdminPage() {
       handleStaffApproval(selectedStaffForRejection, false, values.rejectionReason);
     }
   };
-
-  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block') => {
+  
+  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete') => {
       setSelectedUserForAction(user);
       setActionType(type);
       actionReasonForm.reset();
@@ -154,32 +148,36 @@ export default function UsersAdminPage() {
     const userRef = doc(db, collectionName, docId);
 
     try {
-        let updateData: any = { suspensionReason: values.reason };
-
-        if (actionType === 'suspend') {
-            if (!values.duration) {
-                toast({ variant: 'destructive', title: 'Gagal', description: 'Durasi penangguhan harus dipilih.' });
-                setIsSubmitting(false);
-                return;
+        if (actionType === 'delete') {
+            await deleteDoc(userRef);
+            toast({ title: 'Berhasil', description: `Pengguna berhasil dihapus.` });
+            setIsUserDetailOpen(false); // Close the detail view
+        } else {
+            let updateData: any = { suspensionReason: values.reason };
+            if (actionType === 'suspend') {
+                if (!values.duration) {
+                    toast({ variant: 'destructive', title: 'Gagal', description: 'Durasi penangguhan harus dipilih.' });
+                    setIsSubmitting(false);
+                    return;
+                }
+                const [count, unit] = values.duration.split('_');
+                let endDate: Date | null = new Date();
+                if (unit === 'permanent') {
+                    endDate = null;
+                } else {
+                    endDate = add(endDate, { [unit]: parseInt(count) });
+                }
+                updateData.suspensionEndDate = endDate ? Timestamp.fromDate(endDate) : null;
+                updateData[isUserType ? 'isSuspended' : 'status'] = isUserType ? true : 'suspended';
+                updateData.isBlocked = false;
+            } else if (actionType === 'block') {
+                updateData.isBlocked = true;
+                updateData.isSuspended = false;
+                updateData.suspensionEndDate = null;
             }
-            const [count, unit] = values.duration.split('_');
-            let endDate: Date | null = new Date();
-            if (unit === 'permanent') {
-                endDate = null;
-            } else {
-                endDate = add(endDate, { [unit]: parseInt(count) });
-            }
-            updateData.suspensionEndDate = endDate ? Timestamp.fromDate(endDate) : null;
-            updateData[isUserType ? 'isSuspended' : 'status'] = isUserType ? true : 'suspended';
-            updateData.isBlocked = false; // Ensure not blocked
-        } else if (actionType === 'block') {
-            updateData.isBlocked = true;
-            updateData.isSuspended = false; // Ensure not suspended
-            updateData.suspensionEndDate = null;
+            await updateDoc(userRef, updateData);
+            toast({ title: 'Berhasil', description: `Pengguna berhasil di${actionType === 'suspend' ? 'tangguhkan' : 'blokir'}.` });
         }
-
-        await updateDoc(userRef, updateData);
-        toast({ title: 'Berhasil', description: `Pengguna berhasil di${actionType === 'suspend' ? 'tangguhkan' : 'blokir'}.` });
         setIsActionDialogOpen(false);
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal', description: `Gagal melakukan tindakan.` });
@@ -188,13 +186,11 @@ export default function UsersAdminPage() {
     }
 };
 
-  
   const handleRemoveRestriction = async (user: AppUser | Staff) => {
       const isUserType = 'uid' in user;
       const collectionName = isUserType ? 'users' : 'staff';
       const docId = isUserType ? user.uid : user.id;
       const userRef = doc(db, collectionName, docId);
-
       const statusField = isUserType ? 'isSuspended' : 'status';
       const statusValue = isUserType ? false : 'active';
       
@@ -206,11 +202,11 @@ export default function UsersAdminPage() {
             suspensionEndDate: null,
         });
         toast({ title: 'Berhasil', description: 'Batasan pengguna telah dicabut.' });
+        if (isUserDetailOpen) setIsUserDetailOpen(false); // Close detail view on success
       } catch (error) {
          toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mencabut batasan.' });
       }
   };
-
 
   const handleDeleteStaff = async (id: string) => {
      try {
@@ -244,75 +240,10 @@ export default function UsersAdminPage() {
     return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
   };
 
-  const ActionButtons = ({ user } : { user: AppUser }) => {
-    const isRestricted = user.isBlocked || user.isSuspended;
-    return (
-        <div className="flex gap-2 justify-end">
-            {isRestricted ? (
-                <Button variant="outline" size="icon" onClick={() => handleRemoveRestriction(user)} className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
-                    <ShieldCheck className="h-4 w-4" />
-                </Button>
-            ) : (
-                <>
-                    <Button variant="outline" size="icon" onClick={() => openActionDialog(user, 'suspend')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
-                        <ShieldAlert className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => openActionDialog(user, 'block')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
-                        <ShieldX className="h-4 w-4" />
-                    </Button>
-                </>
-            )}
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-lg">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Hapus Warga?</AlertDialogTitle>
-                        <AlertDialogDescription>Tindakan ini akan menghapus akun warga secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Hapus Akun</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
-    );
-  };
-  
-   const StaffActionButtons = ({ staffMember }: { staffMember: Staff }) => {
-    const isRestricted = staffMember.status === 'suspended';
-    return (
-        <div className="flex gap-2 justify-end">
-            {isRestricted ? (
-                <Button variant="outline" size="icon" onClick={() => handleRemoveRestriction(staffMember)} className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
-                    <ShieldCheck className="h-4 w-4" />
-                </Button>
-            ) : (
-                 <Button variant="outline" size="icon" onClick={() => openActionDialog(staffMember, 'suspend')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
-                    <ShieldAlert className="h-4 w-4" />
-                </Button>
-            )}
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon"><Trash className="h-4 w-4" /></Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-lg">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Hapus Staf?</AlertDialogTitle>
-                        <AlertDialogDescription>Tindakan ini akan menghapus staf secara permanen.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteStaff(staffMember.id)}>Hapus</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
-    );
-  };
-
+  const showUserDetail = (user: AppUser) => {
+      setSelectedUserForDetail(user);
+      setIsUserDetailOpen(true);
+  }
 
   return (
     <>
@@ -337,7 +268,7 @@ export default function UsersAdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Pengguna</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Terdaftar Sejak</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
@@ -358,19 +289,21 @@ export default function UsersAdminPage() {
                         <TableCell>
                           <div className="flex items-center gap-4">
                             <Avatar><AvatarImage src={user.photoURL || undefined} /><AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                            <div>
-                              <p className="font-medium">{user.displayName || 'Tanpa Nama'}</p>
-                            </div>
+                            <p className="font-medium">{user.displayName || 'Tanpa Nama'}</p>
                           </div>
                         </TableCell>
-                        <TableCell>{user.email}</TableCell>
+                         <TableCell>
+                           {user.createdAt ? format(user.createdAt, "d MMM yyyy", { locale: id }) : 'N/A'}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={'secondary'} className={getUserStatus(user).className}>
                               {getUserStatus(user).text}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                           <ActionButtons user={user} />
+                           <Button variant="outline" size="sm" onClick={() => showUserDetail(user)}>
+                              Detail & Aksi
+                           </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -445,7 +378,9 @@ export default function UsersAdminPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                       <StaffActionButtons staffMember={s} />
+                                       <Button variant="outline" size="icon" onClick={() => openActionDialog(s, 'suspend')} className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                                          <ShieldAlert className="h-4 w-4" />
+                                      </Button>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -517,6 +452,63 @@ export default function UsersAdminPage() {
       </CardContent>
     </Card>
 
+    <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
+        <DialogContent>
+            {selectedUserForDetail && (
+                <>
+                <DialogHeader>
+                    <div className="flex items-center gap-4">
+                        <Avatar className="h-16 w-16">
+                            <AvatarImage src={selectedUserForDetail.photoURL || undefined} />
+                            <AvatarFallback>{selectedUserForDetail.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <DialogTitle className="text-xl">{selectedUserForDetail.displayName}</DialogTitle>
+                            <DialogDescription>Detail dan Aksi Pengguna</DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+                <DialogBody>
+                   <div className="space-y-3 text-sm">
+                       <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground"/> {selectedUserForDetail.email}</div>
+                       <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/> {selectedUserForDetail.phone || 'Tidak ada no. HP'}</div>
+                       <div className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground"/> Terdaftar: {format(selectedUserForDetail.createdAt as Date, 'PPP', { locale: id })}</div>
+                   </div>
+                </DialogBody>
+                <DialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch">
+                   <div className="flex gap-2 justify-end">
+                     {(selectedUserForDetail.isBlocked || selectedUserForDetail.isSuspended) ? (
+                        <Button variant="outline" onClick={() => handleRemoveRestriction(selectedUserForDetail)} className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
+                            <ShieldCheck className="mr-2 h-4 w-4" /> Cabut Batasan
+                        </Button>
+                    ) : (
+                        <>
+                           <Button variant="outline" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
+                           <Button variant="destructive" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
+                        </>
+                    )}
+                   </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full"><Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus Pengguna Ini?</AlertDialogTitle>
+                            <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Semua data terkait pengguna ini akan dihapus.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => openActionDialog(selectedUserForDetail, 'delete')}>Ya, Hapus</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </DialogFooter>
+                </>
+            )}
+        </DialogContent>
+    </Dialog>
+
     <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
         <DialogContent>
             <DialogHeader>
@@ -559,9 +551,12 @@ export default function UsersAdminPage() {
     <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>{actionType === 'block' ? 'Blokir' : 'Tangguhkan'} Pengguna</DialogTitle>
+                <DialogTitle>
+                    {actionType === 'block' ? 'Blokir' : actionType === 'suspend' ? 'Tangguhkan' : 'Hapus'} Pengguna
+                </DialogTitle>
                 <DialogDescription>
-                  Pengguna yang di{actionType === 'block' ? 'blokir' : 'tangguhkan'} tidak akan bisa masuk ke aplikasi.
+                  {actionType === 'delete' ? 'Tindakan ini akan menghapus akun secara permanen. ' : `Pengguna yang di${actionType === 'block' ? 'blokir' : 'tangguhkan'} tidak akan bisa masuk ke aplikasi.`}
+                   Mohon jelaskan alasannya.
                 </DialogDescription>
             </DialogHeader>
              <Form {...actionReasonForm}>
@@ -572,7 +567,7 @@ export default function UsersAdminPage() {
                         name="reason"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Alasan {actionType === 'block' ? 'Pemblokiran' : 'Penangguhan'}</FormLabel>
+                            <FormLabel>Alasan {actionType === 'block' ? 'Pemblokiran' : actionType === 'suspend' ? 'Penangguhan' : 'Penghapusan'}</FormLabel>
                             <FormControl>
                                 <Textarea {...field} rows={3} placeholder="Contoh: Melanggar aturan komunitas..." />
                             </FormControl>
@@ -608,7 +603,7 @@ export default function UsersAdminPage() {
                         <Button type="button" variant="secondary" onClick={() => setIsActionDialogOpen(false)}>Batal</Button>
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {actionType === 'block' ? 'Blokir Pengguna' : 'Tangguhkan'}
+                             {actionType === 'block' ? 'Blokir Pengguna' : actionType === 'suspend' ? 'Tangguhkan' : 'Hapus Permanen'}
                         </Button>
                     </DialogFooter>
                 </form>

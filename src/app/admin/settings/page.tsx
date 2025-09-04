@@ -19,6 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -38,7 +40,8 @@ export default function ShortLinkAdminPage() {
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [history, setHistory] = useState<ShortLinkData[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [visibleUrls, setVisibleUrls] = useState<Record<string, boolean>>({});
+  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+  const [selectedLongUrl, setSelectedLongUrl] = useState('');
   const { toast } = useToast();
 
   const form = useForm<ShortLinkFormValues>({
@@ -54,7 +57,7 @@ export default function ShortLinkAdminPage() {
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(), // Safety check for createdAt
+                createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
             } as ShortLinkData;
         });
         setHistory(historyData);
@@ -113,20 +116,14 @@ export default function ShortLinkAdminPage() {
       }
   }
 
-  const toggleUrlVisibility = (id: string) => {
-    setVisibleUrls(prev => ({ ...prev, [id]: !prev[id] }));
+  const showOriginalUrl = (url: string) => {
+    setSelectedLongUrl(url);
+    setIsUrlModalOpen(true);
   };
 
-  const maskUrl = (url: string) => {
-    try {
-        const urlObj = new URL(url);
-        return `${urlObj.protocol}//********.com`;
-    } catch {
-        return 'URL tidak valid';
-    }
-  };
 
   return (
+    <>
     <div className="grid lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-1">
             <Card>
@@ -236,9 +233,9 @@ export default function ShortLinkAdminPage() {
                                             </TableCell>
                                             <TableCell className="max-w-xs">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="truncate">{visibleUrls[link.id] ? link.longUrl : maskUrl(link.longUrl)}</span>
-                                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleUrlVisibility(link.id)}>
-                                                        {visibleUrls[link.id] ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                                                    <span>*****</span>
+                                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => showOriginalUrl(link.longUrl)}>
+                                                        <Eye className="h-4 w-4"/>
                                                     </Button>
                                                 </div>
                                             </TableCell>
@@ -273,5 +270,23 @@ export default function ShortLinkAdminPage() {
             </Card>
         </div>
     </div>
+    
+    <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Tautan Asli</DialogTitle>
+                <DialogDescription>
+                    Ini adalah URL tujuan lengkap untuk tautan pendek yang dipilih.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <Input value={selectedLongUrl} readOnly className="bg-muted" />
+                 <Button className="w-full" onClick={() => copyToClipboard(selectedLongUrl)}>
+                    <Copy className="mr-2 h-4 w-4" /> Salin Tautan Asli
+                </Button>
+            </div>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
