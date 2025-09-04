@@ -60,7 +60,7 @@ export default function AdminLayout({
         { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
         { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
         { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
-        { href: "/admin/settings", icon: LinkIcon, label: "Short Link" },
+        { href: "/admin/settings", icon: LinkIcon, label: "Lainnya" },
         { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
         { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
     ];
@@ -222,9 +222,8 @@ export default function AdminLayout({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-              <SheetHeader className="p-0 border-b">
-                <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                <NavHeader />
+              <SheetHeader className="p-4 border-b">
+                 <SheetTitle className="text-lg font-semibold">Menu Navigasi</SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-auto py-2">
                 <NavContent onLinkClick={() => setIsSheetOpen(false)} />

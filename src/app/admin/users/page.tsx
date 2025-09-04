@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, Key } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -303,7 +303,7 @@ export default function UsersAdminPage() {
                         </TableCell>
                         <TableCell className="text-right">
                            <Button variant="ghost" size="icon" onClick={() => showUserDetail(user)}>
-                              <MoreVertical className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                            </Button>
                         </TableCell>
                       </TableRow>
@@ -348,7 +348,7 @@ export default function UsersAdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                        <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
-                                          <MoreVertical className="h-4 w-4" />
+                                          <Eye className="h-4 w-4" />
                                       </Button>
                                     </TableCell>
                                 </TableRow>
@@ -393,7 +393,7 @@ export default function UsersAdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
-                                          <MoreVertical className="h-4 w-4" />
+                                          <Eye className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -413,30 +413,28 @@ export default function UsersAdminPage() {
     </Card>
 
     <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-      <DialogContent className="sm:max-w-md p-0">
+      <DialogContent className="p-0 border-0 max-w-sm">
         <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
           {selectedUserForDetail && (
               <Card className="border-0 shadow-none">
-                  <CardContent className="p-6">
-                      <div className="flex flex-col items-center text-center">
-                          <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)}>
-                              <Avatar className="h-24 w-24 border-4 border-muted">
-                                  <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
-                                  <AvatarFallback className="text-4xl">
-                                      {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
-                                  </AvatarFallback>
-                              </Avatar>
-                          </button>
-                          <h2 className="text-xl font-bold mt-2">
-                              {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
-                          </h2>
-                          <p className="text-sm text-muted-foreground">{selectedUserForDetail.email}</p>
-                      </div>
-                      <div className="space-y-3 text-sm border-t mt-4 pt-4">
+                  <CardContent className="p-6 text-center">
+                      <button onClick={() => handleImageZoom('uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)} className="mx-auto">
+                          <Avatar className="h-24 w-24 border-4 border-muted">
+                              <AvatarImage src={'uid' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
+                              <AvatarFallback className="text-4xl">
+                                  {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
+                              </AvatarFallback>
+                          </Avatar>
+                      </button>
+                      <h2 className="text-xl font-bold mt-2">
+                          {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">{selectedUserForDetail.email}</p>
+                      <div className="space-y-3 text-sm text-left border-t mt-4 pt-4">
                           <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
                           <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
                            {'accessCode' in selectedUserForDetail && (
-                              <div className="flex items-start gap-3"><Key className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.accessCode}</span></div>
+                              <div className="flex items-start gap-3"><KeyRound className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.accessCode}</span></div>
                           )}
                           {'points' in selectedUserForDetail && (
                               <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
@@ -458,8 +456,8 @@ export default function UsersAdminPage() {
                                       </Button>
                                   ) : (
                                       <>
-                                          <Button className="bg-yellow-500 border-yellow-500 text-white hover:bg-yellow-600" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
-                                          <Button variant="destructive" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
+                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')}><ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan</Button>
+                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')}><ShieldX className="mr-2 h-4 w-4"/> Blokir</Button>
                                       </>
                                   )}
                               </div>

@@ -103,18 +103,17 @@ export default function HonorariumAdminPage() {
   
   const staffWithHonor = useMemo(() => {
     const staffMap = new Map<string, { staff: Staff, honorCount: number, totalAmount: number }>();
+    staff.forEach(s => {
+        staffMap.set(s.id, { staff: s, honorCount: 0, totalAmount: 0 });
+    });
     honorariums.forEach(h => {
-        const staffMember = staff.find(s => s.id === h.staffId);
-        if (staffMember) {
-            if (!staffMap.has(h.staffId)) {
-                staffMap.set(h.staffId, { staff: staffMember, honorCount: 0, totalAmount: 0 });
-            }
+        if (staffMap.has(h.staffId)) {
             const existing = staffMap.get(h.staffId)!;
             existing.honorCount += 1;
             existing.totalAmount += h.amount;
         }
     });
-    const result = Array.from(staffMap.values());
+    const result = Array.from(staffMap.values()).filter(item => item.honorCount > 0);
     result.sort((a,b) => a.staff.name.localeCompare(b.staff.name));
     return result;
   }, [honorariums, staff]);
