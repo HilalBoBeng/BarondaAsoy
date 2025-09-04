@@ -33,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotPermittedPage from "@/app/not-permitted/page";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Staff } from "@/lib/types";
+import { appConfig } from "@/config/app-config";
 
 
 interface MenuConfig {
@@ -42,18 +43,18 @@ interface MenuConfig {
   locked: boolean;
 }
 
-const navItemsList = [
-    { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
-    { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil Saya" },
-    { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
-    { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
-    { id: 'patrol-log', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { id: 'dues', href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
-    { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
-    { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
-    { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
-    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
-    { id: 'emergency-contacts', href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+const getNavItemsList = () => [
+    { id: 'dashboard', href: "/petugas", icon: Home, label: appConfig.menus.petugas.dashboard },
+    { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: appConfig.menus.petugas.profile },
+    { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: appConfig.menus.petugas.reports, badgeKey: 'newReports' },
+    { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: appConfig.menus.petugas.schedule, badgeKey: 'pendingSchedules' },
+    { id: 'patrolLog', href: "/petugas/patrol-log", icon: FileText, label: appConfig.menus.petugas.patrolLog },
+    { id: 'dues', href: "/petugas/dues", icon: Landmark, label: appConfig.menus.petugas.dues },
+    { id: 'honor', href: "/petugas/honor", icon: Banknote, label: appConfig.menus.petugas.honor, badgeKey: 'newHonors' },
+    { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: appConfig.menus.petugas.announcements },
+    { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: appConfig.menus.petugas.notifications },
+    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: appConfig.menus.petugas.tools },
+    { id: 'emergencyContacts', href: "/petugas/emergency-contacts", icon: Phone, label: appConfig.menus.petugas.emergencyContacts },
 ];
 
 
@@ -61,7 +62,7 @@ function LoadingSkeleton() {
   return (
     <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
         <Image 
-            src="https://iili.io/KJ4aGxp.png" 
+            src={appConfig.appLogoUrl}
             alt="Loading Logo" 
             width={120} 
             height={120} 
@@ -91,6 +92,8 @@ export default function PetugasLayout({
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
+
+  const navItemsList = getNavItemsList();
 
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
@@ -194,7 +197,7 @@ export default function PetugasLayout({
         if (activeItem) newPageTitle = activeItem.label;
     }
     setPageTitle(newPageTitle);
-  }, [pathname, menuConfig, loadingConfig]);
+  }, [pathname, menuConfig, loadingConfig, navItemsList]);
 
   const handleLogout = (silent = false) => {
     if (!silent) setIsLoggingOut(true);
@@ -333,11 +336,11 @@ export default function PetugasLayout({
           </div>
             <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
-                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+                  <span className="text-sm font-bold text-primary leading-tight">{appConfig.appName}</span>
+                  <p className="text-xs text-muted-foreground leading-tight">{appConfig.appTagline}</p>
               </div>
                <Image
-                src="https://iili.io/KJ4aGxp.png"
+                src={appConfig.appLogoUrl}
                 alt="Logo"
                 width={32}
                 height={32}

@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound, CheckCircle } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Trash, Eye, EyeOff, History, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound, CheckCircle, Edit } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,6 +28,7 @@ import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sendAdminVerificationEmail } from '@/ai/flows/send-admin-verification-email';
+import Link from 'next/link';
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -472,6 +473,19 @@ export default function ToolsAdminPage() {
                         </div>
                         {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                     </div>
+                     {isSuperAdmin && (
+                        <Link href="/admin/editor" className="block">
+                            <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                <div className="flex items-center space-x-3">
+                                    <Edit className="h-5 w-5 text-muted-foreground" />
+                                    <div className="space-y-0.5">
+                                        <Label>Live Editor</Label>
+                                        <p className="text-xs text-muted-foreground">Ubah nama aplikasi, logo, dan label menu.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    )}
                 </CardContent>
             </Card>
             <Card>

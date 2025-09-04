@@ -22,6 +22,7 @@ import {
   User as UserIcon,
   Wrench,
   History,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -35,21 +36,22 @@ import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Staff } from "@/lib/types";
+import { appConfig } from "@/config/app-config";
 
 const navItemsList = [
-    { href: "/admin", icon: Home, label: "Dasbor" },
-    { href: "/admin/profile", icon: UserIcon, label: "Profil Saya" },
-    { href: "/admin/reports", icon: ShieldAlert, label: "Laporan Masuk", badgeKey: 'newReports' },
-    { href: "/admin/announcements", icon: FileText, label: "Pengumuman" },
-    { href: "/admin/users", icon: Users, label: "Manajemen Pengguna", badgeKey: 'pendingStaff' },
-    { href: "/admin/schedule", icon: Calendar, label: "Jadwal Patroli" },
-    { href: "/admin/attendance", icon: ClipboardList, label: "Daftar Hadir" },
-    { href: "/admin/dues", icon: Landmark, label: "Iuran Warga" },
-    { href: "/admin/honor", icon: Banknote, label: "Honorarium" },
-    { href: "/admin/activity-log", icon: History, label: "Log Aktivitas Admin" },
-    { href: "/admin/tools", icon: Wrench, label: "Lainnya" },
-    { href: "/admin/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
-    { href: "/admin/notifications", icon: Bell, label: "Notifikasi" },
+    { href: "/admin", icon: Home, label: appConfig.menus.admin.dashboard, id: 'dashboard' },
+    { href: "/admin/profile", icon: UserIcon, label: appConfig.menus.admin.profile, id: 'profile' },
+    { href: "/admin/reports", icon: ShieldAlert, label: appConfig.menus.admin.reports, id: 'reports', badgeKey: 'newReports' },
+    { href: "/admin/announcements", icon: FileText, label: appConfig.menus.admin.announcements, id: 'announcements' },
+    { href: "/admin/users", icon: Users, label: appConfig.menus.admin.users, id: 'users', badgeKey: 'pendingStaff' },
+    { href: "/admin/schedule", icon: Calendar, label: appConfig.menus.admin.schedule, id: 'schedule' },
+    { href: "/admin/attendance", icon: ClipboardList, label: appConfig.menus.admin.attendance, id: 'attendance' },
+    { href: "/admin/dues", icon: Landmark, label: appConfig.menus.admin.dues, id: 'dues' },
+    { href: "/admin/honor", icon: Banknote, label: appConfig.menus.admin.honor, id: 'honor' },
+    { href: "/admin/activity-log", icon: History, label: appConfig.menus.admin.activityLog, id: 'activityLog' },
+    { href: "/admin/tools", icon: Wrench, label: appConfig.menus.admin.tools, id: 'tools' },
+    { href: "/admin/emergency-contacts", icon: Phone, label: appConfig.menus.admin.emergencyContacts, id: 'emergencyContacts' },
+    { href: "/admin/notifications", icon: Bell, label: appConfig.menus.admin.notifications, id: 'notifications' },
 ];
 
 
@@ -177,7 +179,7 @@ export default function AdminLayout({
       return (
         <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
             <Image 
-                src="https://iili.io/KJ4aGxp.png" 
+                src={appConfig.appLogoUrl}
                 alt="Loading Logo" 
                 width={120} 
                 height={120} 
@@ -228,6 +230,21 @@ export default function AdminLayout({
             {item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
           </Link>
         ))}
+         {adminInfo.role === 'super_admin' && (
+            <Link
+                href="/admin/editor"
+                onClick={onLinkClick}
+                className={cn(
+                    "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                    pathname.startsWith("/admin/editor") && "bg-muted text-primary"
+                )}
+                >
+                <div className="flex items-center gap-3">
+                    <Edit className="h-4 w-4" />
+                    {appConfig.menus.admin.editor}
+                </div>
+            </Link>
+        )}
       </nav>
       <div className="mt-auto p-4">
         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={() => handleLogout()} disabled={isLoggingOut}>
@@ -285,11 +302,11 @@ export default function AdminLayout({
 
           <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
-                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+                  <span className="text-sm font-bold text-primary leading-tight">{appConfig.appName}</span>
+                  <p className="text-xs text-muted-foreground leading-tight">{appConfig.appTagline}</p>
               </div>
               <Image 
-                src="https://iili.io/KJ4aGxp.png" 
+                src={appConfig.appLogoUrl}
                 alt="Logo" 
                 width={32} 
                 height={32}
