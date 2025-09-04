@@ -20,11 +20,12 @@ import { doc, onSnapshot, Timestamp, updateDoc, serverTimestamp } from "firebase
 import { db } from "@/lib/firebase/client";
 import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { resetStaffAccessCode } from "@/ai/flows/reset-staff-access-code";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
+
 
 const profileEditSchema = z.object({
   displayName: z.string().optional(),
@@ -32,9 +33,21 @@ const profileEditSchema = z.object({
   addressDetail: z.string().optional(),
   photoURL: z.string().optional(),
 });
+
 const accessCodeSchema = z.object({
   currentAccessCode: z.string().min(1, "Kode akses saat ini harus diisi."),
+  newAccessCode: z.string().min(6, "Kode akses baru minimal 6 karakter.").optional(),
+  confirmNewAccessCode: z.string().optional(),
+}).refine(data => {
+    if (data.newAccessCode) {
+        return data.newAccessCode === data.confirmNewAccessCode;
+    }
+    return true;
+}, {
+    message: "Konfirmasi kode akses baru tidak cocok.",
+    path: ["confirmNewAccessCode"],
 });
+
 
 type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
 type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
@@ -43,10 +56,10 @@ type FieldName = 'displayName' | 'phone' | 'addressDetail' | 'photoURL';
 export default function AdminProfilePage() {
     const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
+    const [isAccessCodeSubmitting, setIsAccessCodeSubmitting] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName | 'accessCode']?: Date | null }>({});
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const router = useRouter();
@@ -55,7 +68,7 @@ export default function AdminProfilePage() {
     const form = useForm<ProfileEditFormValues>({ resolver: zodResolver(profileEditSchema) });
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
-    const canEditField = useCallback((field: FieldName) => {
+    const canEditField = useCallback((field: FieldName | 'accessCode') => {
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
         const cooldownDays = field === 'photoURL' ? 1 : 7;
@@ -80,10 +93,8 @@ export default function AdminProfilePage() {
                 if (docSnap.exists()) {
                     const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                     setAdminInfo(staffData);
-                    const newLastUpdated: { [key in FieldName]?: Date | null } = {};
-                    if(staffData.lastCodeChangeTimestamp) {
-                        newLastUpdated.displayName = (staffData.lastCodeChangeTimestamp as Timestamp).toDate(); // Assuming name and code changed together
-                    }
+                    const newLastUpdated: { [key in FieldName | 'accessCode']?: Date | null } = {};
+                    if(staffData.lastCodeChangeTimestamp) newLastUpdated.accessCode = (staffData.lastCodeChangeTimestamp as Timestamp).toDate();
                     setLastUpdated(newLastUpdated);
                 } else {
                      router.push('/auth/staff-login');
@@ -97,7 +108,7 @@ export default function AdminProfilePage() {
     
     const handleEditClick = (field: FieldName) => {
         if (!adminInfo) return;
-        if (adminInfo.id === 'admin_utama' && field !== 'currentAccessCode') {
+        if (adminInfo.id === 'admin_utama') {
             toast({ variant: 'destructive', title: 'Aksi Ditolak', description: 'Profil Admin Utama tidak dapat diubah.' });
             return;
         }
@@ -187,7 +198,6 @@ export default function AdminProfilePage() {
             
             const updateData: { [key: string]: any } = {};
             updateData[editingField === 'displayName' ? 'name' : editingField] = valueToUpdate;
-            updateData[`lastUpdated_${editingField}`] = serverTimestamp();
             
             await updateDoc(staffRef, updateData);
             
@@ -195,7 +205,7 @@ export default function AdminProfilePage() {
             
             const updatedAdminInfo = { ...adminInfo, [editingField === 'displayName' ? 'name' : editingField]: valueToUpdate };
             setAdminInfo(updatedAdminInfo);
-            setLastUpdated(prev => ({ ...prev, [editingField]: new Date() }));
+            setLastUpdated(prev => ({ ...prev, [editingField!]: new Date() }));
             localStorage.setItem('staffInfo', JSON.stringify(updatedAdminInfo));
 
             setIsEditDialogOpen(false);
@@ -209,33 +219,27 @@ export default function AdminProfilePage() {
     };
 
     const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
-        if (!adminInfo?.id || !adminInfo.email) {
-            toast({ variant: 'destructive', title: 'Gagal', description: 'Informasi admin tidak lengkap untuk aksi ini.' });
-            return;
-        };
-        if (adminInfo.id === 'admin_utama') {
-            toast({ variant: 'destructive', title: 'Aksi Ditolak', description: 'Kode akses Admin Utama tidak dapat diubah.' });
-            return;
-        }
-        setIsSubmitting(true);
+        if (!adminInfo?.id || !data.newAccessCode) return;
+        setIsAccessCodeSubmitting(true);
         
         try {
-            const result = await resetStaffAccessCode({
+            const result = await updateStaffAccessCode({
                 staffId: adminInfo.id,
                 currentAccessCode: data.currentAccessCode,
+                newAccessCode: data.newAccessCode
             });
 
             if (result.success) {
                 toast({ title: 'Berhasil', description: result.message });
-                accessCodeForm.reset({currentAccessCode: ''});
-                setLastUpdated(prev => ({ ...prev, displayName: new Date() })); // Using displayName as a proxy for any cooldown
+                accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
+                setLastUpdated(prev => ({...prev, accessCode: new Date() }));
             } else {
                 throw new Error(result.message);
             }
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal', description: error instanceof Error ? error.message : "Gagal mengubah kode akses." });
         } finally {
-            setIsSubmitting(false);
+            setIsAccessCodeSubmitting(false);
         }
     };
 
@@ -251,10 +255,9 @@ export default function AdminProfilePage() {
     };
 
     const dataRows = [
-        { field: 'phone' as FieldName, value: adminInfo.phone },
-        { field: 'addressDetail' as FieldName, value: adminInfo.addressDetail },
+        { field: 'phone' as FieldName, value: adminInfo.phone, icon: Phone },
+        { field: 'addressDetail' as FieldName, value: adminInfo.addressDetail, icon: MapPin },
     ];
-
 
     return (
         <div className="space-y-6">
@@ -271,10 +274,10 @@ export default function AdminProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                                    <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{adminInfo.name}</CardTitle>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
+                                <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{adminInfo.name}</CardTitle>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
                             </div>
                             <CardDescription className="text-primary-foreground/80 truncate">{adminInfo.email}</CardDescription>
                             <Badge variant="secondary" className="mt-2">Administrator</Badge>
@@ -286,8 +289,7 @@ export default function AdminProfilePage() {
                         {dataRows.map(row => (
                             <div key={row.field} className="flex items-start justify-between gap-4 p-4">
                                 <div className="flex items-center gap-4">
-                                    {row.field === 'phone' && <Phone className="h-5 w-5 text-muted-foreground" />}
-                                    {row.field === 'addressDetail' && <MapPin className="h-5 w-5 text-muted-foreground" />}
+                                    <row.icon className="h-5 w-5 text-muted-foreground" />
                                     <div className="flex-1">
                                         <p className="text-xs text-muted-foreground">{fieldLabels[row.field]}</p>
                                         <p className="font-medium">{row.value || 'Belum diisi'}</p>
@@ -305,30 +307,34 @@ export default function AdminProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">Ubah Kode Akses</CardTitle>
-                    <CardDescription>Jika Anda merasa kode akses Anda tidak aman, Anda dapat mengubahnya di sini. Kode akses baru akan dikirimkan ke email Anda.</CardDescription>
+                    <CardDescription>Jika Anda merasa kode akses Anda tidak aman, Anda dapat mengubahnya di sini.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...accessCodeForm}>
                         <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="space-y-4">
-                            {canEditField('displayName') ? ( // Using displayName as a proxy for cooldown
-                                <FormField control={accessCodeForm.control} name="currentAccessCode" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Kode Akses Saat Ini</FormLabel>
-                                        <FormControl><Input type="password" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                            {canEditField('accessCode') ? (
+                                <>
+                                    <FormField control={accessCodeForm.control} name="currentAccessCode" render={({ field }) => (
+                                        <FormItem><FormLabel>Kode Akses Saat Ini</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={accessCodeForm.control} name="newAccessCode" render={({ field }) => (
+                                        <FormItem><FormLabel>Kode Akses Baru</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={accessCodeForm.control} name="confirmNewAccessCode" render={({ field }) => (
+                                        <FormItem><FormLabel>Konfirmasi Kode Akses Baru</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </>
                             ) : (
                                 <FormItem>
-                                    <FormLabel>Kode Akses Saat Ini</FormLabel>
+                                    <FormLabel>Kode Akses</FormLabel>
                                     <FormControl><Input readOnly value="••••••••" className="bg-muted" /></FormControl>
-                                    {lastUpdated.displayName && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.displayName, 7), { addSuffix: true, locale: id })}.</p>}
+                                    {lastUpdated.accessCode && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.accessCode, 7), { addSuffix: true, locale: id })}.</p>}
                                 </FormItem>
                             )}
 
-                            <Button type="submit" disabled={isSubmitting || !canEditField('displayName')}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4"/>}
-                                Kirim Kode Akses Baru
+                            <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode')}>
+                                {isAccessCodeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4"/>}
+                                Ganti Kode Akses
                             </Button>
                         </form>
                     </Form>
@@ -336,25 +342,27 @@ export default function AdminProfilePage() {
             </Card>
 
             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
-                <DialogContent className="rounded-lg">
-                    <DialogHeader>
+                <DialogContent>
+                    <DialogHeader className="text-left">
                         <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onProfileEditSubmit)} className="space-y-4 pt-4">
-                            {editingField && (
-                            <FormField
-                                control={form.control}
-                                name={editingField}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{fieldLabels[editingField]}</FormLabel>
-                                    <FormControl><Input {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                        <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
+                            <DialogBody className="space-y-4">
+                               {editingField && editingField !== 'photoURL' && (
+                                <FormField
+                                    control={form.control}
+                                    name={editingField}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{fieldLabels[editingField]}</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
                                 )}
-                            />
-                            )}
+                            </DialogBody>
                             <DialogFooter>
                                 <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                                 <Button type="submit" disabled={isSubmitting}>

@@ -21,7 +21,7 @@ import { db } from "@/lib/firebase/client";
 import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -35,9 +35,14 @@ const profileEditSchema = z.object({
 
 const accessCodeSchema = z.object({
   currentAccessCode: z.string().min(1, "Kode akses saat ini harus diisi."),
-  newAccessCode: z.string().min(6, "Kode akses baru minimal 6 karakter."),
-  confirmNewAccessCode: z.string(),
-}).refine(data => data.newAccessCode === data.confirmNewAccessCode, {
+  newAccessCode: z.string().min(6, "Kode akses baru minimal 6 karakter.").optional(),
+  confirmNewAccessCode: z.string().optional(),
+}).refine(data => {
+    if (data.newAccessCode) {
+        return data.newAccessCode === data.confirmNewAccessCode;
+    }
+    return true;
+}, {
     message: "Konfirmasi kode akses baru tidak cocok.",
     path: ["confirmNewAccessCode"],
 });
@@ -49,7 +54,8 @@ type FieldName = 'displayName' | 'phone' | 'addressDetail' | 'photoURL';
 export default function PetugasProfilePage() {
     const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName]?: Date | null }>({});
+    const [isAccessCodeSubmitting, setIsAccessCodeSubmitting] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<{ [key in FieldName | 'accessCode']?: Date | null }>({});
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -60,7 +66,7 @@ export default function PetugasProfilePage() {
     const form = useForm<ProfileEditFormValues>({ resolver: zodResolver(profileEditSchema) });
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
-    const canEditField = useCallback((field: FieldName) => {
+    const canEditField = useCallback((field: FieldName | 'accessCode') => {
         const lastUpdateDate = lastUpdated[field];
         if (!lastUpdateDate) return true;
         const cooldownDays = field === 'photoURL' ? 1 : 7;
@@ -74,10 +80,8 @@ export default function PetugasProfilePage() {
                 if (docSnap.exists()) {
                     const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                     setStaffInfo(staffData);
-                    const newLastUpdated: { [key in FieldName]?: Date | null } = {};
-                    if(staffData.lastCodeChangeTimestamp) {
-                        newLastUpdated.displayName = (staffData.lastCodeChangeTimestamp as Timestamp).toDate(); // Using displayName as a proxy
-                    }
+                    const newLastUpdated: { [key in FieldName | 'accessCode']?: Date | null } = {};
+                    if(staffData.lastCodeChangeTimestamp) newLastUpdated.accessCode = (staffData.lastCodeChangeTimestamp as Timestamp).toDate();
                     setLastUpdated(newLastUpdated);
                 } else {
                      router.push('/auth/staff-login');
@@ -119,7 +123,6 @@ export default function PetugasProfilePage() {
             
             const updateData: { [key: string]: any } = {};
             updateData[editingField === 'displayName' ? 'name' : editingField] = valueToUpdate;
-            updateData[`lastUpdated_${editingField}`] = serverTimestamp();
             
             await updateDoc(staffRef, updateData);
             
@@ -127,7 +130,7 @@ export default function PetugasProfilePage() {
             
             const updatedStaffInfo = { ...staffInfo, [editingField === 'displayName' ? 'name' : editingField]: valueToUpdate };
             setStaffInfo(updatedStaffInfo);
-            setLastUpdated(prev => ({ ...prev, [editingField]: new Date() }));
+            setLastUpdated(prev => ({ ...prev, [editingField!]: new Date() }));
             localStorage.setItem('staffInfo', JSON.stringify(updatedStaffInfo));
 
             setIsEditDialogOpen(false);
@@ -141,8 +144,8 @@ export default function PetugasProfilePage() {
     };
 
     const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
-        if (!staffInfo?.id) return;
-        setIsSubmitting(true);
+        if (!staffInfo?.id || !data.newAccessCode) return;
+        setIsAccessCodeSubmitting(true);
         
         try {
             const result = await updateStaffAccessCode({
@@ -153,15 +156,15 @@ export default function PetugasProfilePage() {
 
             if (result.success) {
                 toast({ title: 'Berhasil', description: result.message });
-                accessCodeForm.reset();
-                setLastUpdated(prev => ({...prev, displayName: new Date() })); // Using displayName as cooldown proxy
+                accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
+                setLastUpdated(prev => ({...prev, accessCode: new Date() }));
             } else {
                 throw new Error(result.message);
             }
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal', description: error instanceof Error ? error.message : "Gagal mengubah kode akses." });
         } finally {
-            setIsSubmitting(false);
+            setIsAccessCodeSubmitting(false);
         }
     };
 
@@ -237,7 +240,7 @@ export default function PetugasProfilePage() {
                 <CardContent>
                     <Form {...accessCodeForm}>
                         <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="space-y-4">
-                            {canEditField('displayName') ? (
+                           {canEditField('accessCode') ? (
                                 <>
                                     <FormField control={accessCodeForm.control} name="currentAccessCode" render={({ field }) => (
                                         <FormItem><FormLabel>Kode Akses Saat Ini</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
@@ -253,12 +256,11 @@ export default function PetugasProfilePage() {
                                 <FormItem>
                                     <FormLabel>Kode Akses</FormLabel>
                                     <FormControl><Input readOnly value="••••••••" className="bg-muted" /></FormControl>
-                                    {lastUpdated.displayName && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.displayName, 7), { addSuffix: true, locale: id })}.</p>}
+                                    {lastUpdated.accessCode && <p className="text-xs text-muted-foreground pt-2">Bisa diubah lagi {formatDistanceToNow(addDays(lastUpdated.accessCode, 7), { addSuffix: true, locale: id })}.</p>}
                                 </FormItem>
                             )}
-
-                            <Button type="submit" disabled={isSubmitting || !canEditField('displayName')}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4"/>}
+                            <Button type="submit" disabled={isAccessCodeSubmitting || !canEditField('accessCode')}>
+                                {isAccessCodeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4"/>}
                                 Ganti Kode Akses
                             </Button>
                         </form>
@@ -267,25 +269,27 @@ export default function PetugasProfilePage() {
             </Card>
             
             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
-                <DialogContent className="rounded-lg">
-                    <DialogHeader>
+                <DialogContent>
+                    <DialogHeader className="text-left">
                         <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onProfileEditSubmit)} className="space-y-4 pt-4">
-                            {editingField && editingField !== 'photoURL' && (
-                            <FormField
-                                control={form.control}
-                                name={editingField}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{fieldLabels[editingField]}</FormLabel>
-                                    <FormControl><Input {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                        <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
+                             <DialogBody className="space-y-4">
+                                {editingField && editingField !== 'photoURL' && (
+                                <FormField
+                                    control={form.control}
+                                    name={editingField}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{fieldLabels[editingField]}</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
                                 )}
-                            />
-                            )}
+                            </DialogBody>
                             <DialogFooter>
                                 <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                                 <Button type="submit" disabled={isSubmitting}>
