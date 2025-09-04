@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
@@ -52,6 +52,7 @@ export default function HonorariumAdminPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(months[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [filterStatus, setFilterStatus] = useState<'all' | 'Dibayarkan' | 'Belum Dibayar'>('all');
+  const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const { toast } = useToast();
 
   const paymentForm = useForm<PaymentFormValues>({
@@ -59,6 +60,10 @@ export default function HonorariumAdminPage() {
   });
 
   useEffect(() => {
+    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (info) {
+        setAdminInfo(info);
+    }
     const staffQuery = query(collection(db, 'staff'), where('status', '==', 'active'));
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
       const staffData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
@@ -112,39 +117,61 @@ export default function HonorariumAdminPage() {
   const handleCancelPayment = async (honorRecordId?: string) => {
     if (!honorRecordId) return;
     try {
-        await deleteDoc(doc(db, 'honorariums', honorRecordId));
-        toast({ title: "Berhasil", description: "Pembayaran telah dibatalkan." });
+        const batch = writeBatch(db);
+
+        // Delete the honorarium record
+        const honorRef = doc(db, 'honorariums', honorRecordId);
+        batch.delete(honorRef);
+        
+        // Find and delete the corresponding financial transaction
+        const financeQuery = query(collection(db, 'financial_transactions'), where('relatedId', '==', honorRecordId));
+        const financeDocs = await getDocs(financeQuery);
+        financeDocs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+
+        toast({ title: "Berhasil", description: "Pembayaran telah dibatalkan dan catatan keuangan telah dihapus." });
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal membatalkan pembayaran." });
     }
   };
 
   const onPaymentSubmit = async (values: PaymentFormValues) => {
-    if (!selectedStaffForPayment) return;
+    if (!selectedStaffForPayment || !adminInfo) return;
     setIsSubmitting(true);
 
     try {
+        const batch = writeBatch(db);
         const period = `${selectedMonth} ${selectedYear}`;
-        const honorRecord = honorariums.find(h => h.staffId === selectedStaffForPayment.id && h.period === period);
         
-        const payload = {
+        // Create new honorarium record
+        const honorRef = doc(collection(db, 'honorariums'));
+        batch.set(honorRef, {
             staffId: selectedStaffForPayment.id,
             staffName: selectedStaffForPayment.name,
             amount: values.amount,
             period: period,
             status: 'Dibayarkan' as const,
             issueDate: serverTimestamp(),
-        };
-
-        if (honorRecord) {
-            // This case should ideally not happen if UI is correct, but as a fallback
-            const docRef = doc(db, 'honorariums', honorRecord.id);
-            await updateDoc(docRef, { status: 'Dibayarkan', amount: values.amount, issueDate: serverTimestamp() });
-        } else {
-            await addDoc(collection(db, 'honorariums'), payload);
-        }
+        });
         
-        toast({ title: "Berhasil", description: `Honor untuk ${selectedStaffForPayment.name} telah dibayarkan.` });
+        // Create corresponding financial transaction
+        const financeRef = doc(collection(db, 'financial_transactions'));
+        batch.set(financeRef, {
+            type: 'expense',
+            description: `Honor Petugas - ${selectedStaffForPayment.name} (${period})`,
+            amount: values.amount,
+            category: 'Honor Petugas',
+            date: serverTimestamp(),
+            recordedBy: adminInfo.name,
+            relatedId: honorRef.id,
+        });
+
+        await batch.commit();
+        
+        toast({ title: "Berhasil", description: `Honor untuk ${selectedStaffForPayment.name} telah dibayarkan dan dicatat.` });
         setIsPayDialogOpen(false);
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat menyimpan pembayaran." });

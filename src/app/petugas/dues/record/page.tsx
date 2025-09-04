@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs, Timestamp, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, getDocs, Timestamp, where, writeBatch, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -93,7 +93,11 @@ export default function RecordDuesPage() {
     }
 
     try {
-      await addDoc(collection(db, 'dues'), {
+      const batch = writeBatch(db);
+
+      // Create dues payment record
+      const duesRef = doc(collection(db, 'dues'));
+      batch.set(duesRef, {
         userId: userToSave.uid,
         userName: userToSave.displayName,
         amount: values.amount,
@@ -103,7 +107,22 @@ export default function RecordDuesPage() {
         recordedBy: staffInfo.name,
         recordedById: staffInfo.id,
       });
-      toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
+
+      // Create corresponding financial transaction
+      const financeRef = doc(collection(db, 'financial_transactions'));
+      batch.set(financeRef, {
+          type: 'income',
+          description: `Iuran dari ${userToSave.displayName} (${values.month} ${values.year})`,
+          amount: values.amount,
+          category: 'Iuran Warga',
+          date: serverTimestamp(),
+          recordedBy: staffInfo.name,
+          relatedId: duesRef.id,
+      });
+
+      await batch.commit();
+
+      toast({ title: "Berhasil", description: "Pembayaran iuran dan transaksi keuangan berhasil dicatat." });
       form.reset({ userId: '', amount: 0, month: months[new Date().getMonth()], year: currentYear.toString() });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mencatat iuran." });
