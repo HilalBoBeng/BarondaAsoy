@@ -6,9 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, CheckCircle, ShieldAlert, AlertCircle } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { verifyAdminToken } from '@/ai/flows/verify-admin-token';
 
 function VerificationContent() {
@@ -32,8 +30,8 @@ function VerificationContent() {
         const result = await verifyAdminToken({ token });
         if (result.success) {
           setStatus('success');
-          setMessage(result.message);
-          setTimeout(() => router.push('/'), 5000);
+          setMessage(result.message + ' Anda akan dialihkan ke halaman login.');
+          setTimeout(() => router.push('/auth/staff-login'), 5000);
         } else {
           throw new Error(result.message);
         }
@@ -80,11 +78,13 @@ function VerificationContent() {
              <CardContent>
                 <p className="text-muted-foreground">{message}</p>
              </CardContent>
-              <CardFooter>
-                <Button className="w-full" asChild>
-                    <Link href="/">Kembali ke Halaman Utama</Link>
-                </Button>
-            </CardFooter>
+             {status !== 'verifying' && (
+                <CardFooter>
+                    <Button className="w-full" onClick={() => router.push('/auth/staff-login')}>
+                        Ke Halaman Login
+                    </Button>
+                </CardFooter>
+            )}
         </Card>
     </div>
   )

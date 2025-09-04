@@ -44,7 +44,7 @@ const sendAdminWelcomeEmail = async (email: string, name: string, accessCode: st
     subject: 'Selamat! Akun Admin Baronda Anda Telah Dibuat',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
-        <div style="background-color: #28a745; color: white; padding: 20px; text-align: center;">
+        <div style="background-color: #6f42c1; color: white; padding: 20px; text-align: center;">
           <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
           <h1 style="margin: 0; font-size: 24px;">Akun Admin Dibuat</h1>
         </div>
@@ -87,7 +87,7 @@ const createAdminFlow = ai.defineFlow(
         addressType,
         addressDetail: addressType === 'luar_kilongan' ? addressDetail : 'Kilongan',
         status: 'active' as const,
-        role: 'admin',
+        role: 'admin' as const, // Ensure role is 'admin'
         accessCode: accessCode,
         createdAt: Timestamp.now(),
         points: 0,

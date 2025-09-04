@@ -17,6 +17,7 @@ const SendAdminVerificationEmailInputSchema = z.object({
   addressType: z.enum(['kilongan', 'luar_kilongan']),
   addressDetail: z.string(),
   baseUrl: z.string().url(),
+  verificationId: z.string(),
 });
 export type SendAdminVerificationEmailInput = z.infer<typeof SendAdminVerificationEmailInputSchema>;
 
@@ -36,7 +37,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
     inputSchema: SendAdminVerificationEmailInputSchema,
     outputSchema: SendAdminVerificationEmailOutputSchema,
   },
-  async ({ baseUrl, ...newAdminData }) => {
+  async ({ baseUrl, verificationId, ...newAdminData }) => {
     try {
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
@@ -44,10 +45,12 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
       const verificationData = {
         ...newAdminData,
         token,
+        status: 'pending',
         expiresAt: Timestamp.fromDate(expiresAt),
       };
-
-      await adminDb.collection('admin_verifications').doc(token).set(verificationData);
+      
+      // Use the provided verificationId as the document ID
+      await adminDb.collection('admin_verifications').doc(verificationId).set(verificationData);
 
       const transporter = nodemailer.createTransport({
         service: 'gmail',

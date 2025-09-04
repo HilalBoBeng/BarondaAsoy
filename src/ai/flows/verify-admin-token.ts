@@ -32,19 +32,19 @@ const verifyAdminTokenFlow = ai.defineFlow(
   },
   async ({ token }) => {
     try {
-      const verificationRef = adminDb.collection('admin_verifications').doc(token);
-      const verificationDoc = await verificationRef.get();
+      const q = adminDb.collection('admin_verifications').where('token', '==', token).limit(1);
+      const verificationSnapshot = await q.get();
 
-      if (!verificationDoc.exists) {
+      if (verificationSnapshot.empty) {
         return { success: false, message: 'Token tidak valid atau tidak ditemukan.' };
       }
-
+      
+      const verificationDoc = verificationSnapshot.docs[0];
+      const verificationRef = verificationDoc.ref;
       const data = verificationDoc.data();
 
       if (!data || data.expiresAt.toDate() < new Date()) {
-        if (verificationDoc.exists) {
-          await verificationRef.delete();
-        }
+        await verificationRef.delete();
         return { success: false, message: 'Token sudah kedaluwarsa. Mohon minta Super Admin untuk mendaftar ulang.' };
       }
 

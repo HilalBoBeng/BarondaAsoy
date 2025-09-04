@@ -109,7 +109,7 @@ export default function ToolsAdminPage() {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'waiting' | 'sent'>('idle');
   
   const { toast } = useToast();
 
@@ -123,6 +123,31 @@ export default function ToolsAdminPage() {
     defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
   });
   const addressType = addAdminForm.watch('addressType');
+
+  useEffect(() => {
+    let unsubVerification: (() => void) | null = null;
+    
+    if (submissionStatus === 'waiting') {
+        const verificationId = localStorage.getItem('verificationId');
+        if (verificationId) {
+            const verificationRef = doc(db, 'admin_verifications', verificationId);
+            unsubVerification = onSnapshot(verificationRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    setSubmissionStatus('sent');
+                    toast({ title: 'Berhasil', description: 'Akun admin telah berhasil diverifikasi.' });
+                    setIsAddAdminOpen(false);
+                    localStorage.removeItem('verificationId');
+                }
+            });
+        }
+    }
+    
+    return () => {
+        if (unsubVerification) {
+            unsubVerification();
+        }
+    };
+}, [submissionStatus, toast]);
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -197,6 +222,7 @@ export default function ToolsAdminPage() {
       setTimeout(() => {
         addAdminForm.reset();
         setSubmissionStatus('idle');
+         localStorage.removeItem('verificationId');
       }, 300);
     }
   }, [isAddAdminOpen, addAdminForm]);
@@ -234,6 +260,9 @@ export default function ToolsAdminPage() {
             addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' }); return;
         }
         
+        const verificationId = nanoid();
+        localStorage.setItem('verificationId', verificationId);
+
         const result = await sendAdminVerificationEmail({
             name: toTitleCase(values.name),
             email: values.email,
@@ -241,11 +270,12 @@ export default function ToolsAdminPage() {
             addressType: values.addressType,
             addressDetail: values.addressType === 'kilongan' ? 'Kilongan' : values.addressDetail || '',
             baseUrl: window.location.origin,
+            verificationId: verificationId,
         });
         
         if (!result.success) throw new Error(result.message);
         
-        setSubmissionStatus('sent');
+        setSubmissionStatus('waiting');
 
     } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman verifikasi gagal. ${error instanceof Error ? error.message : ''}`});
@@ -638,14 +668,14 @@ export default function ToolsAdminPage() {
     </Dialog>
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(submissionStatus === 'sending') e.preventDefault()}}>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(submissionStatus === 'sending' || submissionStatus === 'waiting') e.preventDefault()}}>
             <DialogHeader>
                 <DialogTitle>Tambah Admin Baru</DialogTitle>
                 <DialogDescription>
-                   {submissionStatus === 'sent' ? 'Verifikasi Terkirim!' : 'Isi detail di bawah ini. Tautan verifikasi akan dikirim ke email calon admin.'}
+                   {submissionStatus === 'waiting' ? 'Menunggu verifikasi dari calon admin...' : 'Isi detail di bawah ini. Tautan verifikasi akan dikirim ke email calon admin.'}
                 </DialogDescription>
             </DialogHeader>
-            {submissionStatus !== 'sent' ? (
+            {submissionStatus === 'idle' || submissionStatus === 'sending' ? (
                 <Form {...addAdminForm}>
                     <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
                         <DialogBody className="space-y-4">
@@ -707,9 +737,9 @@ export default function ToolsAdminPage() {
                 </Form>
             ) : (
                 <DialogBody className="text-center py-8">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
                     <p className="text-muted-foreground">
-                        Tautan verifikasi telah berhasil dikirim ke email calon admin. Mereka harus mengklik tautan tersebut untuk menyelesaikan pembuatan akun.
+                        Tautan verifikasi telah dikirim. Menunggu calon admin untuk mengonfirmasi pendaftaran mereka. Dialog ini akan tertutup otomatis setelah verifikasi selesai.
                     </p>
                 </DialogBody>
             )}
