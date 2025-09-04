@@ -5,45 +5,40 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getAuth, signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, Mail, Shield, Phone, MapPin, KeyRound, Camera, Pencil, Lock } from 'lucide-react';
+import { Loader2, User, Mail, Shield, Phone, MapPin, KeyRound, Camera, Pencil, Lock, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { isBefore, subDays, addDays, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { resetStaffAccessCode } from '@/ai/flows/reset-staff-access-code';
 
 const adminProfileSchema = z.object({
-  displayName: z.string().min(1, 'Nama tidak boleh kosong.'),
-  phone: z.string().min(1, 'Nomor HP tidak boleh kosong.'),
-  addressDetail: z.string().min(1, 'Alamat tidak boleh kosong.'),
+  displayName: z.string().optional(),
+  phone: z.string().optional(),
+  addressDetail: z.string().optional(),
   photoURL: z.string().optional(),
 });
 
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, "Kata sandi saat ini harus diisi."),
-  newPassword: z.string().min(8, "Kata sandi baru minimal 8 karakter."),
-  confirmNewPassword: z.string(),
-}).refine(data => data.newPassword === data.confirmNewPassword, {
-    message: "Konfirmasi kata sandi baru tidak cocok.",
-    path: ["confirmNewPassword"],
+const accessCodeSchema = z.object({
+  currentAccessCode: z.string().min(1, "Kode akses saat ini harus diisi."),
 });
 
 type AdminProfileFormValues = z.infer<typeof adminProfileSchema>;
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+type AccessCodeFormValues = z.infer<typeof accessCodeSchema>;
 type FieldName = keyof AdminProfileFormValues;
 
 export default function AdminSettingsPage() {
-    const [adminInfo, setAdminInfo] = useState<{ name: string; email: string, photoURL?: string, phone?: string, addressDetail?: string } | null>(null);
-    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+    const [adminInfo, setAdminInfo] = useState<{ id: string, name: string; email: string, photoURL?: string, phone?: string, addressDetail?: string } | null>(null);
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
     
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -56,7 +51,7 @@ export default function AdminSettingsPage() {
     const { toast } = useToast();
 
     const profileForm = useForm<AdminProfileFormValues>();
-    const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema) });
+    const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
 
     const canEditField = useCallback((field: FieldName) => {
         const lastUpdateDate = lastUpdated[field];
@@ -77,10 +72,12 @@ export default function AdminSettingsPage() {
             });
 
              const lastUpdatedDates: { [key in FieldName]?: Date | null } = {};
-            // You might need to fetch these from a 'admins' collection if you want to persist them
             setLastUpdated(lastUpdatedDates);
+        } else {
+            // Handle case where admin is not logged in or info is missing
+            router.push('/auth/staff-login');
         }
-    }, [profileForm]);
+    }, [profileForm, router]);
 
     const handleEditClick = (field: FieldName) => {
         if (!canEditField(field)) {
@@ -145,7 +142,7 @@ export default function AdminSettingsPage() {
             try {
                 const compressedDataUrl = await compressImage(file, 64);
                 profileForm.setValue('photoURL', compressedDataUrl);
-                onProfileSubmit({ photoURL: compressedDataUrl }); // Directly submit photo
+                onProfileSubmit({ photoURL: compressedDataUrl });
             } catch(err) {
                  toast({ variant: "destructive", title: "Gagal Memproses Gambar", description: "Terjadi kesalahan saat memproses gambar Anda." });
             }
@@ -159,8 +156,6 @@ export default function AdminSettingsPage() {
         
         const updatedInfo = { ...adminInfo, ...data };
 
-        // Note: This only updates localStorage. For persistent admin profiles,
-        // you would save this to a dedicated 'admins' collection in Firestore.
         localStorage.setItem('staffInfo', JSON.stringify(updatedInfo));
         setAdminInfo(updatedInfo);
         
@@ -172,20 +167,48 @@ export default function AdminSettingsPage() {
         setIsSubmitting(false);
     };
 
-    const onPasswordSubmit = async (data: PasswordFormValues) => {
-        if (!adminInfo?.email) return;
-        // This is a placeholder as admin auth isn't fully implemented with Firebase Auth
-        toast({ title: "Fitur Dalam Pengembangan", description: "Ubah kata sandi admin akan tersedia di versi mendatang." });
+    const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
+        if (!adminInfo?.id) {
+            toast({ variant: 'destructive', title: "Gagal", description: "ID Admin tidak ditemukan. Silakan login ulang." });
+            return;
+        }
+
+        setIsSubmittingPassword(true);
+        try {
+            const result = await resetStaffAccessCode({
+                staffId: adminInfo.id,
+                currentAccessCode: data.currentAccessCode,
+            });
+
+            if (result.success) {
+                toast({ title: "Berhasil", description: result.message });
+                accessCodeForm.reset();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan.";
+            toast({ variant: 'destructive', title: "Gagal", description: errorMessage });
+        } finally {
+            setIsSubmittingPassword(false);
+        }
     };
+
     
     if (!adminInfo) {
-        return <Loader2 className="animate-spin" />;
+        return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
     }
+    
+    const fieldLabels: Record<FieldName, string> = {
+        displayName: "Nama Lengkap",
+        phone: "Nomor HP / WhatsApp",
+        addressDetail: "Alamat",
+        photoURL: "Foto Profil"
+    };
 
     const renderDataRow = (field: FieldName, value: string | undefined | null) => {
         const Icon = field === 'displayName' ? User : field === 'phone' ? Phone : MapPin;
         const canEdit = canEditField(field);
-        const cooldownDays = field === 'photoURL' ? 1 : 7;
         const lastUpdateDate = lastUpdated[field];
         
         return (
@@ -193,11 +216,11 @@ export default function AdminSettingsPage() {
                 <div className="flex items-center gap-4">
                     <Icon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
-                        <p className="text-xs text-muted-foreground">{field === 'displayName' ? 'Nama Lengkap' : field === 'phone' ? 'Nomor HP' : 'Alamat'}</p>
+                        <p className="text-xs text-muted-foreground">{fieldLabels[field]}</p>
                         <p className="font-medium">{value || 'Belum diisi'}</p>
                         {!canEdit && lastUpdateDate && (
                             <p className="text-xs text-muted-foreground italic mt-1">
-                                Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdateDate, cooldownDays), { addSuffix: true, locale: id })}
+                                Bisa diedit lagi {formatDistanceToNow(addDays(lastUpdateDate, 7), { addSuffix: true, locale: id })}
                             </p>
                         )}
                     </div>
@@ -245,89 +268,55 @@ export default function AdminSettingsPage() {
             <Card>
                 <CardHeader>
                      <CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-5 w-5" /> Keamanan</CardTitle>
+                     <CardDescription>Ubah kode akses Anda secara berkala untuk menjaga keamanan.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <div className="flex items-center justify-between p-3 border rounded-lg">
-                        <p className="text-sm font-medium">Ubah Kata Sandi</p>
-                        <Button variant="outline" onClick={() => setIsPasswordDialogOpen(true)}>Ubah</Button>
-                     </div>
+                    <Form {...accessCodeForm}>
+                        <form onSubmit={accessCodeForm.handleSubmit(onAccessCodeSubmit)} className="space-y-4">
+                             <FormField
+                                control={accessCodeForm.control}
+                                name="currentAccessCode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Kode Akses Saat Ini</FormLabel>
+                                        <FormControl><Input type="password" {...field} placeholder="Masukkan kode akses Anda yang sekarang" /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" disabled={isSubmittingPassword}>
+                                {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Kirim Kode Akses Baru ke Email
+                            </Button>
+                        </form>
+                    </Form>
                 </CardContent>
             </Card>
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit {editingField === 'displayName' ? 'Nama' : editingField === 'phone' ? 'Nomor HP' : 'Alamat'}</DialogTitle>
+                        <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
                     </DialogHeader>
                     <Form {...profileForm}>
                         <form onSubmit={profileForm.handleSubmit((data) => onProfileSubmit(data))} className="space-y-4">
-                            <FormField
-                                control={profileForm.control}
-                                name={editingField!}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{editingField === 'displayName' ? 'Nama Baru' : editingField === 'phone' ? 'Nomor HP Baru' : 'Alamat Baru'}</FormLabel>
-                                    <FormControl><Input {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                            {editingField && (
+                               <FormField
+                                    control={profileForm.control}
+                                    name={editingField}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{fieldLabels[editingField]}</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                                <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                                 <Button type="submit" disabled={isSubmitting}>
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Simpan
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
-            
-            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Ubah Kata Sandi Admin</DialogTitle>
-                    </DialogHeader>
-                    <Form {...passwordForm}>
-                        <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                             <FormField
-                                control={passwordForm.control}
-                                name="currentPassword"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                                        <FormControl><Input type="password" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={passwordForm.control}
-                                name="newPassword"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Kata Sandi Baru</FormLabel>
-                                        <FormControl><Input type="password" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={passwordForm.control}
-                                name="confirmNewPassword"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                                        <FormControl><Input type="password" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmittingPassword}>
-                                    {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Simpan
                                 </Button>
                             </DialogFooter>

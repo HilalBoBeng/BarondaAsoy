@@ -116,7 +116,7 @@ export default function ProfilePage() {
                 return;
             }
              if (userData.isSuspended) {
-                const endDate = (userData.suspensionEndDate as Timestamp)?.toDate();
+                const endDate = (userData.suspensionEndDate as Timestamp)?.toDate() || null;
                 const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
                  
                 const dialog = document.createElement('div');
@@ -409,9 +409,7 @@ export default function ProfilePage() {
                                      )}
                                 </div>
                                 <CardDescription className="text-primary-foreground/80 truncate">{user?.email}</CardDescription>
-                                {user?.isBlocked && (
-                                    <Badge variant="destructive" className="mt-2">Akun Diblokir</Badge>
-                                )}
+                                <Badge variant="secondary" className="mt-2">Warga</Badge>
                             </div>
                         </div>
                     </CardHeader>

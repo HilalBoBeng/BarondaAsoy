@@ -89,6 +89,7 @@ export interface Staff {
   suspensionEndDate?: Timestamp | null; // null for permanent
   points?: number;
   lastCodeChangeTimestamp?: Timestamp;
+  createdAt?: Timestamp | Date;
 }
 
 export interface Notification {
