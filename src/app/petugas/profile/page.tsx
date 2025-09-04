@@ -94,6 +94,7 @@ export default function PetugasProfilePage() {
     }, [router]);
     
     const handleEditClick = (field: FieldName) => {
+        if (field === 'displayName') return;
         if (!staffInfo || !canEditField(field)) {
              toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi nanti.` });
              return;
@@ -271,9 +272,6 @@ export default function PetugasProfilePage() {
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                                 <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{staffInfo.name}</CardTitle>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
-                                    {canEditField("displayName") ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                                </Button>
                             </div>
                             <CardDescription className="text-primary-foreground/80 truncate">{staffInfo.email}</CardDescription>
                             <Badge variant="secondary" className="mt-2">Petugas</Badge>
@@ -362,15 +360,29 @@ export default function PetugasProfilePage() {
                                     )}
                                 />
                                 )}
-                                 {editingField === 'photoURL' && form.getValues('photoURL') && (
-                                    <div className="flex justify-center">
-                                         <Avatar className="h-32 w-32 mt-2">
-                                            <AvatarImage src={form.getValues('photoURL') || ''} alt="Preview" />
-                                            <AvatarFallback>
-                                                <Loader2 className="animate-spin" />
-                                            </AvatarFallback>
-                                        </Avatar>
-                                    </div>
+                                 {editingField === 'photoURL' && (
+                                    <FormField
+                                        control={form.control}
+                                        name="photoURL"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <div className="hidden"><Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} /></div>
+                                            </FormControl>
+                                            {field.value && (
+                                            <div className="flex flex-col items-center gap-4">
+                                                    <Avatar className="h-32 w-32 mt-2">
+                                                        <AvatarImage src={field.value} alt="Preview" />
+                                                        <AvatarFallback>
+                                                            <Loader2 className="animate-spin" />
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                            </div>
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
                                 )}
                             </DialogBody>
                             <DialogFooter className="sm:justify-between gap-2 pt-4">

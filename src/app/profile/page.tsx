@@ -173,6 +173,7 @@ export default function ProfilePage() {
   }, [auth, router, toast]);
 
   const handleEditClick = (field: FieldName) => {
+    if (field === 'displayName') return; // Disable name editing
     if (field !== 'photoURL' && !canEditField(field)) {
         toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.` });
         return;
@@ -267,7 +268,7 @@ export default function ProfilePage() {
           const newLastUpdatedDate = new Date();
           const updatedUser = { ...user, [editingField]: valueToUpdate };
           setUser(updatedUser as AppUser);
-          setLastUpdated(prev => ({ ...prev, [editingField]: newLastUpdatedDate }));
+          setLastUpdated(prev => ({ ...prev, [editingField!]: newLastUpdatedDate }));
 
           setIsEditDialogOpen(false);
           setEditingField(null);
@@ -402,11 +403,6 @@ export default function ProfilePage() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                      <CardTitle className="text-2xl font-bold text-primary-foreground truncate">{user?.displayName || 'Pengguna'}</CardTitle>
-                                      {canEditField('displayName') && (
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20" onClick={() => handleEditClick("displayName")}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                     )}
                                 </div>
                                 <CardDescription className="text-primary-foreground/80 truncate">{user?.email}</CardDescription>
                                 <Badge variant="secondary" className="mt-2">Warga</Badge>
