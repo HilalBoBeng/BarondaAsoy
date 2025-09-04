@@ -9,7 +9,6 @@ import { doc, updateDoc, getDocs, collection, query, where, Timestamp, serverTim
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, ArrowLeft, QrCode, CheckCircle, ShieldAlert, CameraOff } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Html5Qrcode, Html5QrcodeResult } from 'html5-qrcode';
 import { cn } from '@/lib/utils';
@@ -21,11 +20,11 @@ function ScanPageContent() {
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const qrReaderContainerId = "qr-reader-container";
-  const requestRef = useRef<number>();
   
   const [status, setStatus] = useState<'idle' | 'scanning' | 'success' | 'error' | 'permission_denied'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<'start' | 'end' | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const type = searchParams.get('type') as 'start' | 'end';
@@ -38,11 +37,8 @@ function ScanPageContent() {
   }, [searchParams]);
 
   const onScanSuccess = (decodedText: string, decodedResult: Html5QrcodeResult) => {
-    if (status === 'scanning') { // Only process if we are actively scanning
-      setStatus('success'); // Immediately go to success state visually
-      if (scannerRef.current?.isScanning) {
-        scannerRef.current.stop();
-      }
+    if (!isProcessing) {
+      setIsProcessing(true);
       processDecodedText(decodedText);
     }
   };
@@ -52,7 +48,7 @@ function ScanPageContent() {
   };
 
   useEffect(() => {
-    if (scanType && status === 'idle') {
+    if (scanType && status === 'idle' && !scannerRef.current) {
       const html5QrcodeScanner = new Html5Qrcode(qrReaderContainerId, {
           // verbose: true
       });
@@ -74,16 +70,13 @@ function ScanPageContent() {
           }
       };
 
-      // Ensure the container is in the DOM
-      requestRef.current = requestAnimationFrame(startScanner);
+      startScanner();
     }
 
     return () => {
-      if (requestRef.current) {
-          cancelAnimationFrame(requestRef.current);
-      }
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop().catch(err => console.error("Failed to stop scanner:", err));
+        scannerRef.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,6 +127,7 @@ function ScanPageContent() {
       }
 
       await updateDoc(scheduleRef, updatePayload);
+      setStatus('success');
       toast({ title: 'Absen Berhasil', description: `Status patroli telah diperbarui.` });
 
       setTimeout(() => {
@@ -144,7 +138,7 @@ function ScanPageContent() {
       const msg = err instanceof Error ? err.message : 'Gagal memproses QR code.';
       setErrorMessage(msg);
       setStatus('error');
-      // No automatic reset to idle, user must press cancel or retry.
+      setIsProcessing(false);
     }
   };
 

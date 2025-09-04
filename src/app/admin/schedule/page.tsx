@@ -348,7 +348,7 @@ export default function ScheduleAdminPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-8 w-[124px] ml-auto" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-10 w-[124px] ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : filteredSchedule.length > 0 ? (
