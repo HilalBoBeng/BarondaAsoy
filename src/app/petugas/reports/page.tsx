@@ -217,7 +217,7 @@ export default function PetugasReportsPage() {
                  <CardTitle>Laporan Warga</CardTitle>
                 <CardDescription>Tinjau dan tanggapi laporan yang masuk dari warga.</CardDescription>
             </div>
-             <div className="flex flex-col sm:flex-row gap-2">
+             <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
                 <Button variant={filter === 'new' ? 'default' : 'outline'} onClick={() => setFilter('new')}>
                     Laporan Baru
                     {newReportsCount > 0 && <Badge variant="destructive" className="ml-2">{newReportsCount}</Badge>}
@@ -227,7 +227,7 @@ export default function PetugasReportsPage() {
                     {myReportsCount > 0 && <Badge variant="secondary" className="ml-2">{myReportsCount}</Badge>}
                 </Button>
                  <Select value={threatFilter} onValueChange={setThreatFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectTrigger className="w-full sm:w-auto">
                         <SelectValue placeholder="Filter ancaman" />
                     </SelectTrigger>
                     <SelectContent>

@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription, DialogBody } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +27,7 @@ const announcementSchema = z.object({
 
 type AnnouncementFormValues = z.infer<typeof announcementSchema>;
 
-export default function AnnouncementsAdminPage() {
+export default function AnnouncementsPetugasPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,10 +86,6 @@ export default function AnnouncementsAdminPage() {
         await addDoc(collection(db, 'announcements'), {
           ...values,
           date: serverTimestamp(),
-          likes: 0,
-          dislikes: 0,
-          likesBy: [],
-          dislikesBy: [],
         });
         toast({ title: "Berhasil", description: "Pengumuman berhasil dibuat." });
       }
@@ -114,7 +110,7 @@ export default function AnnouncementsAdminPage() {
       setIsDeleting(null);
     }
   };
-  
+
   const handleDeleteAll = async () => {
     if (announcements.length === 0) return;
     const batch = writeBatch(db);
@@ -167,29 +163,29 @@ export default function AnnouncementsAdminPage() {
           <CardDescription>Buat, edit, atau hapus pengumuman untuk warga.</CardDescription>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-          <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Buat
-          </Button>
-          {announcements.length > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon">
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Hapus Semua Pengumuman?</AlertDialogTitle>
-                  <AlertDialogDescription>Tindakan ini akan menghapus semua {announcements.length} pengumuman.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Batal</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAll}>Ya, Hapus Semua</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+            <Button onClick={() => handleDialogOpen()} disabled={isSubmitting || !!isDeleting}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Buat
+            </Button>
+            {announcements.length > 0 && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon">
+                            <Trash className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus Semua Pengumuman?</AlertDialogTitle>
+                            <AlertDialogDescription>Tindakan ini akan menghapus semua {announcements.length} pengumuman.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteAll}>Ya, Hapus Semua</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
       </CardHeader>
       <CardContent>
@@ -268,8 +264,8 @@ export default function AnnouncementsAdminPage() {
               <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <DialogBody className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -279,7 +275,7 @@ export default function AnnouncementsAdminPage() {
                         <FormControl>
                           <Input 
                             {...field} 
-                            maxLength={50} 
+                            maxLength={50}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
@@ -302,7 +298,7 @@ export default function AnnouncementsAdminPage() {
                       </FormItem>
                     )}
                   />
-                </DialogBody>
+                </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>

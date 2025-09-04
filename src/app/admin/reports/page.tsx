@@ -148,9 +148,9 @@ export default function ReportsAdminPage() {
                  <CardTitle>Manajemen Laporan Masuk</CardTitle>
                 <CardDescription>Tanggapi, ubah status, dan kelola laporan dari warga.</CardDescription>
             </div>
-             <div className="flex flex-col sm:flex-row gap-2">
+             <div className="flex flex-wrap items-center gap-2">
                  <Select value={threatFilter} onValueChange={setThreatFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectTrigger className="w-full sm:w-auto">
                         <SelectValue placeholder="Filter ancaman" />
                     </SelectTrigger>
                     <SelectContent>
@@ -208,75 +208,77 @@ export default function ReportsAdminPage() {
           )}
         </div>
       
-        <div className="hidden sm:block rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Pelapor</TableHead>
-                <TableHead>Laporan & Balasan</TableHead>
-                <TableHead>Penanggung Jawab</TableHead>
-                <TableHead>Ancaman</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[150px] text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-[100px] ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : paginatedReports.length > 0 ? (
-                paginatedReports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>{new Date(report.createdAt as Date).toLocaleString('id-ID')}</TableCell>
-                    <TableCell className="font-medium">{report.reporterName}</TableCell>
-                    <TableCell className="max-w-xs">
-                        <p className="truncate font-medium">{report.reportText}</p>
-                        {report.replies && report.replies.length > 0 && (
-                             <div className="mt-2">
-                                {(report.replies as Reply[]).map((reply, index) => (
-                                   <div key={index} className="text-xs text-muted-foreground border-l-2 pl-2">
-                                       <span className="font-bold">{reply.replierRole}: </span>
-                                       <span className="italic">"{reply.message}"</span>
-                                   </div>
-                                ))}
-                            </div>
-                        )}
-                    </TableCell>
-                    <TableCell>{report.handlerName || '-'}</TableCell>
-                    <TableCell>
-                       <ThreatLevelBadge level={report.triageResult?.threatLevel} />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={report.status === 'resolved' ? 'secondary' : report.status === 'in_progress' ? 'default' : 'destructive'}>
-                        {statusDisplay[report.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                           {renderActions(report)}
-                        </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+        <div className="hidden sm:block">
+          <div className="rounded-lg border overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">
-                    Belum ada laporan masuk.
-                  </TableCell>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Pelapor</TableHead>
+                  <TableHead>Laporan & Balasan</TableHead>
+                  <TableHead>Penanggung Jawab</TableHead>
+                  <TableHead>Ancaman</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[150px] text-right">Aksi</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-[100px] ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedReports.length > 0 ? (
+                  paginatedReports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>{new Date(report.createdAt as Date).toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="font-medium">{report.reporterName}</TableCell>
+                      <TableCell className="max-w-xs">
+                          <p className="truncate font-medium">{report.reportText}</p>
+                          {report.replies && report.replies.length > 0 && (
+                              <div className="mt-2">
+                                  {(report.replies as Reply[]).map((reply, index) => (
+                                    <div key={index} className="text-xs text-muted-foreground border-l-2 pl-2">
+                                        <span className="font-bold">{reply.replierRole}: </span>
+                                        <span className="italic">"{reply.message}"</span>
+                                    </div>
+                                  ))}
+                              </div>
+                          )}
+                      </TableCell>
+                      <TableCell>{report.handlerName || '-'}</TableCell>
+                      <TableCell>
+                        <ThreatLevelBadge level={report.triageResult?.threatLevel} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={report.status === 'resolved' ? 'secondary' : report.status === 'in_progress' ? 'default' : 'destructive'}>
+                          {statusDisplay[report.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {renderActions(report)}
+                          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center h-24">
+                      Belum ada laporan masuk.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
       <CardFooter>
