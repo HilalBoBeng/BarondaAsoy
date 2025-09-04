@@ -348,33 +348,28 @@ export default function ToolsAdminPage() {
                                         <TableCell>{format(link.createdAt, 'd MMM yyyy', { locale: id })}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <a href={fullShortUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                                                <a href={fullShortUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 break-all">
                                                     {fullShortUrl}
                                                 </a>
-                                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(fullShortUrl)}>
+                                                 <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => copyToClipboard(fullShortUrl)}>
                                                     <Copy className="h-4 w-4"/>
                                                  </Button>
                                             </div>
                                         </TableCell>
                                         <TableCell className="max-w-xs">
-                                            {revealedUrlId === link.id ? (
-                                                 <div className="flex items-center gap-2">
-                                                    <Input value={link.longUrl} readOnly className="h-8 text-xs" />
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(link.longUrl)}>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-mono text-xs break-all">
+                                                    {revealedUrlId === link.id ? link.longUrl : '*****'}
+                                                </p>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => setRevealedUrlId(revealedUrlId === link.id ? null : link.id)}>
+                                                    {revealedUrlId === link.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </Button>
+                                                 {revealedUrlId === link.id && (
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => copyToClipboard(link.longUrl)}>
                                                         <Copy className="h-4 w-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRevealedUrlId(null)}>
-                                                        <EyeOff className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <span>*****</span>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRevealedUrlId(link.id)}>
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <AlertDialog>
@@ -383,8 +378,8 @@ export default function ToolsAdminPage() {
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>Hapus Tautan Ini?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                                        <DialogTitle>Hapus Tautan Ini?</DialogTitle>
+                                                        <DialogDescription>Tindakan ini tidak dapat dibatalkan.</DialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Batal</AlertDialogCancel>
