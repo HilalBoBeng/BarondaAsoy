@@ -16,7 +16,7 @@ const CreateAdminInputSchema = z.object({
   phone: z.string().describe('The phone number of the new admin.'),
   addressType: z.enum(['kilongan', 'luar_kilongan']).describe('The address type.'),
   addressDetail: z.string().optional().describe('The detailed address.'),
-  role: z.enum(['admin', 'bendahara']).describe('The role of the new staff member.'),
+  role: z.enum(['admin', 'bendahara', 'petugas']).describe('The role of the new staff member.'),
 });
 export type CreateAdminInput = z.infer<typeof CreateAdminInputSchema>;
 
@@ -30,7 +30,7 @@ export async function createAdmin(input: CreateAdminInput): Promise<CreateAdminO
   return createAdminFlow(input);
 }
 
-const sendAdminWelcomeEmail = async (email: string, name: string, accessCode: string, role: 'admin' | 'bendahara') => {
+const sendAdminWelcomeEmail = async (email: string, name: string, accessCode: string, role: 'admin' | 'bendahara' | 'petugas') => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -39,7 +39,14 @@ const sendAdminWelcomeEmail = async (email: string, name: string, accessCode: st
     },
   });
 
-  const roleName = role === 'admin' ? 'Administrator' : 'Bendahara';
+  let roleName = 'Anggota Tim';
+  if (role === 'admin') {
+      roleName = 'Administrator';
+  } else if (role === 'bendahara') {
+      roleName = 'Bendahara';
+  } else if (role === 'petugas') {
+      roleName = 'Petugas';
+  }
 
   const mailOptions = {
     from: '"Baronda" <bobeng.icu@gmail.com>',
@@ -78,12 +85,20 @@ const createAdminFlow = ai.defineFlow(
     try {
       const existingUser = await adminDb.collection('staff').where('email', '==', email).limit(1).get();
       if (!existingUser.empty) {
-        return { success: false, message: 'Admin dengan email ini sudah ada.' };
+        return { success: false, message: 'Anggota dengan email ini sudah ada.' };
       }
+      
+      let roleName = 'Anggota Tim';
+        if (role === 'admin') {
+            roleName = 'Administrator';
+        } else if (role === 'bendahara') {
+            roleName = 'Bendahara';
+        } else if (role === 'petugas') {
+            roleName = 'Petugas';
+        }
 
       const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const roleName = role === 'admin' ? 'Administrator' : 'Bendahara';
-
+      
       const newAdminData = {
         name,
         email,
@@ -105,7 +120,7 @@ const createAdminFlow = ai.defineFlow(
       return { success: true, message: `${roleName} baru ${name} telah berhasil dibuat.` };
     } catch (error: any) {
       console.error('Error in createAdminFlow:', error);
-      return { success: false, message: `Gagal membuat admin: ${error.message}` };
+      return { success: false, message: `Gagal membuat akun: ${error.message}` };
     }
   }
 );

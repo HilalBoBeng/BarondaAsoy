@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -48,7 +47,6 @@ const getNavItemsList = () => [
     { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan Warga", badgeKey: 'newReports' },
     { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal Saya", badgeKey: 'pendingSchedules' },
     { id: 'patrolLog', href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { id: 'dues', href: "/petugas/dues", icon: Landmark, label: "Iuran Warga" },
     { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
     { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
     { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
@@ -112,7 +110,8 @@ export default function PetugasLayout({
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    if (localStorage.getItem('userRole') !== 'petugas' || !storedStaffInfo.id) {
+    const validRoles = ['petugas']; // Only petugas can access this layout
+    if (localStorage.getItem('userRole') !== 'petugas') {
       router.replace('/auth/staff-login');
       return;
     }

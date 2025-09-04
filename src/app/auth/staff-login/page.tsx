@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -67,7 +66,7 @@ export default function StaffLoginPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'bendahara') {
       router.replace('/admin');
     } else if (userRole === 'petugas') {
       router.replace('/petugas');
@@ -102,7 +101,7 @@ export default function StaffLoginPage() {
 
     // Admin login check
     if (data.accessCode === "Admin123") {
-        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('userRole', 'super_admin');
         const adminInfo = { name: "Admin Utama", email: "admin@baronda.or.id", role: 'super_admin' };
         localStorage.setItem('staffInfo', JSON.stringify(adminInfo));
         toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
@@ -111,7 +110,6 @@ export default function StaffLoginPage() {
         return;
     }
 
-    // Petugas login check
     try {
         const staffQuery = query(
             collection(db, "staff"), 
@@ -141,12 +139,12 @@ export default function StaffLoginPage() {
              throw new Error("Akun Anda tidak aktif.");
         }
 
-        const role = staffData.role || 'petugas'; // Default to 'petugas' if role is not set
+        const role = staffData.role || 'petugas';
         localStorage.setItem('userRole', role);
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email, role: role }));
 
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'super_admin' || role === 'bendahara') {
             router.push("/admin");
         } else {
             router.push("/petugas");
@@ -173,7 +171,7 @@ export default function StaffLoginPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Halaman Akses Staf & Admin</CardTitle>
+          <CardTitle>Halaman Akses Staf &amp; Admin</CardTitle>
           <CardDescription>
              Masuk dengan kode akses unik Anda.
           </CardDescription>
@@ -194,13 +192,10 @@ export default function StaffLoginPage() {
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Masuk
                     </Button>
-                    <div className="text-center text-sm text-muted-foreground w-full flex flex-col sm:flex-row justify-center items-center gap-2">
-                        <Link href="/auth/staff-register" className="text-primary hover:text-primary/80">
-                            Daftar sebagai Petugas
-                        </Link>
-                        <span className="hidden sm:inline text-gray-400">•</span>
-                        <Link href="/auth/staff-forgot-password" className="text-primary hover:text-primary/80">
-                            Lupa Kode Akses?
+                    <div className="text-center text-sm text-muted-foreground">
+                        Bukan staf?{" "}
+                        <Link href="/auth/login" className="underline text-primary">
+                            Masuk sebagai warga
                         </Link>
                     </div>
                 </CardFooter>

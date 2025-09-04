@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -44,14 +43,14 @@ const navItemsList = [
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan Masuk', id: 'reports', badgeKey: 'newReports', roles: ['admin', 'super_admin'] },
     { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin', 'super_admin'] },
-    { href: "/admin/users", icon: Users, label: 'Manajemen Pengguna', id: 'users', badgeKey: 'pendingStaff', roles: ['admin', 'super_admin'] },
+    { href: "/admin/users", icon: Users, label: 'Manajemen Pengguna', id: 'users', roles: ['admin', 'super_admin'] },
     { href: "/admin/schedule", icon: Calendar, label: 'Jadwal Patroli', id: 'schedule', roles: ['admin', 'super_admin'] },
     { href: "/admin/attendance", icon: ClipboardList, label: 'Daftar Hadir', id: 'attendance', roles: ['admin', 'super_admin'] },
     { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/letters", icon: Mail, label: 'Surat Menyurat', id: 'letters', roles: ['admin', 'super_admin'] },
-    { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin', 'bendahara', 'super_admin'] },
+    { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin', 'super_admin'] },
     { href: "/admin/tools", icon: Wrench, label: 'Lainnya', id: 'tools', roles: ['admin', 'super_admin'] },
     { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin', 'super_admin'] },
     { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin', 'bendahara', 'super_admin'] },
@@ -70,7 +69,6 @@ export default function AdminLayout({
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({
     newReports: 0,
-    pendingStaff: 0,
   });
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pageTitle, setPageTitle] = useState("Dasbor Admin");
@@ -130,14 +128,11 @@ export default function AdminLayout({
     }
 
     const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
-    const pendingStaffQuery = query(collection(db, 'staff'), where('status', '==', 'pending'));
     
     const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
-    const unsubStaffPending = onSnapshot(pendingStaffQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingStaff: snap.size})));
     
     return () => {
       unsubReports();
-      unsubStaffPending();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
@@ -158,7 +153,7 @@ export default function AdminLayout({
       newPageTitle = 'Riwayat Iuran';
     } else if (scheduleDetailMatch) {
       detailPage = true;
-      newPageTitle = 'Detail Jadwal & QR Code';
+      newPageTitle = 'Detail Jadwal &amp; QR Code';
     } else if (honorDetailMatch) {
         detailPage = true;
         newPageTitle = 'Detail Honorarium';
@@ -181,11 +176,12 @@ export default function AdminLayout({
     }, silent ? 0 : 1500); 
   };
   
-  const getRoleDisplayName = (role?: 'admin' | 'super_admin' | 'bendahara') => {
+  const getRoleDisplayName = (role?: 'admin' | 'super_admin' | 'bendahara' | 'petugas') => {
       switch (role) {
           case 'super_admin': return 'Super Admin';
           case 'admin': return 'Administrator';
           case 'bendahara': return 'Bendahara';
+          case 'petugas': return 'Petugas';
           default: return 'Staf';
       }
   }

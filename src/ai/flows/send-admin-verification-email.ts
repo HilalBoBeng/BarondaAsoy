@@ -16,7 +16,7 @@ const SendAdminVerificationEmailInputSchema = z.object({
   phone: z.string(),
   addressType: z.enum(['kilongan', 'luar_kilongan']),
   addressDetail: z.string(),
-  role: z.enum(['admin', 'bendahara']),
+  role: z.enum(['admin', 'bendahara', 'petugas']),
   baseUrl: z.string().url(),
   verificationId: z.string(),
 });
@@ -42,7 +42,15 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
     try {
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
-      const roleName = newAdminData.role === 'admin' ? 'Admin' : 'Bendahara';
+      
+      let roleName = 'Anggota Tim';
+        if (newAdminData.role === 'admin') {
+            roleName = 'Admin';
+        } else if (newAdminData.role === 'bendahara') {
+            roleName = 'Bendahara';
+        } else if (newAdminData.role === 'petugas') {
+            roleName = 'Petugas';
+        }
 
       const verificationData = {
         ...newAdminData,
@@ -76,7 +84,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
             </div>
             <div style="padding: 30px; text-align: center; color: #333;">
               <p style="font-size: 16px;">Halo ${newAdminData.name},</p>
-              <p style="font-size: 16px;">Anda telah didaftarkan sebagai ${roleName} oleh Super Admin Baronda. Klik tombol di bawah ini untuk mengonfirmasi pendaftaran Anda. Tautan ini berlaku selama 5 menit.</p>
+              <p style="font-size: 16px;">Anda telah didaftarkan sebagai ${roleName} oleh Admin Baronda. Klik tombol di bawah ini untuk mengonfirmasi pendaftaran Anda. Tautan ini berlaku selama 5 menit.</p>
               <a href="${verificationLink}" style="display: inline-block; background-color: #6f42c1; color: white; padding: 12px 25px; margin: 20px 0; text-decoration: none; border-radius: 5px; font-weight: bold;">Konfirmasi Pendaftaran</a>
               <p style="font-size: 12px; color: #888;">Jika Anda tidak merasa mendaftar, abaikan email ini.</p>
             </div>

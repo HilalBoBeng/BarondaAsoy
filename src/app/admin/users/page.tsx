@@ -15,7 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { approveOrRejectStaff } from '@/ai/flows/approve-reject-staff';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
@@ -47,7 +46,6 @@ type ActionReasonFormValues = z.infer<typeof actionReasonSchema>;
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [pendingStaff, setPendingStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -56,7 +54,7 @@ export default function UsersAdminPage() {
 
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [selectedUserForAction, setSelectedUserForAction] = useState<AppUser | Staff | null>(null);
-  const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | 'reject' | null>(null);
+  const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | null>(null);
 
   const actionReasonForm = useForm<ActionReasonFormValues>({ resolver: zodResolver(actionReasonSchema) });
   
@@ -101,7 +99,6 @@ export default function UsersAdminPage() {
         const regularStaff = activeStaff.filter(s => s.role !== 'super_admin');
         
         setStaff(regularStaff);
-        setPendingStaff(allStaff.filter(s => s.status === 'pending'));
         setLoading(false);
     }, (error) => {
         console.error("Error fetching staff:", error)
@@ -123,33 +120,8 @@ export default function UsersAdminPage() {
           timestamp: serverTimestamp(),
       });
   };
-  
-  const handleStaffApproval = async (staffMember: Staff, approved: boolean, reason?: string) => {
-    setIsSubmitting(true);
-    try {
-        const result = await approveOrRejectStaff({
-            staffId: staffMember.id,
-            approved,
-            rejectionReason: reason
-        });
 
-        if (result.success) {
-            toast({ title: "Berhasil", description: result.message });
-            await createLog(approved ? 'Menyetujui Staf' : 'Menolak Staf', staffMember.name);
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error) {
-        const action = approved ? "menyetujui" : "menolak";
-        toast({ variant: "destructive", title: "Gagal", description: `Gagal ${action} pendaftaran. ${error instanceof Error ? error.message : ''}`});
-    } finally {
-        setIsSubmitting(false);
-        setIsActionDialogOpen(false);
-        if (isUserDetailOpen) setIsUserDetailOpen(false);
-    }
-  };
-
-  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete' | 'reject') => {
+  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete') => {
       setSelectedUserForAction(user);
       setActionType(type);
       actionReasonForm.reset();
@@ -171,9 +143,6 @@ export default function UsersAdminPage() {
             await deleteDoc(userRef);
             toast({ title: 'Berhasil', description: `Data pengguna berhasil dihapus.` });
             await createLog(`Menghapus ${isUserType ? 'Warga' : 'Staf'}`, userName || docId);
-        } else if (actionType === 'reject' && !isUserType) {
-             const rejectionReason = values.reason;
-             await handleStaffApproval(selectedUserForAction as Staff, false, rejectionReason);
         } else {
             let updateData: any = { suspensionReason: values.reason };
             let logAction = '';
@@ -272,10 +241,6 @@ export default function UsersAdminPage() {
     staff.filter(s => s.name?.toLowerCase().includes(searchTerm.toLowerCase())),
   [staff, searchTerm]);
 
-  const filteredPendingStaff = useMemo(() =>
-    pendingStaff.filter(s => s.name?.toLowerCase().includes(searchTerm.toLowerCase())),
-  [pendingStaff, searchTerm]);
-
   return (
     <>
     <Card>
@@ -294,13 +259,9 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3 p-1.5 gap-1">
+          <TabsList className="grid w-full grid-cols-2 p-1.5 gap-1">
             <TabsTrigger value="users">Warga</TabsTrigger>
             <TabsTrigger value="staff">Staf</TabsTrigger>
-            <TabsTrigger value="pending-staff">
-                Persetujuan 
-                {pendingStaff.length > 0 && <Badge className="ml-2">{pendingStaff.length}</Badge>}
-            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="mt-4">
@@ -408,57 +369,6 @@ export default function UsersAdminPage() {
               </Table>
             </div>
           </TabsContent>
-
-          <TabsContent value="pending-staff" className="mt-4">
-             <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nama</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                         {loading ? (
-                             Array.from({ length: 1 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><div className="flex items-center gap-4"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-40" /></div></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                                    <TableCell className="text-right"><Skeleton className="h-10 w-10 ml-auto" /></TableCell>
-                                </TableRow>
-                            ))
-                         ) : filteredPendingStaff.length > 0 ? (
-                            filteredPendingStaff.map((s) => (
-                                <TableRow key={s.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-4">
-                                            <Avatar><AvatarImage src={s.photoURL || undefined} /><AvatarFallback>{s.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                                            <p className="font-medium">{s.name}</p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant={'secondary'} className={getStaffStatus(s).className}>
-                                        {getStaffStatus(s).text}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => showUserDetail(s)}>
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                         ) : (
-                             <TableRow>
-                                <TableCell colSpan={3} className="text-center h-24">Tidak ada pendaftaran staf yang tertunda.</TableCell>
-                            </TableRow>
-                         )}
-                    </TableBody>
-                </Table>
-             </div>
-          </TabsContent>
-
         </Tabs>
       </CardContent>
     </Card>
@@ -496,12 +406,7 @@ export default function UsersAdminPage() {
                       </div>
                   </CardContent>
                   <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4 border-t bg-muted/50 p-6">
-                      {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
-                          <div className="flex gap-2">
-                               <Button variant="outline" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
-                               <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => handleStaffApproval(selectedUserForDetail as Staff, true)}>Setujui</Button>
-                          </div>
-                      ) : (
+                      {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? null : (
                           <>
                               <div className="flex gap-2 justify-end">
                                   {('isBlocked' in selectedUserForDetail && (selectedUserForDetail.isBlocked || selectedUserForDetail.isSuspended)) || ('status' in selectedUserForDetail && selectedUserForDetail.status === 'suspended') ? (
@@ -551,12 +456,10 @@ export default function UsersAdminPage() {
                  <DialogTitle>
                     {actionType === 'block' ? 'Blokir' :
                      actionType === 'suspend' ? 'Tangguhkan' :
-                     actionType === 'reject' ? 'Tolak Pendaftaran' :
                      'Hapus'} Pengguna
                 </DialogTitle>
                 <DialogDescription>
                   {actionType === 'delete' ? 'Tindakan ini akan menghapus akun secara permanen. Mohon jelaskan alasannya.' :
-                   actionType === 'reject' ? 'Tuliskan alasan penolakan untuk dikirimkan ke email pendaftar.' :
                    `Pengguna yang di${actionType === 'block' ? 'blokir' : 'tangguhkan'} tidak akan bisa masuk ke aplikasi. Mohon jelaskan alasannya.`
                   }
                 </DialogDescription>
@@ -607,7 +510,6 @@ export default function UsersAdminPage() {
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {actionType === 'block' ? 'Blokir Pengguna' :
                               actionType === 'suspend' ? 'Tangguhkan' :
-                              actionType === 'reject' ? 'Tolak Pendaftaran' :
                               'Hapus Permanen'}
                         </Button>
                     </DialogFooter>

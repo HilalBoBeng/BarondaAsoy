@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -29,6 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sendAdminVerificationEmail } from '@/ai/flows/send-admin-verification-email';
 import Link from 'next/link';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -52,7 +54,7 @@ interface MenuConfig {
 
 const toTitleCase = (str: string) => {
   return str.replace(
-    /\w\S*/g,
+    /\\w\\S*/g,
     (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
   );
 };
@@ -64,7 +66,7 @@ const addAdminSchema = z.object({
     phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
     addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
     addressDetail: z.string().optional(),
-    role: z.enum(['admin', 'bendahara'], { required_error: "Peran harus dipilih." }),
+    role: z.enum(['admin', 'bendahara', 'petugas'], { required_error: "Peran harus dipilih." }),
 }).refine(data => data.email === data.confirmEmail, {
     message: "Konfirmasi email tidak cocok.",
     path: ["confirmEmail"],
@@ -79,20 +81,24 @@ const addAdminSchema = z.object({
 });
 type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
+const getInitialMenuState = (role: 'petugas' | 'bendahara'): Omit<MenuConfig, 'visible' | 'locked'>[] => {
+    const allMenus = [
+        { id: 'dashboard', label: 'Dasbor', roles: ['petugas', 'bendahara'] },
+        { id: 'profile', label: 'Profil Saya', roles: ['petugas', 'bendahara'] },
+        { id: 'reports', label: 'Laporan Warga', roles: ['petugas'] },
+        { id: 'schedule', label: 'Jadwal Saya', roles: ['petugas'] },
+        { id: 'patrolLog', label: 'Patroli & Log', roles: ['petugas'] },
+        { id: 'honor', label: 'Honor Saya', roles: ['petugas', 'bendahara'] },
+        { id: 'announcements', label: 'Pengumuman', roles: ['petugas'] },
+        { id: 'notifications', label: 'Notifikasi', roles: ['petugas', 'bendahara'] },
+        { id: 'tools', label: 'Lainnya', roles: ['petugas'] },
+        { id: 'emergencyContacts', label: 'Kontak Darurat', roles: ['petugas'] },
+        { id: 'dues', label: 'Iuran Warga', roles: ['bendahara'] },
+        { id: 'finance', label: 'Keuangan', roles: ['bendahara'] },
+    ];
+    return allMenus.filter(menu => menu.roles.includes(role)).map(({ roles, ...rest }) => rest);
+};
 
-const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
-    { id: 'dashboard', label: 'Dasbor' },
-    { id: 'profile', label: 'Profil Saya' },
-    { id: 'reports', label: 'Laporan Warga' },
-    { id: 'schedule', label: 'Jadwal Patroli' },
-    { id: 'patrol-log', label: 'Patroli & Log' },
-    { id: 'dues', label: 'Iuran Warga' },
-    { id: 'honor', label: 'Honorarium' },
-    { id: 'announcements', label: 'Pengumuman' },
-    { id: 'notifications', label: 'Notifikasi' },
-    { id: 'tools', label: 'Lainnya' },
-    { id: 'emergency-contacts', label: 'Kontak Darurat' },
-];
 
 export default function ToolsAdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,8 +109,11 @@ export default function ToolsAdminPage() {
   const [revealedUrlId, setRevealedUrlId] = useState<string | null>(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
-  const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
+  
+  const [petugasMenuConfig, setPetugasMenuConfig] = useState<MenuConfig[]>([]);
+  const [bendaharaMenuConfig, setBendaharaMenuConfig] = useState<MenuConfig[]>([]);
   const [loadingMenuConfig, setLoadingMenuConfig] = useState(true);
+
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
   const [allAdmins, setAllAdmins] = useState<Staff[]>([]);
@@ -167,41 +176,20 @@ export default function ToolsAdminPage() {
     };
 }, [submissionStatus, toast]);
 
-  useEffect(() => {
-    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-    if (info) {
-        setCurrentAdmin(info);
-    }
-    const settingsRef = doc(db, 'app_settings', 'config');
-    const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
-        if (docSnap.exists()) {
-            setMaintenanceMode(docSnap.data().maintenanceMode || false);
-        }
-        setLoadingMaintenance(false);
-    });
+  const loadMenuConfig = useCallback(async (role: 'petugas' | 'bendahara') => {
+        const docId = `${role}_menu`;
+        const menuConfigRef = doc(db, 'app_settings', docId);
+        const initialMenuState = getInitialMenuState(role);
 
-    const shortlinksQuery = query(collection(db, 'shortlinks'), orderBy('createdAt', 'desc'));
-    const unsubHistory = onSnapshot(shortlinksQuery, (snapshot) => {
-        const historyData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return { id: doc.id, ...data, createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date() } as ShortLinkData;
-        });
-        setHistory(historyData);
-        setLoadingHistory(false);
-    });
-    
-    const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-    const unsubMenuConfig = onSnapshot(menuConfigRef, async (docSnap) => {
+        const docSnap = await getDoc(menuConfigRef);
         const savedConfig = docSnap.exists() ? docSnap.data().config : [];
         let configChanged = false;
 
         const mergedConfig = initialMenuState.map(initialItem => {
             const savedItem = savedConfig.find((d: MenuConfig) => d.id === initialItem.id);
-            if (savedItem) {
-                return { ...initialItem, ...savedItem };
-            }
+            if (savedItem) return { ...initialItem, ...savedItem };
             configChanged = true;
-            return { ...initialItem, visible: false, locked: false };
+            return { ...initialItem, visible: true, locked: false };
         });
 
         const dashboardItem = mergedConfig.find(item => item.id === 'dashboard');
@@ -213,27 +201,44 @@ export default function ToolsAdminPage() {
             }
         }
         
-        setMenuConfig(mergedConfig);
-        if (configChanged) {
-            await setDoc(menuConfigRef, { config: mergedConfig });
-        }
-        setLoadingMenuConfig(false);
-    });
-    
-    const adminsQuery = query(collection(db, 'staff'), where('role', 'in', ['admin', 'bendahara']));
-    const unsubAdmins = onSnapshot(adminsQuery, (snapshot) => {
-        const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
-        setAllAdmins(adminsData);
-        setLoadingAdmins(false);
-    });
+        if (role === 'petugas') setPetugasMenuConfig(mergedConfig);
+        if (role === 'bendahara') setBendaharaMenuConfig(mergedConfig);
 
-    return () => {
-        unsubSettings();
-        unsubHistory();
-        unsubMenuConfig();
-        unsubAdmins();
-    };
-  }, []);
+        if (configChanged) await setDoc(menuConfigRef, { config: mergedConfig });
+    }, []);
+
+    useEffect(() => {
+        const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        if (info) setCurrentAdmin(info);
+
+        const settingsRef = doc(db, 'app_settings', 'config');
+        const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
+            if (docSnap.exists()) setMaintenanceMode(docSnap.data().maintenanceMode || false);
+            setLoadingMaintenance(false);
+        });
+
+        const shortlinksQuery = query(collection(db, 'shortlinks'), orderBy('createdAt', 'desc'));
+        const unsubHistory = onSnapshot(shortlinksQuery, (snapshot) => {
+            const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: (doc.data().createdAt as Timestamp).toDate() } as ShortLinkData));
+            setHistory(historyData);
+            setLoadingHistory(false);
+        });
+        
+        Promise.all([loadMenuConfig('petugas'), loadMenuConfig('bendahara')]).then(() => setLoadingMenuConfig(false));
+        
+        const adminsQuery = query(collection(db, 'staff'), where('role', 'in', ['admin', 'bendahara']));
+        const unsubAdmins = onSnapshot(adminsQuery, (snapshot) => {
+            const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
+            setAllAdmins(adminsData);
+            setLoadingAdmins(false);
+        });
+
+        return () => {
+            unsubSettings();
+            unsubHistory();
+            unsubAdmins();
+        };
+    }, [loadMenuConfig]);
 
   useEffect(() => {
     if (!isAddAdminOpen) {
@@ -308,19 +313,23 @@ export default function ToolsAdminPage() {
     }
   };
 
-  const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
-      const newConfig = menuConfig.map(item => 
-          item.id === id ? { ...item, [type]: !item[type as keyof MenuConfig] } : item
-      );
-      setMenuConfig(newConfig);
-      try {
-        const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-        await setDoc(menuConfigRef, { config: newConfig });
-        toast({ title: 'Berhasil', description: 'Konfigurasi menu petugas diperbarui.' });
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan konfigurasi menu.' });
-      }
-  };
+  const handleMenuConfigChange = async (role: 'petugas' | 'bendahara', id: string, type: 'visible' | 'locked') => {
+        const configToUpdate = role === 'petugas' ? petugasMenuConfig : bendaharaMenuConfig;
+        const setConfig = role === 'petugas' ? setPetugasMenuConfig : setBendaharaMenuConfig;
+        
+        const newConfig = configToUpdate.map(item => 
+            item.id === id ? { ...item, [type]: !item[type as keyof MenuConfig] } : item
+        );
+        setConfig(newConfig);
+
+        try {
+            const menuConfigRef = doc(db, 'app_settings', `${role}_menu`);
+            await setDoc(menuConfigRef, { config: newConfig });
+            toast({ title: 'Berhasil', description: `Konfigurasi menu ${role} diperbarui.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan konfigurasi menu.' });
+        }
+    };
 
 
   const onSubmit = async (values: ShortLinkFormValues) => {
@@ -391,6 +400,51 @@ export default function ToolsAdminPage() {
       setIsUserDetailOpen(true);
   }
 
+  const MenuManagementTab = ({ role }: { role: 'petugas' | 'bendahara' }) => {
+    const config = role === 'petugas' ? petugasMenuConfig : bendaharaMenuConfig;
+
+    return (
+        <CardContent>
+            {loadingMenuConfig ? <Skeleton className="h-48 w-full" /> : (
+                <div className="space-y-4">
+                    {config.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <span className="font-medium text-sm">{item.label}</span>
+                             <div className="flex items-center gap-4">
+                              {item.id !== 'dashboard' ? (
+                                <>
+                                  <div className="flex items-center space-x-2">
+                                      <Switch id={`visible-${role}-${item.id}`} checked={item.visible} onCheckedChange={() => handleMenuConfigChange(role, item.id, 'visible')} />
+                                      <Label htmlFor={`visible-${role}-${item.id}`} className="text-xs">Tampil</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMenuConfigChange(role, item.id, 'locked')} disabled={!item.visible}>
+                                          {item.locked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
+                                      </Button>
+                                  </div>
+                                </>
+                              ) : (
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Switch id={`visible-${role}-${item.id}`} checked={true} disabled />
+                                        <Label htmlFor={`visible-${role}-${item.id}`} className="text-xs text-muted-foreground">Tampil</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
+                                            <Unlock className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </div>
+                                  </div>
+                              )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </CardContent>
+    );
+  };
+
 
   return (
     <>
@@ -457,9 +511,6 @@ export default function ToolsAdminPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
-
-        <div className="lg:col-span-2 space-y-6">
              <Card>
                 <CardHeader>
                     <CardTitle>Pengaturan Aplikasi</CardTitle>
@@ -477,60 +528,19 @@ export default function ToolsAdminPage() {
                     </div>
                 </CardContent>
             </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Manajemen Menu Petugas</CardTitle>
-                    <CardDescription>Atur menu yang dapat dilihat atau diakses oleh petugas.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {loadingMenuConfig ? <Skeleton className="h-48 w-full" /> : (
-                        <div className="space-y-4">
-                            {menuConfig.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                    <span className="font-medium text-sm">{item.label}</span>
-                                     <div className="flex items-center gap-4">
-                                      {item.id !== 'dashboard' ? (
-                                        <>
-                                          <div className="flex items-center space-x-2">
-                                              <Switch id={`visible-${item.id}`} checked={item.visible} onCheckedChange={() => handleMenuConfigChange(item.id, 'visible')} />
-                                              <Label htmlFor={`visible-${item.id}`} className="text-xs">Tampil</Label>
-                                          </div>
-                                          <div className="flex items-center space-x-2">
-                                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMenuConfigChange(item.id, 'locked')} disabled={!item.visible}>
-                                                  {item.locked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
-                                              </Button>
-                                          </div>
-                                        </>
-                                      ) : (
-                                          <div className="flex items-center gap-4">
-                                            <div className="flex items-center space-x-2">
-                                                <Switch id={`visible-${item.id}`} checked={true} disabled />
-                                                <Label htmlFor={`visible-${item.id}`} className="text-xs text-muted-foreground">Tampil</Label>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
-                                                    <Unlock className="h-4 w-4 text-muted-foreground" />
-                                                </Button>
-                                            </div>
-                                          </div>
-                                      )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
              {isSuperAdmin && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Manajemen Admin & Bendahara</CardTitle>
-                        <CardDescription>Tambah admin/bendahara baru atau lihat daftar yang sudah ada.</CardDescription>
+                        <CardTitle className="text-base">Manajemen Tim</CardTitle>
+                        <CardDescription>Tambah anggota tim baru atau lihat daftar yang sudah ada.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="p-4 border rounded-lg flex flex-col items-center text-center">
                             <h3 className="font-semibold mb-2">Tambah Akun Baru</h3>
-                             <p className="text-xs text-muted-foreground mb-4">Buat akun untuk administrator atau bendahara baru.</p>
+                             <p className="text-xs text-muted-foreground mb-4">Buat akun untuk administrator, bendahara, atau petugas baru.</p>
                              <Button onClick={() => setIsAddAdminOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Tambah
@@ -538,7 +548,7 @@ export default function ToolsAdminPage() {
                         </div>
                          <div className="p-4 border rounded-lg flex flex-col items-center text-center">
                            <h3 className="font-semibold mb-2">Daftar Akun</h3>
-                           <p className="text-xs text-muted-foreground mb-4">Lihat daftar semua administrator & bendahara.</p>
+                           <p className="text-xs text-muted-foreground mb-4">Lihat daftar semua administrator &amp; bendahara.</p>
                            <div className="rounded-lg border overflow-x-auto w-full">
                                 <Table>
                                     <TableHeader>
@@ -605,6 +615,24 @@ export default function ToolsAdminPage() {
                     </CardContent>
                 </Card>
             )}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Manajemen Menu</CardTitle>
+                    <CardDescription>Atur menu yang dapat dilihat atau diakses oleh peran tertentu.</CardDescription>
+                </CardHeader>
+                <Tabs defaultValue="petugas">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="petugas">Petugas</TabsTrigger>
+                        <TabsTrigger value="bendahara">Bendahara</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="petugas">
+                        <MenuManagementTab role="petugas" />
+                    </TabsContent>
+                    <TabsContent value="bendahara">
+                        <MenuManagementTab role="bendahara" />
+                    </TabsContent>
+                </Tabs>
+            </Card>
         </div>
     </div>
     
@@ -722,6 +750,7 @@ export default function ToolsAdminPage() {
                                         <SelectContent>
                                             <SelectItem value="admin">Administrator</SelectItem>
                                             <SelectItem value="bendahara">Bendahara</SelectItem>
+                                            <SelectItem value="petugas">Petugas</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

@@ -64,6 +64,7 @@ export default function LettersPage() {
         orientation: 'p',
         unit: 'px',
         format: 'a4',
+        hotfixes: ['px_scaling'],
     });
     
     doc.html(letterRef.current, {
@@ -71,10 +72,13 @@ export default function LettersPage() {
             doc.save(`Surat_Tugas_${selectedSchedule.officer}_${format(selectedSchedule.startDate as Date, "dd-MM-yyyy")}.pdf`);
             setIsGenerating(false);
         },
-        x: 15,
-        y: 15,
-        width: 170,
-        windowWidth: 650
+        html2canvas: {
+            scale: 0.26, // Adjust scale to fit A4
+        },
+        x: 0,
+        y: 0,
+        width: 190, // A4 width in mm, jsPDF will handle conversion with px_scaling hotfix
+        windowWidth: 750 // Width of the virtual window
     });
   };
 

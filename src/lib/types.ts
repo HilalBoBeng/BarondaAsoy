@@ -162,6 +162,7 @@ export interface Honorarium {
     issueDate: Timestamp | Date;
     status: 'Dibayarkan' | 'Belum Dibayar';
     notes?: string;
+    relatedId?: string; // To link to financial transaction
 }
 
 export interface AdminLog {
@@ -178,7 +179,7 @@ export interface FinancialTransaction {
   date: Timestamp | Date;
   description: string;
   amount: number;
-  category?: 'Iuran Warga' | 'Honor Petugas' | 'Pembelian Peralatan' | 'Konsumsi' | 'Lainnya';
+  category?: string;
   relatedId?: string; // e.g., duesId or honorariumId
   recordedBy: string;
 }

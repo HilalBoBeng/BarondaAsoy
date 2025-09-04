@@ -18,7 +18,7 @@ const VerifyOtpInputSchema = z.object({
   phone: z.string().optional().describe("The user's phone number (for registration)."),
   addressType: z.enum(['kilongan', 'luar_kilongan']).optional().describe('The type of address.'),
   addressDetail: z.string().optional().describe('The detailed address if outside Kilongan.'),
-  flow: z.enum(['userRegistration', 'staffRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
+  flow: z.enum(['userRegistration', 'staffResetPassword', 'userPasswordReset']).describe('The flow context for OTP verification.'),
 });
 export type VerifyOtpInput = z.infer<typeof VerifyOtpInputSchema>;
 
@@ -54,7 +54,7 @@ const sendAccessCodeEmail = async (email: string, name: string, accessCode: stri
           <h1 style="margin: 0; font-size: 24px;">Informasi Kode Akses</h1>
         </div>
         <div style="padding: 30px; text-align: center; color: #333;">
-          <p style="font-size: 16px;">Halo ${name}, berikut adalah kode akses rahasia Anda untuk masuk ke dasbor petugas. Jangan bagikan kode ini kepada siapapun.</p>
+          <p style="font-size: 16px;">Halo ${name}, berikut adalah kode akses rahasia Anda untuk masuk ke dasbor. Jangan bagikan kode ini kepada siapapun.</p>
           <div style="background-color: #f2f2f2; border-radius: 5px; margin: 20px 0; padding: 15px;">
             <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0;">${accessCode}</p>
           </div>
@@ -133,28 +133,6 @@ const verifyOtpFlow = ai.defineFlow(
 
         await batch.commit();
         return { success: true, message: 'Registrasi berhasil!', userId: userRecord.uid };
-      }
-      
-      if (flow === 'staffRegistration') {
-         if (!name || !phone || !addressDetail) {
-            return { success: false, message: 'Informasi pendaftaran staf tidak lengkap.' };
-         }
-         const accessCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-         const staffDocRef = adminDb.collection('staff').doc();
-         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Expires in 15 minutes
-         batch.set(staffDocRef, {
-            name: name,
-            email: email,
-            phone: phone,
-            addressType: addressType,
-            addressDetail: addressDetail,
-            status: 'pending',
-            accessCode: accessCode,
-            createdAt: FieldValue.serverTimestamp(),
-            expiresAt: Timestamp.fromDate(expiresAt),
-         });
-         await batch.commit();
-         return { success: true, message: 'Verifikasi berhasil! Pendaftaran Anda akan ditinjau oleh Admin.' };
       }
       
       if (flow === 'staffResetPassword') {
