@@ -64,6 +64,7 @@ const addAdminSchema = z.object({
     phone: z.string().min(1, "Nomor HP tidak boleh kosong."),
     addressType: z.enum(['kilongan', 'luar_kilongan'], { required_error: "Pilih jenis alamat." }),
     addressDetail: z.string().optional(),
+    role: z.enum(['admin', 'bendahara'], { required_error: "Peran harus dipilih." }),
 }).refine(data => data.email === data.confirmEmail, {
     message: "Konfirmasi email tidak cocok.",
     path: ["confirmEmail"],
@@ -122,7 +123,7 @@ export default function ToolsAdminPage() {
   
   const addAdminForm = useForm<AddAdminFormValues>({ 
     resolver: zodResolver(addAdminSchema),
-    defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
+    defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '', role: 'admin' }
   });
   const addressType = addAdminForm.watch('addressType');
 
@@ -219,7 +220,7 @@ export default function ToolsAdminPage() {
         setLoadingMenuConfig(false);
     });
     
-    const adminsQuery = query(collection(db, 'staff'), where('role', '==', 'admin'));
+    const adminsQuery = query(collection(db, 'staff'), where('role', 'in', ['admin', 'bendahara']));
     const unsubAdmins = onSnapshot(adminsQuery, (snapshot) => {
         const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
         setAllAdmins(adminsData);
@@ -289,6 +290,7 @@ export default function ToolsAdminPage() {
             phone: values.phone,
             addressType: values.addressType,
             addressDetail: values.addressType === 'kilongan' ? 'Kilongan' : values.addressDetail || '',
+            role: values.role,
             baseUrl: window.location.origin,
             verificationId: verificationId,
         });
@@ -382,7 +384,7 @@ export default function ToolsAdminPage() {
       }
   }
 
-  const isSuperAdmin = currentAdmin?.email === 'admin@baronda.or.id';
+  const isSuperAdmin = currentAdmin?.role === 'super_admin';
 
   const showUserDetail = (user: Staff) => {
       setSelectedUserForDetail(user);
@@ -522,21 +524,21 @@ export default function ToolsAdminPage() {
              {isSuperAdmin && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Manajemen Admin</CardTitle>
-                        <CardDescription>Tambah admin baru atau lihat daftar admin yang sudah ada.</CardDescription>
+                        <CardTitle className="text-base">Manajemen Admin & Bendahara</CardTitle>
+                        <CardDescription>Tambah admin/bendahara baru atau lihat daftar yang sudah ada.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="p-4 border rounded-lg flex flex-col items-center text-center">
-                            <h3 className="font-semibold mb-2">Tambah Admin Baru</h3>
-                             <p className="text-xs text-muted-foreground mb-4">Buat akun untuk administrator baru.</p>
+                            <h3 className="font-semibold mb-2">Tambah Akun Baru</h3>
+                             <p className="text-xs text-muted-foreground mb-4">Buat akun untuk administrator atau bendahara baru.</p>
                              <Button onClick={() => setIsAddAdminOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Tambah Admin
+                                Tambah
                             </Button>
                         </div>
                          <div className="p-4 border rounded-lg flex flex-col items-center text-center">
-                           <h3 className="font-semibold mb-2">Daftar Admin</h3>
-                           <p className="text-xs text-muted-foreground mb-4">Lihat daftar semua administrator.</p>
+                           <h3 className="font-semibold mb-2">Daftar Akun</h3>
+                           <p className="text-xs text-muted-foreground mb-4">Lihat daftar semua administrator & bendahara.</p>
                            <div className="rounded-lg border overflow-x-auto w-full">
                                 <Table>
                                     <TableHeader>
@@ -557,7 +559,10 @@ export default function ToolsAdminPage() {
                                                         <AvatarImage src={admin.photoURL || undefined}/>
                                                         <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
                                                     </Avatar>
-                                                    {admin.name}
+                                                    <div>
+                                                        <p>{admin.name}</p>
+                                                        <Badge variant="outline" className="mt-1">{admin.role === 'admin' ? 'Admin' : 'Bendahara'}</Badge>
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -574,8 +579,8 @@ export default function ToolsAdminPage() {
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
                                                                 <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Hapus Admin Ini?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>Tindakan ini akan menghapus akun admin secara permanen. Anda yakin?</AlertDialogDescription>
+                                                                    <AlertDialogTitle>Hapus Akun Ini?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>Tindakan ini akan menghapus akun secara permanen. Anda yakin?</AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>Batal</AlertDialogCancel>
@@ -695,15 +700,34 @@ export default function ToolsAdminPage() {
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(submissionStatus === 'sending' || submissionStatus === 'waiting') e.preventDefault()}}>
             <DialogHeader>
-                <DialogTitle>Tambah Admin Baru</DialogTitle>
+                <DialogTitle>Tambah Akun Baru</DialogTitle>
                 <DialogDescription>
-                   {submissionStatus === 'waiting' ? 'Menunggu verifikasi dari calon admin...' : 'Isi detail di bawah ini. Tautan verifikasi akan dikirim ke email calon admin.'}
+                   {submissionStatus === 'waiting' ? 'Menunggu verifikasi dari calon anggota...' : 'Isi detail di bawah ini. Tautan verifikasi akan dikirim ke email calon anggota.'}
                 </DialogDescription>
             </DialogHeader>
             {submissionStatus === 'idle' || submissionStatus === 'sending' ? (
                 <Form {...addAdminForm}>
                     <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
                         <DialogBody className="space-y-4">
+                             <FormField
+                                control={addAdminForm.control}
+                                name="role"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Peran</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger><SelectValue placeholder="Pilih peran" /></SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="admin">Administrator</SelectItem>
+                                            <SelectItem value="bendahara">Bendahara</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
                             <FormField control={addAdminForm.control} name="name" render={({ field }) => (
                                 <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
@@ -764,7 +788,7 @@ export default function ToolsAdminPage() {
                 <DialogBody className="text-center py-8">
                     <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
                     <p className="text-muted-foreground">
-                        Tautan verifikasi telah dikirim. Menunggu calon admin untuk mengonfirmasi pendaftaran.
+                        Tautan verifikasi telah dikirim. Menunggu calon anggota untuk mengonfirmasi pendaftaran.
                     </p>
                     <p className="font-bold text-2xl mt-2">{Math.floor(countdown/60).toString().padStart(2, '0')}:{(countdown%60).toString().padStart(2, '0')}</p>
                 </DialogBody>
@@ -772,7 +796,7 @@ export default function ToolsAdminPage() {
                 <DialogBody className="text-center py-8">
                     <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                     <p className="font-semibold">Verifikasi Berhasil!</p>
-                    <p className="text-muted-foreground">Akun admin baru telah dibuat.</p>
+                    <p className="text-muted-foreground">Akun baru telah dibuat.</p>
                 </DialogBody>
             )}
         </DialogContent>
@@ -793,7 +817,7 @@ export default function ToolsAdminPage() {
                       <h2 className="text-xl font-bold mt-2">
                           {selectedUserForDetail.name}
                       </h2>
-                      <Badge variant="secondary" className="mt-1">Administrator</Badge>
+                       <Badge variant="secondary" className="mt-1">{selectedUserForDetail.role === 'admin' ? 'Administrator' : 'Bendahara'}</Badge>
                       <div className="space-y-3 text-sm text-left border-t mt-4 pt-4">
                           <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/><span>{selectedUserForDetail.email}</span></div>
                           <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>

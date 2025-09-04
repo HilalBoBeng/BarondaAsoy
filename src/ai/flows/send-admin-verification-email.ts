@@ -16,6 +16,7 @@ const SendAdminVerificationEmailInputSchema = z.object({
   phone: z.string(),
   addressType: z.enum(['kilongan', 'luar_kilongan']),
   addressDetail: z.string(),
+  role: z.enum(['admin', 'bendahara']),
   baseUrl: z.string().url(),
   verificationId: z.string(),
 });
@@ -41,6 +42,7 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
     try {
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
+      const roleName = newAdminData.role === 'admin' ? 'Admin' : 'Bendahara';
 
       const verificationData = {
         ...newAdminData,
@@ -65,16 +67,16 @@ const sendAdminVerificationEmailFlow = ai.defineFlow(
       const mailOptions = {
         from: '"Baronda" <bobeng.icu@gmail.com>',
         to: newAdminData.email,
-        subject: 'Konfirmasi Pendaftaran Admin Baronda',
+        subject: `Konfirmasi Pendaftaran ${roleName} Baronda`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
             <div style="background-color: #6f42c1; color: white; padding: 20px; text-align: center;">
               <img src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
-              <h1 style="margin: 0; font-size: 24px;">Konfirmasi Pendaftaran Admin</h1>
+              <h1 style="margin: 0; font-size: 24px;">Konfirmasi Pendaftaran ${roleName}</h1>
             </div>
             <div style="padding: 30px; text-align: center; color: #333;">
               <p style="font-size: 16px;">Halo ${newAdminData.name},</p>
-              <p style="font-size: 16px;">Anda telah didaftarkan sebagai Admin oleh Super Admin Baronda. Klik tombol di bawah ini untuk mengonfirmasi pendaftaran Anda. Tautan ini berlaku selama 5 menit.</p>
+              <p style="font-size: 16px;">Anda telah didaftarkan sebagai ${roleName} oleh Super Admin Baronda. Klik tombol di bawah ini untuk mengonfirmasi pendaftaran Anda. Tautan ini berlaku selama 5 menit.</p>
               <a href="${verificationLink}" style="display: inline-block; background-color: #6f42c1; color: white; padding: 12px 25px; margin: 20px 0; text-decoration: none; border-radius: 5px; font-weight: bold;">Konfirmasi Pendaftaran</a>
               <p style="font-size: 12px; color: #888;">Jika Anda tidak merasa mendaftar, abaikan email ini.</p>
             </div>

@@ -54,7 +54,8 @@ const verifyAdminTokenFlow = ai.defineFlow(
           email: data.email,
           phone: data.phone,
           addressType: data.addressType,
-          addressDetail: data.addressDetail
+          addressDetail: data.addressDetail,
+          role: data.role,
       });
       
       if (!createResult.success) {

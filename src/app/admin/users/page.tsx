@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound, Calendar, History } from 'lucide-react';
+import { Trash, User as UserIcon, ShieldX, PlusCircle, Loader2, Check, X, Star, Eye, EyeOff, ShieldCheck, ShieldAlert, MoreVertical, Phone, Mail, MapPin, KeyRound, Calendar, History, Wallet } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
@@ -98,7 +98,7 @@ export default function UsersAdminPage() {
         })) as Staff[];
         
         const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
-        const regularStaff = activeStaff.filter(s => s.role !== 'admin' && s.role !== 'super_admin');
+        const regularStaff = activeStaff.filter(s => s.role !== 'super_admin');
         
         setStaff(regularStaff);
         setPendingStaff(allStaff.filter(s => s.status === 'pending'));
@@ -246,6 +246,7 @@ export default function UsersAdminPage() {
   const getStaffStatus = (staff: Staff) => {
     if (staff.role === 'super_admin') return { text: 'Super Admin', className: 'bg-purple-600 text-white hover:bg-purple-700' };
     if (staff.role === 'admin') return { text: 'Admin', className: 'bg-primary/80 text-primary-foreground hover:bg-primary/90' };
+    if (staff.role === 'bendahara') return { text: 'Bendahara', className: 'bg-indigo-500 text-white hover:bg-indigo-600' };
     if (staff.status === 'suspended') return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
     if (staff.status === 'pending') return { text: 'Pending', className: 'bg-blue-100 text-blue-800' };
     return { text: 'Aktif', className: 'bg-green-100 text-green-800' };
@@ -380,12 +381,15 @@ export default function UsersAdminPage() {
                         <TableCell>
                           <div className="flex items-center gap-4">
                             <Avatar><AvatarImage src={s.photoURL || undefined} /><AvatarFallback>{s.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                            <p className="font-medium">{s.name}</p>
+                            <div>
+                                <p className="font-medium">{s.name}</p>
+                                <Badge variant="outline" className="mt-1">{getStaffStatus(s).text}</Badge>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={'secondary'} className={getStaffStatus(s).className}>
-                            {getStaffStatus(s).text}
+                          <Badge variant={'secondary'} className={s.status === 'suspended' ? getStaffStatus(s).className : 'bg-green-100 text-green-800'}>
+                            {s.status === 'suspended' ? 'Ditangguhkan' : 'Aktif'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -482,6 +486,9 @@ export default function UsersAdminPage() {
                           <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
                            {'points' in selectedUserForDetail && (
                               <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
+                          )}
+                           {'role' in selectedUserForDetail && selectedUserForDetail.role && (
+                              <div className="flex items-start gap-3"><Wallet className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Peran: {toTitleCase(selectedUserForDetail.role)}</span></div>
                           )}
                           {'createdAt' in selectedUserForDetail && selectedUserForDetail.createdAt && (
                              <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format(selectedUserForDetail.createdAt as Date, "d MMMM yyyy", { locale: localeId })}</span></div>

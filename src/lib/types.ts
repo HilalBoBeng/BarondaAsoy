@@ -92,7 +92,7 @@ export interface Staff {
   lastCodeChangeTimestamp?: Timestamp;
   createdAt?: Timestamp | Date;
   expiresAt?: Timestamp;
-  role?: 'petugas' | 'admin' | 'super_admin';
+  role?: 'petugas' | 'admin' | 'super_admin' | 'bendahara';
   photoURL?: string | null;
   lastUpdated_name?: Timestamp;
   lastUpdated_phone?: Timestamp;
