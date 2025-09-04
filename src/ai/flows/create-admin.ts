@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for creating a new admin account.
- * This should only be executable by a Super Admin.
+ * This should only be executable by a Super Admin after OTP verification.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
@@ -82,10 +82,10 @@ const createAdminFlow = ai.defineFlow(
         addressType,
         addressDetail: addressType === 'luar_kilongan' ? addressDetail : 'Kilongan',
         status: 'active' as const,
+        role: 'admin',
         accessCode: accessCode,
         createdAt: Timestamp.now(),
         points: 0,
-        role: 'admin',
       };
       
       const docRef = adminDb.collection('staff').doc();
@@ -100,5 +100,3 @@ const createAdminFlow = ai.defineFlow(
     }
   }
 );
-
-    

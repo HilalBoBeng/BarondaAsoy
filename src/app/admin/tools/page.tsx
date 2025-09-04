@@ -28,8 +28,9 @@ import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { createAdmin } from '@/ai/flows/create-admin';
+import { sendOtp } from '@/ai/flows/send-otp';
+import { verifyOtp } from '@/ai/flows/verify-otp';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-
 
 const shortLinkSchema = z.object({
   longUrl: z.string().url("URL tidak valid. Harap masukkan URL lengkap (contoh: https://example.com)."),
@@ -79,6 +80,12 @@ const addAdminSchema = z.object({
 });
 type AddAdminFormValues = z.infer<typeof addAdminSchema>;
 
+const otpSchema = z.object({
+    otp: z.string().length(6, "Kode OTP harus 6 digit."),
+});
+type OtpFormValues = z.infer<typeof otpSchema>;
+
+
 const initialMenuState: Omit<MenuConfig, 'visible' | 'locked'>[] = [
     { id: 'dashboard', label: 'Dasbor' },
     { id: 'profile', label: 'Profil Saya' },
@@ -110,6 +117,8 @@ export default function ToolsAdminPage() {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
+  const [otpStep, setOtpStep] = useState(false);
+  const [newAdminData, setNewAdminData] = useState<AddAdminFormValues | null>(null);
   
 
   const { toast } = useToast();
@@ -123,6 +132,7 @@ export default function ToolsAdminPage() {
     resolver: zodResolver(addAdminSchema),
     defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '' }
   });
+  const otpForm = useForm<OtpFormValues>({ resolver: zodResolver(otpSchema), defaultValues: { otp: '' } });
   const addressType = addAdminForm.watch('addressType');
 
   useEffect(() => {
@@ -226,26 +236,50 @@ export default function ToolsAdminPage() {
             addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' }); return;
         }
         
-        const createResult = await createAdmin({
-            name: toTitleCase(values.name),
-            email: values.email,
-            phone: values.phone,
-            addressType: values.addressType,
-            addressDetail: values.addressDetail
-        });
-
-        if (!createResult.success) throw new Error(createResult.message);
-
-        toast({ title: "Admin Berhasil Dibuat", description: createResult.message });
-        setIsAddAdminOpen(false);
-        addAdminForm.reset();
+        const otpResult = await sendOtp({ email: values.email, context: 'adminCreation' });
+        if (!otpResult.success) throw new Error(otpResult.message);
+        
+        toast({ title: 'OTP Terkirim', description: `Kode OTP telah dikirim ke email calon admin: ${values.email}.` });
+        setNewAdminData(values);
+        setOtpStep(true);
 
     } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: `Proses pembuatan admin gagal. ${error instanceof Error ? error.message : ''}`});
+        toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman OTP gagal. ${error instanceof Error ? error.message : ''}`});
     } finally {
         setIsSubmitting(false);
     }
   };
+
+  const handleOtpSubmit = async (values: OtpFormValues) => {
+      if (!newAdminData) return;
+      setIsSubmitting(true);
+      try {
+          const verifyResult = await verifyOtp({ email: newAdminData.email, otp: values.otp, flow: 'adminCreation' });
+          if (!verifyResult.success) throw new Error(verifyResult.message);
+          
+          const createResult = await createAdmin({
+            name: toTitleCase(newAdminData.name),
+            email: newAdminData.email,
+            phone: newAdminData.phone,
+            addressType: newAdminData.addressType,
+            addressDetail: newAdminData.addressDetail
+          });
+
+          if (!createResult.success) throw new Error(createResult.message);
+          
+          toast({ title: 'Admin Berhasil Dibuat', description: createResult.message });
+          setIsAddAdminOpen(false);
+          setOtpStep(false);
+          addAdminForm.reset();
+          otpForm.reset();
+
+      } catch (error) {
+          toast({ variant: "destructive", title: "Gagal", description: `Proses pembuatan admin gagal. ${error instanceof Error ? error.message : ''}`});
+          otpForm.reset();
+      } finally {
+          setIsSubmitting(false);
+      }
+  }
 
   const handleMenuConfigChange = async (id: string, type: 'visible' | 'locked') => {
       const newConfig = menuConfig.map(item => 
@@ -631,73 +665,111 @@ export default function ToolsAdminPage() {
         </DialogContent>
     </Dialog>
 
-     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
+    <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => otpStep && e.preventDefault()}>
             <DialogHeader>
-                <DialogTitle>Tambah Admin Baru</DialogTitle>
+                <DialogTitle>{otpStep ? 'Verifikasi OTP' : 'Tambah Admin Baru'}</DialogTitle>
                 <DialogDescription>
-                    Isi detail di bawah ini untuk membuat akun admin baru. Kode akses akan dikirimkan ke email yang didaftarkan.
+                   {otpStep ? `Masukkan kode 6 digit yang dikirim ke ${newAdminData?.email}.` : 'Isi detail di bawah ini. Kode verifikasi akan dikirim ke email calon admin.'}
                 </DialogDescription>
             </DialogHeader>
-            <Form {...addAdminForm}>
-                <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
-                     <DialogBody className="space-y-4">
-                        <FormField control={addAdminForm.control} name="name" render={({ field }) => (
-                            <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="confirmEmail" render={({ field }) => (
-                            <FormItem><FormLabel>Konfirmasi Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                         <FormField control={addAdminForm.control} name="phone" render={({ field }) => (
-                            <FormItem><FormLabel>Nomor HP</FormLabel><FormControl><Input {...field} inputMode="numeric" /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField
-                            control={addAdminForm.control}
-                            name="addressType"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Alamat</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Pilih jenis alamat" /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="kilongan">Kilongan</SelectItem>
-                                        <SelectItem value="luar_kilongan">Luar Kilongan</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                         {addressType === 'luar_kilongan' && (
+            {!otpStep ? (
+                <Form {...addAdminForm}>
+                    <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
+                        <DialogBody className="space-y-4">
+                            <FormField control={addAdminForm.control} name="name" render={({ field }) => (
+                                <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={addAdminForm.control} name="email" render={({ field }) => (
+                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={addAdminForm.control} name="confirmEmail" render={({ field }) => (
+                                <FormItem><FormLabel>Konfirmasi Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={addAdminForm.control} name="phone" render={({ field }) => (
+                                <FormItem><FormLabel>Nomor HP</FormLabel><FormControl><Input {...field} inputMode="numeric" /></FormControl><FormMessage /></FormItem>
+                            )} />
                             <FormField
                                 control={addAdminForm.control}
-                                name="addressDetail"
+                                name="addressType"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Detail Alamat</FormLabel>
+                                    <FormLabel>Alamat</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger><SelectValue placeholder="Pilih jenis alamat" /></SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="kilongan">Kilongan</SelectItem>
+                                            <SelectItem value="luar_kilongan">Luar Kilongan</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {addressType === 'luar_kilongan' && (
+                                <FormField
+                                    control={addAdminForm.control}
+                                    name="addressDetail"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Detail Alamat</FormLabel>
+                                        <FormControl>
+                                        <Textarea placeholder="Masukkan nama jalan, nomor rumah, RT/RW, dll." {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
+                        </DialogBody>
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                                Kirim OTP
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            ) : (
+                 <Form {...otpForm}>
+                    <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)}>
+                        <DialogBody className="flex flex-col items-center justify-center">
+                            <FormField
+                                control={otpForm.control}
+                                name="otp"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="sr-only">Kode OTP</FormLabel>
                                     <FormControl>
-                                    <Textarea placeholder="Masukkan nama jalan, nomor rumah, RT/RW, dll." {...field} />
+                                        <InputOTP maxLength={6} {...field}>
+                                            <InputOTPGroup>
+                                                <InputOTPSlot index={0} />
+                                                <InputOTPSlot index={1} />
+                                                <InputOTPSlot index={2} />
+                                                <InputOTPSlot index={3} />
+                                                <InputOTPSlot index={4} />
+                                                <InputOTPSlot index={5} />
+                                            </InputOTPGroup>
+                                        </InputOTP>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                                 )}
                             />
-                        )}
-                    </DialogBody>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)}>Batal</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                            Buat Akun Admin
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
+                        </DialogBody>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setOtpStep(false)}>Kembali</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Verifikasi & Buat Akun
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            )}
         </DialogContent>
     </Dialog>
 
@@ -736,5 +808,3 @@ export default function ToolsAdminPage() {
     </>
   );
 }
-
-    
