@@ -23,6 +23,8 @@ import {
   Wrench,
   History,
   Edit,
+  Wallet,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -47,6 +49,8 @@ const navItemsList = [
     { href: "/admin/attendance", icon: ClipboardList, label: 'Daftar Hadir', id: 'attendance' },
     { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues' },
     { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor' },
+    { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
+    { href: "/admin/letters", icon: Mail, label: 'Surat Menyurat', id: 'letters' },
     { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog' },
     { href: "/admin/tools", icon: Wrench, label: 'Lainnya', id: 'tools' },
     { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts' },

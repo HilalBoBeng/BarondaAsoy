@@ -171,3 +171,14 @@ export interface AdminLog {
     action: string;
     timestamp: Timestamp | Date;
 }
+
+export interface FinancialTransaction {
+  id: string;
+  type: 'income' | 'expense';
+  date: Timestamp | Date;
+  description: string;
+  amount: number;
+  category?: 'Iuran Warga' | 'Honor Petugas' | 'Pembelian Peralatan' | 'Konsumsi' | 'Lainnya';
+  relatedId?: string; // e.g., duesId or honorariumId
+  recordedBy: string;
+}
