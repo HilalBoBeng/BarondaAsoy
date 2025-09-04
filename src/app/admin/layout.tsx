@@ -90,7 +90,7 @@ export default function AdminLayout({
             id: 'super_admin',
             name: 'Admin Utama',
             email: 'admin@baronda.or.id',
-            role: 'admin',
+            role: 'super_admin',
         } as Staff;
         setAdminInfo(superAdminData);
     } else if (storedStaffInfo.id) { // Handle regular admin
@@ -188,8 +188,8 @@ export default function AdminLayout({
         <div className="flex flex-col">
             <p className="font-bold text-base truncate">{adminInfo.name}</p>
             <p className="text-sm text-muted-foreground truncate">{adminInfo.email}</p>
-            <Badge variant="secondary" className="mt-2 w-fit">
-              {adminInfo.role === 'admin' ? 'Administrator' : 'Super Admin'}
+            <Badge variant="secondary" className={cn("mt-2 w-fit", adminInfo.role === 'super_admin' && "bg-purple-600 text-white hover:bg-purple-700")}>
+              {adminInfo.role === 'super_admin' ? 'Super Admin' : 'Administrator'}
             </Badge>
         </div>
     </div>
@@ -293,5 +293,3 @@ export default function AdminLayout({
     </div>
   );
 }
-
-    

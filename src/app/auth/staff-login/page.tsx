@@ -103,7 +103,7 @@ export default function StaffLoginPage() {
     // Admin login check
     if (data.accessCode === "Admin123") {
         localStorage.setItem('userRole', 'admin');
-        const adminInfo = { name: "Admin Utama", email: "admin@baronda.or.id" };
+        const adminInfo = { name: "Admin Utama", email: "admin@baronda.or.id", role: 'super_admin' };
         localStorage.setItem('staffInfo', JSON.stringify(adminInfo));
         toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
         router.push("/admin");
@@ -141,11 +141,16 @@ export default function StaffLoginPage() {
              throw new Error("Akun Anda tidak aktif.");
         }
 
+        const role = staffData.role || 'petugas'; // Default to 'petugas' if role is not set
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email, role: role }));
 
-        localStorage.setItem('userRole', 'petugas');
-        localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email }));
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
-        router.push("/petugas");
+        if (role === 'admin') {
+            router.push("/admin");
+        } else {
+            router.push("/petugas");
+        }
 
     } catch (error) {
         localStorage.removeItem('userRole');

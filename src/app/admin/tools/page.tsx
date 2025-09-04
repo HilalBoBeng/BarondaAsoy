@@ -109,7 +109,8 @@ export default function ToolsAdminPage() {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'waiting' | 'sent'>('idle');
+  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'waiting' | 'verified'>('idle');
+  const [countdown, setCountdown] = useState(0);
   
   const { toast } = useToast();
 
@@ -126,26 +127,41 @@ export default function ToolsAdminPage() {
 
   useEffect(() => {
     let unsubVerification: (() => void) | null = null;
-    
+    let timer: NodeJS.Timeout | null = null;
+
     if (submissionStatus === 'waiting') {
         const verificationId = localStorage.getItem('verificationId');
         if (verificationId) {
             const verificationRef = doc(db, 'admin_verifications', verificationId);
             unsubVerification = onSnapshot(verificationRef, (docSnap) => {
                 if (!docSnap.exists()) {
-                    setSubmissionStatus('sent');
+                    setSubmissionStatus('verified');
                     toast({ title: 'Berhasil', description: 'Akun admin telah berhasil diverifikasi.' });
-                    setIsAddAdminOpen(false);
                     localStorage.removeItem('verificationId');
+                    setTimeout(() => {
+                        setIsAddAdminOpen(false);
+                        setSubmissionStatus('idle');
+                    }, 3000);
                 }
             });
+        }
+        const expiry = localStorage.getItem('verificationExpiry');
+        if (expiry) {
+            timer = setInterval(() => {
+                const remaining = Math.round((parseInt(expiry) - Date.now()) / 1000);
+                if (remaining <= 0) {
+                    setCountdown(0);
+                    clearInterval(timer!);
+                } else {
+                    setCountdown(remaining);
+                }
+            }, 1000);
         }
     }
     
     return () => {
-        if (unsubVerification) {
-            unsubVerification();
-        }
+        if (unsubVerification) unsubVerification();
+        if (timer) clearInterval(timer);
     };
 }, [submissionStatus, toast]);
 
@@ -223,6 +239,7 @@ export default function ToolsAdminPage() {
         addAdminForm.reset();
         setSubmissionStatus('idle');
          localStorage.removeItem('verificationId');
+         localStorage.removeItem('verificationExpiry');
       }, 300);
     }
   }, [isAddAdminOpen, addAdminForm]);
@@ -261,7 +278,9 @@ export default function ToolsAdminPage() {
         }
         
         const verificationId = nanoid();
+        const expiryTime = Date.now() + 5 * 60 * 1000;
         localStorage.setItem('verificationId', verificationId);
+        localStorage.setItem('verificationExpiry', expiryTime.toString());
 
         const result = await sendAdminVerificationEmail({
             name: toTitleCase(values.name),
@@ -276,10 +295,13 @@ export default function ToolsAdminPage() {
         if (!result.success) throw new Error(result.message);
         
         setSubmissionStatus('waiting');
+        setCountdown(300); // 5 minutes
 
     } catch (error) {
         toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman verifikasi gagal. ${error instanceof Error ? error.message : ''}`});
         setSubmissionStatus('idle');
+    } finally {
+        addAdminForm.clearErrors();
     }
   };
 
@@ -735,12 +757,19 @@ export default function ToolsAdminPage() {
                         </DialogFooter>
                     </form>
                 </Form>
-            ) : (
+            ) : submissionStatus === 'waiting' ? (
                 <DialogBody className="text-center py-8">
                     <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
                     <p className="text-muted-foreground">
-                        Tautan verifikasi telah dikirim. Menunggu calon admin untuk mengonfirmasi pendaftaran mereka. Dialog ini akan tertutup otomatis setelah verifikasi selesai.
+                        Tautan verifikasi telah dikirim. Menunggu calon admin untuk mengonfirmasi pendaftaran.
                     </p>
+                    <p className="font-bold text-2xl mt-2">{Math.floor(countdown/60).toString().padStart(2, '0')}:{(countdown%60).toString().padStart(2, '0')}</p>
+                </DialogBody>
+            ) : (
+                <DialogBody className="text-center py-8">
+                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <p className="font-semibold">Verifikasi Berhasil!</p>
+                    <p className="text-muted-foreground">Akun admin baru telah dibuat.</p>
                 </DialogBody>
             )}
         </DialogContent>
