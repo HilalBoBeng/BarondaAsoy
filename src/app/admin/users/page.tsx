@@ -75,7 +75,7 @@ export default function UsersAdminPage() {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info) {
         if (info.email === 'admin@baronda.or.id') {
-            setCurrentAdmin({ ...info, id: 'super_admin' });
+             setCurrentAdmin({ ...info, id: 'super_admin' });
         } else {
             setCurrentAdmin(info);
         }
@@ -172,7 +172,8 @@ export default function UsersAdminPage() {
             toast({ title: 'Berhasil', description: `Data pengguna berhasil dihapus.` });
             await createLog(`Menghapus ${isUserType ? 'Warga' : 'Staf'}`, userName || docId);
         } else if (actionType === 'reject' && !isUserType) {
-            handleStaffApproval(selectedUserForAction as Staff, false, values.reason);
+             const rejectionReason = values.reason;
+             await handleStaffApproval(selectedUserForAction as Staff, false, rejectionReason);
         } else {
             let updateData: any = { suspensionReason: values.reason };
             let logAction = '';
@@ -292,7 +293,7 @@ export default function UsersAdminPage() {
             />
         </div>
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="h-auto w-full flex-wrap justify-start">
             <TabsTrigger value="users">Warga</TabsTrigger>
             <TabsTrigger value="staff">Staf</TabsTrigger>
             <TabsTrigger value="pending-staff">
@@ -490,7 +491,7 @@ export default function UsersAdminPage() {
                   <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4 border-t bg-muted/50 p-6">
                       {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? (
                           <div className="flex gap-2">
-                               <Button variant="destructive" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
+                               <Button variant="outline" className="flex-1" onClick={() => openActionDialog(selectedUserForDetail, 'reject')}>Tolak</Button>
                                <Button className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => handleStaffApproval(selectedUserForDetail as Staff, true)}>Setujui</Button>
                           </div>
                       ) : (
@@ -617,5 +618,7 @@ export default function UsersAdminPage() {
     </>
   );
 }
+
+    
 
     

@@ -61,6 +61,7 @@ export default function RootLayout({
       return (
         <html lang="id">
            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
               <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
            </head>
            <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
@@ -79,6 +80,7 @@ export default function RootLayout({
          <head>
           <title>Baronda - Siskamling Digital</title>
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
          </head>
         <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
@@ -93,6 +95,7 @@ export default function RootLayout({
       <head>
           <title>Baronda - Siskamling Digital</title>
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
+           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
       </head>
       <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
@@ -102,3 +105,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
