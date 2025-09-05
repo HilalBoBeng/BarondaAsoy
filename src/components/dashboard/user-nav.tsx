@@ -162,27 +162,31 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
          )}
       </div>
 
-      <div className={cn("absolute top-0 left-0 w-full h-16 bg-background border-b z-40 flex items-center px-4 transition-transform duration-300",
-          isSearchOpen ? 'translate-y-0' : '-translate-y-full'
-      )}>
-         <Input 
-           ref={searchInputRef}
-           value={searchQuery}
-           onChange={(e) => handleSearch(e.target.value)}
-           placeholder="Cari warga lain..."
-           className="h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-base"
-          />
-          {isSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-3" />}
-          <Button variant="ghost" size="icon" onClick={() => { setIsSearchOpen(false); setSearchResults([]); setSearchQuery(''); }}>
-              <X className="h-5 w-5" />
-          </Button>
-     </div>
-
-     {isSearchOpen && searchQuery && (
-        <Card className="absolute top-16 left-0 right-0 mx-auto sm:left-auto sm:right-4 w-[95%] sm:max-w-sm sm:w-80 z-40 shadow-lg sm:rounded-t-lg">
-            <div className="p-2 max-h-[60vh] overflow-y-auto">
-                {isSearching ? <div className="p-4 text-center text-sm text-muted-foreground">Mencari...</div> 
-                : searchResults.length > 0 ? (
+     {isSearchOpen && (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-in fade-in-0">
+            <div className="flex items-center border-b px-4 h-16">
+                 <Input 
+                   ref={searchInputRef}
+                   value={searchQuery}
+                   onChange={(e) => handleSearch(e.target.value)}
+                   placeholder="Cari warga lain..."
+                   className="h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-base"
+                  />
+                  {isSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-3" />}
+                  <Button variant="ghost" size="icon" onClick={() => { setIsSearchOpen(false); setSearchResults([]); setSearchQuery(''); }}>
+                      <X className="h-5 w-5" />
+                  </Button>
+            </div>
+            <div className="p-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
+                {!searchQuery.trim() ? (
+                    <div className="text-center text-muted-foreground pt-20">
+                        <p>Cari orang yang ingin Anda cari</p>
+                    </div>
+                ) : !isSearching && searchResults.length === 0 ? (
+                     <div className="text-center text-muted-foreground pt-20">
+                        <p>Orang yang Anda cari tidak tersedia</p>
+                    </div>
+                ) : (
                     searchResults.map(foundUser => (
                         <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
                             <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
@@ -194,13 +198,9 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                             </div>
                         </Link>
                     ))
-                ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    <p>Pengguna tidak ditemukan.</p>
-                  </div>
                 )}
             </div>
-        </Card>
+        </div>
       )}
        
       <Drawer open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
@@ -236,7 +236,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
        <Drawer open={!!selectedNotification} onOpenChange={(open) => !open && handleDialogClose()}>
           <DrawerContent>
             {selectedNotification && (
-              <>
+              <div className="mx-auto w-full max-w-sm">
                 <DrawerHeader>
                   <DrawerTitle>{selectedNotification.title}</DrawerTitle>
                 </DrawerHeader>
@@ -246,7 +246,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                 <DrawerFooter>
                   <Button onClick={handleDialogClose}>Tutup</Button>
                 </DrawerFooter>
-              </>
+              </div>
             )}
           </DrawerContent>
         </Drawer>
