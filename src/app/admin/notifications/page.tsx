@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, PlusCircle, Trash, User, Eye, Bell } from 'lucide-react';
+import { Loader2, Send, PlusCircle, Trash, User, Eye, Bell, ImageIcon } from 'lucide-react';
 import type { AppUser, Notification, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,6 +30,7 @@ const notificationSchema = z.object({
   recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   message: z.string().min(1, "Pesan tidak boleh kosong.").max(1200, "Pesan tidak boleh lebih dari 1200 karakter."),
+  imageUrl: z.string().url("URL gambar tidak valid.").optional().or(z.literal('')),
 });
 
 type NotificationFormValues = z.infer<typeof notificationSchema>;
@@ -55,7 +56,7 @@ export default function NotificationsAdminPage() {
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
-    defaultValues: { recipientIds: [], title: '', message: '' },
+    defaultValues: { recipientIds: [], title: '', message: '', imageUrl: '' },
   });
 
   const fetchRecipients = async () => {
@@ -170,13 +171,14 @@ export default function NotificationsAdminPage() {
             message: formattedMessage,
             read: false,
             createdAt: serverTimestamp(),
+            imageUrl: values.imageUrl || null,
           });
         });
         await batch.commit();
 
         toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${values.recipientIds.length} penerima.` });
       
-        form.reset({ recipientIds: [], title: '', message: '' });
+        form.reset({ recipientIds: [], title: '', message: '', imageUrl: '' });
         setIsDialogOpen(false);
         await fetchNotifications(1); // Refresh list
     } catch (error) {
@@ -458,6 +460,22 @@ export default function NotificationsAdminPage() {
                     </FormItem>
                   )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">URL Gambar <span className="text-xs text-muted-foreground">(Opsional)</span></FormLabel>
+                        <FormControl>
+                           <div className="relative">
+                            <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="https://contoh.com/gambar.jpg" {...field} className="pl-9" />
+                           </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </DrawerBody>
                 <DrawerFooter>
                     <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>

@@ -27,7 +27,6 @@ import Image from 'next/image';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose, DrawerBody, DrawerDescription } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -524,7 +523,7 @@ export default function ProfilePage() {
                     <DrawerTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DrawerTitle>
                 </DrawerHeader>
                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
                          <DrawerBody>
                             {editingField === 'photoURL' ? (
                                 <FormField
@@ -574,7 +573,7 @@ export default function ProfilePage() {
                                 />
                             )}
                         </DrawerBody>
-                         <DrawerFooter className="sm:justify-between gap-2 pt-4">
+                         <DrawerFooter className="sm:justify-between gap-2">
                            {editingField === 'photoURL' && user?.photoURL ? (
                                 <Button type="button" variant="destructive" onClick={handleDeletePhoto} disabled={isSubmitting}>
                                     <Trash className="h-4 w-4 mr-2" /> Hapus Foto
@@ -592,6 +591,7 @@ export default function ProfilePage() {
                 </Form>
             </DrawerContent>
         </Drawer>
+        
         <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
             <DrawerContent>
                 <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />

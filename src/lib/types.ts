@@ -111,6 +111,7 @@ export interface Notification {
     link?: string;
     recipientName?: string; 
     recipientEmail?: string; 
+    imageUrl?: string | null;
 }
 
 export interface PatrolLog {

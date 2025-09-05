@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/drawer";
 import { Card } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from "../ui/dialog";
+import Image from "next/image";
 
 
 export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUser | null }) {
@@ -45,6 +46,8 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [imagePopupNotification, setImagePopupNotification] = useState<Notification | null>(null);
+
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -55,19 +58,35 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     if (user) {
         const notifsQuery = query(
             collection(db, "notifications"),
-            where("userId", "==", user.uid)
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc")
         );
         const unsub = onSnapshot(notifsQuery, (snapshot) => {
-            const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
-            
-            notifsData.sort((a, b) => {
-              const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
-              const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
-              return timeB - timeA;
+            const notifsData: Notification[] = [];
+            let unread = 0;
+            let latestUnreadImageNotif: Notification | null = null;
+
+            snapshot.forEach(docSnap => {
+                const data = { id: docSnap.id, ...docSnap.data() } as Notification;
+                notifsData.push(data);
+                if (!data.read) {
+                    unread++;
+                    // Check for image notification to pop-up
+                    if(data.imageUrl && !sessionStorage.getItem(`notif_${data.id}_shown`)) {
+                        if (!latestUnreadImageNotif || (data.createdAt as Timestamp).toMillis() > (latestUnreadImageNotif.createdAt as Timestamp).toMillis()) {
+                            latestUnreadImageNotif = data;
+                        }
+                    }
+                }
             });
 
             setNotifications(notifsData);
-            setUnreadCount(notifsData.filter(n => !n.read).length);
+            setUnreadCount(unread);
+
+            if (latestUnreadImageNotif) {
+                setImagePopupNotification(latestUnreadImageNotif);
+                sessionStorage.setItem(`notif_${latestUnreadImageNotif.id}_shown`, 'true');
+            }
         });
         return () => unsub();
     }
@@ -229,6 +248,27 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
               </>
             )}
           </DialogContent>
+        </Dialog>
+        
+        <Dialog open={!!imagePopupNotification} onOpenChange={() => setImagePopupNotification(null)}>
+            <DialogContent className="p-0 border-0 bg-black/50 max-w-lg w-full max-h-[80vh] flex items-center justify-center rounded-lg">
+                 {imagePopupNotification?.imageUrl && (
+                    <div className="relative w-full h-full">
+                       <Image
+                           src={imagePopupNotification.imageUrl}
+                           alt={imagePopupNotification.title}
+                           layout="fill"
+                           objectFit="contain"
+                           className="rounded-lg"
+                       />
+                        <DialogClose asChild>
+                            <Button size="icon" variant="secondary" className="absolute top-2 right-2 rounded-full h-8 w-8 z-10">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </DialogClose>
+                    </div>
+                 )}
+            </DialogContent>
         </Dialog>
     </>
   );
