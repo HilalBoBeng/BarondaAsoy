@@ -21,8 +21,7 @@ import { db } from "@/lib/firebase/client";
 import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -283,6 +282,7 @@ export default function BendaharaProfilePage() {
 
     return (
         <div className="space-y-6">
+            <h1 className="text-xl font-bold">Profil Saya</h1>
             <Card className="overflow-hidden">
                 <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                      <div className="flex items-center gap-4">
@@ -378,14 +378,14 @@ export default function BendaharaProfilePage() {
                 </CardContent>
             </Card>
             
-            <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
-                    </DialogHeader>
+            <Drawer open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
+                <DrawerContent>
+                    <DrawerHeader>
+                        <DrawerTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DrawerTitle>
+                    </DrawerHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
-                             <DialogBody className="space-y-4 pt-4">
+                             <DrawerBody className="space-y-4 px-4">
                                 {editingField && editingField !== 'photoURL' && (
                                 <FormField
                                     control={form.control}
@@ -423,30 +423,29 @@ export default function BendaharaProfilePage() {
                                         )}
                                     />
                                 )}
-                            </DialogBody>
-                            <DialogFooter className="sm:justify-between gap-2 pt-4">
+                            </DrawerBody>
+                            <DrawerFooter className="flex-col sm:flex-row sm:justify-between pt-4">
                                 <div></div>
                                 <div className="flex gap-2 justify-end">
-                                    <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                                    <DrawerClose asChild>
+                                        <Button type="button" variant="secondary">Batal</Button>
+                                    </DrawerClose>
                                     <Button type="submit" disabled={isSubmitting || !formState.isValid}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Simpan
                                     </Button>
                                </div>
-                            </DialogFooter>
+                            </DrawerFooter>
                         </form>
                     </Form>
-                </DialogContent>
-            </Dialog>
+                </DrawerContent>
+            </Drawer>
 
-            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
-                    <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
+            <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DrawerContent>
                     <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-                </DialogContent>
-            </Dialog>
+                </DrawerContent>
+            </Drawer>
         </div>
     );
 }
-
-    

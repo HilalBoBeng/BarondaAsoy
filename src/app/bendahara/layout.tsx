@@ -28,51 +28,6 @@ const navItemsList = [
     { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
 ];
 
-
-function HeaderContent() {
-    const pathname = usePathname();
-    const router = useRouter();
-
-    const [pageTitle, setPageTitle] = useState("Dasbor Bendahara");
-    const [isDetailPage, setIsDetailPage] = useState(false);
-    
-    useEffect(() => {
-        const detailPage = pathname.split('/').filter(Boolean).length > 2;
-        setIsDetailPage(detailPage);
-        
-        const allNavItems = [...navItemsList, { href: "/bendahara/honor", label: 'Honorarium' }, { href: "/bendahara/notifications", label: 'Notifikasi' }];
-        const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/bendahara');
-        setPageTitle(activeItem?.label || "Dasbor Bendahara");
-        
-    }, [pathname]);
-
-    return (
-        <div className="w-full flex justify-between items-center">
-           <div className="flex-1">
-               {isDetailPage ? (
-                   <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                      <ArrowLeft className="h-4 w-4" />
-                      <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                   </Button>
-               ) : (
-                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-               )}
-           </div>
-           <div className="flex items-center gap-2 text-right">
-                 <Link href="/bendahara" className="flex items-center gap-2">
-                    <Image 
-                    src="https://iili.io/KJ4aGxp.png"
-                    alt="Logo" 
-                    width={32} 
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                    />
-                </Link>
-            </div>
-        </div>
-    );
-}
-
 function LoadingSkeleton() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
@@ -141,7 +96,19 @@ export default function BendaharaLayout({
   return (
     <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-        <HeaderContent />
+        <div className="w-full flex justify-between items-center">
+           <div className="flex-1">
+                 <Link href="/bendahara" className="flex items-center gap-2">
+                    <Image 
+                    src="https://iili.io/KJ4aGxp.png"
+                    alt="Logo" 
+                    width={32} 
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                    />
+                </Link>
+           </div>
+        </div>
       </header>
       <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
         <div className="mx-auto w-full max-w-screen-2xl">

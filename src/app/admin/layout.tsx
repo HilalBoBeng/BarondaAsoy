@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import type { Staff } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
@@ -27,68 +28,6 @@ const navItemsList = [
     { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin', 'bendahara'] },
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
 ];
-
-function HeaderContent() {
-    const pathname = usePathname();
-    const router = useRouter();
-
-    const [pageTitle, setPageTitle] = useState("Dasbor Admin");
-    const [isDetailPage, setIsDetailPage] = useState(false);
-    
-    useEffect(() => {
-        const segments = pathname.split('/').filter(Boolean);
-        const detailPage = segments.length > 2 && segments[1] !== 'tools';
-        setIsDetailPage(detailPage);
-        
-        const allNavItems = [...navItemsList, 
-          { href: "/admin/reports", label: 'Laporan Warga', roles: [] },
-          { href: "/admin/announcements", label: 'Pengumuman', roles: [] },
-          { href: "/admin/attendance", label: 'Kehadiran', roles: [] },
-          { href: "/admin/dues", label: 'Iuran', roles: [] },
-          { href: "/admin/honor", label: 'Honorarium', roles: [] },
-          { href: "/admin/honor-saya", label: 'Honor Saya', roles: [] },
-          { href: "/admin/finance", label: 'Keuangan', roles: [] },
-          { href: "/admin/activity-log", label: 'Log Admin', roles: [] },
-          { href: "/admin/emergency-contacts", label: 'Kontak Darurat', roles: [] },
-          { href: "/admin/notifications", label: 'Notifikasi', roles: [] },
-        ];
-        let newPageTitle = "Dasbor Admin";
-        const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
-
-        if (activeItem) {
-            newPageTitle = activeItem.label;
-        } else if (pathname === '/admin') {
-            newPageTitle = "Dasbor Admin";
-        }
-
-        setPageTitle(newPageTitle);
-    }, [pathname]);
-
-    return (
-        <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2">
-                {isDetailPage ? (
-                     <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                        <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                     </Button>
-                 ) : (
-                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                 )}
-            </div>
-             <Link href="/admin" className="flex items-center gap-2">
-                 <Image 
-                    src="https://iili.io/KJ4aGxp.png" 
-                    alt="Logo" 
-                    width={32} 
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                />
-            </Link>
-        </div>
-    );
-}
-
 
 export default function AdminLayout({
   children,
@@ -149,11 +88,18 @@ export default function AdminLayout({
     }
   }, [router]);
   
-
   return (
     <div className="flex h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <HeaderContent />
+             <Link href="/admin" className="flex items-center gap-2">
+                 <Image 
+                    src="https://iili.io/KJ4aGxp.png" 
+                    alt="Logo" 
+                    width={32} 
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                />
+            </Link>
         </header>
         <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
             {children}

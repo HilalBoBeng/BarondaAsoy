@@ -26,6 +26,7 @@ export default function PetugasToolsPage() {
 
   return (
     <div className="space-y-6">
+        <h1 className="text-xl font-bold">Lainnya</h1>
         <Card>
             <CardHeader>
                 <CardTitle>Menu Lainnya</CardTitle>

@@ -2,11 +2,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -158,9 +155,10 @@ export default function ToolsAdminPage() {
 
   return (
     <div className="space-y-6">
+       <h1 className="text-xl font-bold">Alat & Pengaturan</h1>
         <Card>
             <CardHeader>
-                <CardTitle>Menu Alat & Pengaturan</CardTitle>
+                <CardTitle>Menu Alat</CardTitle>
                 <CardDescription>Akses cepat ke semua fitur manajemen.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

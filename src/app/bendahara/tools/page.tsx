@@ -2,9 +2,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp, where, getDocs, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -35,15 +32,15 @@ export default function BendaharaToolsPage() {
 
   return (
     <div className="space-y-6">
+        <h1 className="text-xl font-bold">Lainnya</h1>
         <Card>
             <CardHeader>
                 <CardTitle>Menu Lainnya</CardTitle>
                 <CardDescription>Akses cepat ke semua fitur manajemen bendahara.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                 {toolPageItems
-                    .map(item => (
-                    <Link key={item.id} href={item.href} className="block">
+                 {toolPageItems.map(item => (
+                    <Link key={item.href} href={item.href} className="block">
                         <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4">
                             <item.icon className="h-8 w-8 text-primary mb-2" />
                             <p className="text-sm font-semibold">{item.label}</p>

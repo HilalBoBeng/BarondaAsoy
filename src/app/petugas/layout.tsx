@@ -36,54 +36,6 @@ const navItemsList = [
     { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil" },
 ];
 
-
-function HeaderContent() {
-    const pathname = usePathname();
-    const router = useRouter();
-
-    const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
-    const [isDetailPage, setIsDetailPage] = useState(false);
-
-    useEffect(() => {
-        const detailPage = pathname.split('/').filter(Boolean).length > 2;
-        setIsDetailPage(detailPage);
-        
-        let newPageTitle = "Dasbor Petugas";
-        const allNavItems = [...navItemsList, { href: "/petugas/patrol-log", label: "Patroli & Log" }, { href: "/petugas/honor", label: "Honor Saya" }, { href: "/petugas/announcements", label: "Pengumuman" }, { href: "/petugas/notifications", label: "Notifikasi" }, { href: "/petugas/emergency-contacts", label: "Kontak Darurat" }];
-        const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
-        if (activeItem) newPageTitle = activeItem.label;
-        
-        setPageTitle(newPageTitle);
-    }, [pathname]);
-
-    return (
-        <div className="flex w-full items-center justify-between">
-            <div className="flex-1">
-                {isDetailPage ? (
-                   <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                      <ArrowLeft className="h-4 w-4" />
-                      <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                   </Button>
-                ) : (
-                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                )}
-            </div>
-            <div className="flex items-center gap-2 text-right">
-                 <Link href="/petugas" className="flex items-center gap-2">
-                     <Image
-                      src="https://iili.io/KJ4aGxp.png"
-                      alt="Logo"
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 rounded-full object-cover"
-                      priority
-                    />
-                </Link>
-            </div>
-        </div>
-    );
-}
-
 function LoadingSkeleton() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
@@ -231,7 +183,16 @@ export default function PetugasLayout({
   return (
     <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-        <HeaderContent />
+        <Link href="/petugas" className="flex items-center gap-2">
+           <Image
+              src="https://iili.io/KJ4aGxp.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+              priority
+            />
+        </Link>
       </header>
       <main className="flex-1 overflow-y-auto p-4 lg:p-6 pb-20 animate-fade-in-up">
          <div className="mx-auto w-full max-w-screen-2xl">
