@@ -7,21 +7,34 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, FileText, Phone, Megaphone, Bell, Banknote, User as UserIcon, Wrench } from 'lucide-react';
 import type { Staff } from '@/lib/types';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
+import { Badge } from '@/components/ui/badge';
 
 const toolPageItems = [
-    { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log" },
-    { href: "/petugas/honor", icon: Banknote, label: "Honor Saya" },
-    { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
-    { href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
-    { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+    { href: "/petugas/patrol-log", icon: FileText, label: "Patroli & Log", id: "patrol-log" },
+    { href: "/petugas/honor", icon: Banknote, label: "Honor Saya", id: "honor" },
+    { href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman", id: "announcements" },
+    { href: "/petugas/notifications", icon: Bell, label: "Notifikasi", id: "notifications" },
+    { href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat", id: "emergency-contacts" },
 ];
 
 export default function PetugasToolsPage() {
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
         if (info) setCurrentAdmin(info);
+
+        if (info?.id) {
+            const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', info.id), where('read', '==', false));
+            const unsubNotifs = onSnapshot(notifsQuery, (snap) => setUnreadNotifications(snap.size));
+            return () => {
+                unsubNotifs();
+            };
+        }
+
     }, []);
 
   return (
@@ -35,7 +48,10 @@ export default function PetugasToolsPage() {
             <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                  {toolPageItems.map(item => (
                     <Link key={item.href} href={item.href} className="block">
-                        <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4">
+                        <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4 relative">
+                            {item.id === 'notifications' && unreadNotifications > 0 && (
+                                <Badge className="absolute top-2 right-2">{unreadNotifications}</Badge>
+                            )}
                             <item.icon className="h-8 w-8 text-primary mb-2" />
                             <p className="text-sm font-semibold">{item.label}</p>
                         </Card>

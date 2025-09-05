@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ import { createLog } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from "@/components/ui/label";
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 const toolPageItems = [
     { href: "/admin/users", icon: UsersIcon, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
@@ -32,6 +33,7 @@ export default function ToolsAdminPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,6 +45,16 @@ export default function ToolsAdminPage() {
         if (docSnap.exists()) setMaintenanceMode(docSnap.data().maintenanceMode || false);
         setLoadingMaintenance(false);
     });
+    
+    if (info?.id) {
+        const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', info.id), where('read', '==', false));
+        const unsubNotifs = onSnapshot(notifsQuery, (snap) => setUnreadNotifications(snap.size));
+        return () => {
+            unsubSettings();
+            unsubNotifs();
+        };
+    }
+
 
     return () => {
         unsubSettings();
@@ -80,7 +92,10 @@ export default function ToolsAdminPage() {
                     .filter(item => item.roles.includes(currentAdmin?.role || ''))
                     .map(item => (
                     <Link key={item.href} href={item.href} className="block">
-                        <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4">
+                        <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4 relative">
+                            {item.id === 'notifications' && unreadNotifications > 0 && (
+                                <Badge className="absolute top-2 right-2">{unreadNotifications}</Badge>
+                            )}
                             <item.icon className="h-8 w-8 text-primary mb-2" />
                             <p className="text-sm font-semibold">{item.label}</p>
                         </Card>
