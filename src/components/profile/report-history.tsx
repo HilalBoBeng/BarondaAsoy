@@ -173,7 +173,7 @@ export default function ReportHistory() {
                 <div className="space-y-4">
                 {paginatedReports.map((report) => (
                     <Card key={report.id} className="overflow-hidden">
-                        <CardContent className="p-4">
+                        <CardContent className="p-4 relative">
                             <div className="flex justify-between items-start mb-2 gap-2">
                                 <div className="flex-grow">
                                     <p className="text-sm text-foreground/90 break-words pr-4">

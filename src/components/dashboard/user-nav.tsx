@@ -79,22 +79,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     }
   }, [isSearchOpen]);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await signOut(auth);
-      router.push('/');
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Gagal Keluar",
-        description: "Terjadi kesalahan saat mencoba keluar.",
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   const handleSearch = async (queryText: string) => {
     setSearchQuery(queryText);
     if (!queryText.trim()) {
@@ -156,45 +140,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
              </div>
           </>
          )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar>
-                <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User profile'} />
-                <AvatarFallback>
-                  <UserIcon className="h-5 w-5" />
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            {user ? (
-              <>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none truncate">{user.displayName || "Pengguna"}</p>
-                    <p className="text-xs leading-none text-muted-foreground truncate">{user.email}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link href="/profile"><UserIcon className="mr-2 h-4 w-4" /><span>Profil Saya</span></Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link href="/chat"><MessageSquare className="mr-2 h-4 w-4" /><span>Pesan</span></Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Pengaturan</span></Link></DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Keluar</span>
-                  {isLoggingOut && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <>
-                <DropdownMenuItem asChild><Link href="/auth/login"><LogIn className="mr-2 h-4 w-4" /><span>Masuk</span></Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link href="/auth/register"><UserPlus className="mr-2 h-4 w-4" /><span>Daftar</span></Link></DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className={cn("absolute top-0 left-0 w-full h-16 bg-background border-b z-40 flex items-center px-4 transition-transform duration-300",
