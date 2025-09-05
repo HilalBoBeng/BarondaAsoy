@@ -14,7 +14,7 @@ import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AppUser, PatrolLog, Announcement } from "@/lib/types";
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone, Calendar } from 'lucide-react';
@@ -130,7 +130,7 @@ export default function MainDashboardView() {
     <div className="flex min-h-screen flex-col bg-muted/40">
         <WelcomeAnnouncement />
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <div className="flex items-center gap-2 text-right">
+            <div className="flex items-center gap-2 text-left">
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 

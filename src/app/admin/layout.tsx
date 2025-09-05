@@ -124,7 +124,7 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-             <div className="flex items-center gap-2 text-right">
+             <div className="flex items-center gap-2 text-left">
               <Image 
                 src="https://iili.io/KJ4aGxp.png" 
                 alt="Logo" 
