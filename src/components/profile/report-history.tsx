@@ -94,7 +94,6 @@ export default function ReportHistory() {
                  } as Report;
             });
             
-            // Sort on the client-side
             reportsData.sort((a,b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
             setAllReports(reportsData);
