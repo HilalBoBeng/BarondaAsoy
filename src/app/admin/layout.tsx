@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -49,7 +50,6 @@ const navItemsList = [
     { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'bendahara', 'super_admin'] },
-    { href: "/admin/letters", icon: Mail, label: 'Surat Menyurat', id: 'letters', roles: ['admin', 'super_admin'] },
     { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin', 'super_admin'] },
     { href: "/admin/tools", icon: Wrench, label: 'Lainnya', id: 'tools', roles: ['admin', 'super_admin'] },
     { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin', 'super_admin'] },

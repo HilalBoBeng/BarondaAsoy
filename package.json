@@ -51,8 +51,6 @@
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.2.5",
     "js-cookie": "^3.0.5",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "next-themes": "^0.3.0",
@@ -69,7 +67,6 @@
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
-    "@types/jspdf": "^2.0.0",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.15",
     "@types/react": "^18",
