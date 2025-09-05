@@ -53,10 +53,21 @@ export default function PetugasPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
   const router = useRouter();
+  const [greeting, setGreeting] = useState("Selamat Datang");
 
 
   useEffect(() => {
     const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    
+     const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) return "Selamat Pagi";
+      if (hour >= 12 && hour < 15) return "Selamat Siang";
+      if (hour >= 15 && hour < 19) return "Selamat Sore";
+      return "Selamat Malam";
+    };
+    setGreeting(getGreeting());
+
     if (staffInfo.id && staffInfo.name) {
       setPetugasId(staffInfo.id);
       setPetugasName(staffInfo.name);
@@ -129,7 +140,9 @@ export default function PetugasPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dasbor Petugas</h1>
+       <h1 className="text-xl sm:text-2xl font-normal tracking-tight">
+        {greeting}, <span className="font-bold">{petugasName || 'Petugas'}!</span>
+      </h1>
       
         {loading ? <Skeleton className="h-56 w-full animate-fade-in-up" style={{animationDelay: '200ms'}} /> :
           !scheduleToday ? (
@@ -205,3 +218,5 @@ export default function PetugasPage() {
     </div>
   );
 }
+
+    

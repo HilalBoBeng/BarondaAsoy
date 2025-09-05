@@ -18,9 +18,25 @@ export default function BendaharaPage() {
         totalUsers: 0,
     });
     const [loadingStats, setLoadingStats] = useState(true);
+    const [greeting, setGreeting] = useState("Selamat Datang");
+    const [bendaharaName, setBendaharaName] = useState("");
 
     useEffect(() => {
         let mounted = true;
+        
+        const getGreeting = () => {
+          const hour = new Date().getHours();
+          if (hour >= 5 && hour < 12) return "Selamat Pagi";
+          if (hour >= 12 && hour < 15) return "Selamat Siang";
+          if (hour >= 15 && hour < 19) return "Selamat Sore";
+          return "Selamat Malam";
+        };
+        setGreeting(getGreeting());
+
+        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        if (staffInfo.name) {
+            setBendaharaName(staffInfo.name);
+        }
 
         // Fetch stats
         const usersQuery = collection(db, "users");
@@ -67,7 +83,9 @@ export default function BendaharaPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dasbor Bendahara</h1>
+            <h1 className="text-xl sm:text-2xl font-normal tracking-tight">
+                {greeting}, <span className="font-bold">{bendaharaName || 'Bendahara'}!</span>
+            </h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in-up" style={{animationDelay: '200ms'}}>
                 {loadingStats ? (
                     Array.from({ length: 3 }).map((_, i) => (
@@ -93,3 +111,5 @@ export default function BendaharaPage() {
         </div>
     );
 }
+
+    

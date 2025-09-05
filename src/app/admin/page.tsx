@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { Report, PatrolLog, Notification } from "@/lib/types";
+import type { Report, PatrolLog, Notification, Staff } from "@/lib/types";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
@@ -28,9 +28,25 @@ export default function AdminPage() {
     const [loadingReports, setLoadingReports] = useState(true);
     const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
     const [loadingNotifications, setLoadingNotifications] = useState(true);
+    const [greeting, setGreeting] = useState("Selamat Datang");
+    const [adminName, setAdminName] = useState("");
 
     useEffect(() => {
         let mounted = true;
+        
+        const getGreeting = () => {
+          const hour = new Date().getHours();
+          if (hour >= 5 && hour < 12) return "Selamat Pagi";
+          if (hour >= 12 && hour < 15) return "Selamat Siang";
+          if (hour >= 15 && hour < 19) return "Selamat Sore";
+          return "Selamat Malam";
+        };
+        setGreeting(getGreeting());
+
+        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+        if (staffInfo.name) {
+            setAdminName(staffInfo.name);
+        }
 
         // Fetch stats
         const reportsQuery = query(collection(db, "reports"), where('status', '!=', 'resolved'));
@@ -119,7 +135,9 @@ export default function AdminPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dasbor Admin</h1>
+             <h1 className="text-xl sm:text-2xl font-normal tracking-tight">
+                {greeting}, <span className="font-bold">{adminName || 'Admin'}!</span>
+            </h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{animationDelay: '200ms'}}>
                 {loadingStats ? (
                     Array.from({ length: 4 }).map((_, i) => (
@@ -261,3 +279,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
