@@ -184,3 +184,11 @@ export interface FinancialTransaction {
   relatedId?: string; // e.g., duesId or honorariumId
   recordedBy: string;
 }
+
+export interface Message {
+  id: string;
+  text: string;
+  senderId: string;
+  timestamp: Timestamp;
+  isRead: boolean;
+}

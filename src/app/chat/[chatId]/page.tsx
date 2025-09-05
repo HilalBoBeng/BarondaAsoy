@@ -3,23 +3,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc, Timestamp, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import type { Message, AppUser } from '@/lib/types';
+import { format } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
 
-interface Message {
-  id: string;
-  text: string;
-  senderId: string;
-  timestamp: any;
-}
 
 interface Chat {
   id: string;
@@ -60,11 +56,18 @@ export default function ChatPage() {
       }
       setLoading(false);
     });
-
+    
     const messagesQuery = query(collection(db, 'chats', chatId as string, 'messages'), orderBy('timestamp', 'asc'));
-    const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+    const unsubMessages = onSnapshot(messagesQuery, async (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       setMessages(msgs);
+      
+      // Mark messages as read
+      const unreadMessages = snapshot.docs.filter(d => !d.data().isRead && d.data().senderId !== currentUser.uid);
+      for(const docSnap of unreadMessages) {
+          await updateDoc(doc(db, 'chats', chatId as string, 'messages', docSnap.id), { isRead: true });
+      }
+
     });
 
     return () => {
@@ -85,10 +88,10 @@ export default function ChatPage() {
     await addDoc(messagesColRef, {
       text: newMessage,
       senderId: currentUser.uid,
-      timestamp: serverTimestamp()
+      timestamp: serverTimestamp(),
+      isRead: false,
     });
     
-    // Update last message in chat document
     const chatDocRef = doc(db, 'chats', chatId as string);
     await updateDoc(chatDocRef, {
       lastMessage: {
@@ -146,10 +149,20 @@ export default function ChatPage() {
                         </Avatar>
                      )}
                      <div className={cn(
-                        "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words",
+                        "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col",
                         msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background'
                      )}>
-                         {msg.text}
+                         <p>{msg.text}</p>
+                         <div className="flex items-center gap-1.5 self-end mt-1">
+                             <span className="text-xs opacity-70">
+                                {msg.timestamp ? format(msg.timestamp.toDate(), 'HH:mm') : '...'}
+                             </span>
+                             {msg.senderId === currentUser?.uid && (
+                                <div className="relative h-4 w-4">
+                                     <Check className={cn("absolute h-4 w-4", msg.isRead ? "text-primary-foreground" : "text-primary-foreground/50")} />
+                                </div>
+                             )}
+                         </div>
                      </div>
                 </div>
             ))}
@@ -158,7 +171,19 @@ export default function ChatPage() {
         
         <footer className="sticky bottom-0 bg-background border-t p-2">
             <form onSubmit={sendMessage} className="flex items-center gap-2">
-                <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan..." autoComplete="off" />
+                 <Textarea 
+                    value={newMessage} 
+                    onChange={(e) => setNewMessage(e.target.value)} 
+                    placeholder="Ketik pesan..." 
+                    rows={1}
+                    className="resize-none max-h-24 h-10"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage(e);
+                        }
+                    }}
+                 />
                 <Button type="submit" size="icon" disabled={!newMessage.trim()}>
                     <Send className="h-4 w-4" />
                 </Button>
