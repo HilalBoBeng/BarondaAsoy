@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -14,21 +14,6 @@ import { createLog } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from "@/components/ui/label";
 import { Skeleton } from '@/components/ui/skeleton';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import Image from 'next/image';
-
-const popupAnnouncementSchema = z.object({
-  title: z.string().min(1, "Judul tidak boleh kosong."),
-  content: z.string().min(1, "Konten tidak boleh kosong."),
-  imageUrl: z.string().url("URL gambar tidak valid.").optional().or(z.literal('')),
-});
-type PopupAnnouncementFormValues = z.infer<typeof popupAnnouncementSchema>;
-
 
 const toolPageItems = [
     { href: "/admin/users", icon: UsersIcon, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
@@ -46,16 +31,8 @@ const toolPageItems = [
 export default function ToolsAdminPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
-  const [loadingPopup, setLoadingPopup] = useState(true);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
-  const [isSubmittingPopup, setIsSubmittingPopup] = useState(false);
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const form = useForm<PopupAnnouncementFormValues>({
-    resolver: zodResolver(popupAnnouncementSchema),
-    defaultValues: { title: '', content: '', imageUrl: '' },
-  });
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -67,19 +44,9 @@ export default function ToolsAdminPage() {
         setLoadingMaintenance(false);
     });
 
-    const popupRef = doc(db, 'app_settings', 'popup_announcement');
-    const unsubPopup = onSnapshot(popupRef, (docSnap) => {
-        if (docSnap.exists()) {
-            form.reset(docSnap.data());
-        }
-        setLoadingPopup(false);
-    });
-
     return () => {
         unsubSettings();
-        unsubPopup();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMaintenanceToggle = async (checked: boolean) => {
@@ -95,40 +62,6 @@ export default function ToolsAdminPage() {
         setMaintenanceMode(!checked); 
     } finally {
         setLoadingMaintenance(false);
-    }
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
-            return;
-        }
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            form.setValue('imageUrl', reader.result as string, { shouldValidate: true });
-        };
-    }
-  };
-
-  const onPopupSubmit = async (values: PopupAnnouncementFormValues) => {
-    if (!currentAdmin) return;
-    setIsSubmittingPopup(true);
-    try {
-        const popupRef = doc(db, 'app_settings', 'popup_announcement');
-        await setDoc(popupRef, {
-            ...values,
-            updatedAt: serverTimestamp(),
-            setBy: currentAdmin.name,
-        });
-        await createLog(currentAdmin, 'Memperbarui pengumuman popup');
-        toast({ title: 'Berhasil', description: 'Pengumuman popup telah diperbarui.' });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan pengumuman popup.' });
-    } finally {
-        setIsSubmittingPopup(false);
     }
   }
 
@@ -176,46 +109,6 @@ export default function ToolsAdminPage() {
                         </div>
                     </CardContent>
                 </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Speaker className="h-5 w-5" /> Atur Pengumuman Popup</CardTitle>
-                        <CardDescription>Buat pengumuman yang akan muncul saat pengguna membuka aplikasi.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {loadingPopup ? <Skeleton className="h-40 w-full" /> : (
-                        <Form {...form}>
-                          <form onSubmit={form.handleSubmit(onPopupSubmit)} className="space-y-4">
-                             <FormField control={form.control} name="title" render={({ field }) => (
-                                <FormItem><FormLabel>Judul</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                             <FormField control={form.control} name="content" render={({ field }) => (
-                                <FormItem><FormLabel>Konten Teks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                             <FormField control={form.control} name="imageUrl" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Gambar Pengumuman</FormLabel>
-                                    <FormControl>
-                                        <Input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
-                                    </FormControl>
-                                     <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}><ImageIcon className="mr-2 h-4 w-4" /> Pilih Gambar</Button>
-                                    {field.value && (
-                                        <div className="mt-2 relative w-full aspect-video">
-                                            <Image src={field.value} alt="Preview" layout="fill" objectFit="cover" className="rounded-md" />
-                                        </div>
-                                    )}
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                             <Button type="submit" disabled={isSubmittingPopup}>
-                                {isSubmittingPopup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Simpan Pengumuman Popup
-                             </Button>
-                          </form>
-                        </Form>
-                      )}
-                    </CardContent>
-                 </Card>
             </>
         )}
     </div>

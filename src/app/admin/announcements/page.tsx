@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, writeBatch, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Megaphone, Image as ImageIconLucide } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Megaphone, Image as ImageIconLucide, Speaker } from 'lucide-react';
 import type { Announcement, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createLog } from '@/lib/utils';
@@ -30,13 +30,22 @@ const announcementSchema = z.object({
 
 type AnnouncementFormValues = z.infer<typeof announcementSchema>;
 
+interface PopupAnnouncement {
+    imageUrl: string;
+    updatedAt: Timestamp;
+}
+
 export default function AnnouncementsAdminPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPopup, setLoadingPopup] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
   const { toast } = useToast();
+  const [popupData, setPopupData] = useState<PopupAnnouncement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmittingPopup, setIsSubmittingPopup] = useState(false);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema),
@@ -59,7 +68,6 @@ export default function AnnouncementsAdminPage() {
             title: data.title,
             content: data.content,
             date: date instanceof Timestamp ? date.toDate() : date,
-            imageUrl: data.imageUrl,
         }
       }) as Announcement[];
       setAnnouncements(announcementsData);
@@ -69,7 +77,19 @@ export default function AnnouncementsAdminPage() {
       setLoading(false);
       toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat memuat pengumuman.' });
     });
-    return () => unsubscribe();
+
+    const popupRef = doc(db, 'app_settings', 'popup_announcement');
+    const unsubPopup = onSnapshot(popupRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setPopupData(docSnap.data() as PopupAnnouncement);
+        }
+        setLoadingPopup(false);
+    });
+
+    return () => {
+        unsubscribe();
+        unsubPopup();
+    };
   }, [toast]);
   
   useEffect(() => {
@@ -139,6 +159,35 @@ export default function AnnouncementsAdminPage() {
     }
   }
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
+            return;
+        }
+        setIsSubmittingPopup(true);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+            try {
+                const imageUrl = reader.result as string;
+                const popupRef = doc(db, 'app_settings', 'popup_announcement');
+                await setDoc(popupRef, {
+                    imageUrl: imageUrl,
+                    updatedAt: serverTimestamp(),
+                });
+                 if (currentAdmin) await createLog(currentAdmin, 'Memperbarui gambar popup');
+                toast({ title: 'Berhasil', description: 'Gambar popup telah diperbarui.' });
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan gambar popup.' });
+            } finally {
+                setIsSubmittingPopup(false);
+            }
+        };
+    }
+  };
+
   const renderActions = (ann: Announcement) => (
     <div className="flex gap-2 justify-end">
       <Button variant="outline" size="sm" onClick={() => handleDialogOpen(ann)} disabled={isSubmitting}>
@@ -168,8 +217,32 @@ export default function AnnouncementsAdminPage() {
 
   return (
     <>
+      <div className="space-y-6">
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Speaker className="h-5 w-5" /> Atur Gambar Popup Selamat Datang</CardTitle>
+                <CardDescription>Gambar ini akan muncul setiap kali warga membuka aplikasi.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loadingPopup ? <Skeleton className="h-40 w-full" /> : (
+                <div className="flex flex-col items-center gap-4">
+                    {popupData?.imageUrl && (
+                        <div className="relative w-full max-w-sm aspect-video">
+                            <Image src={popupData.imageUrl} alt="Preview Popup" layout="fill" objectFit="contain" className="rounded-md border" />
+                        </div>
+                    )}
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmittingPopup}>
+                        {isSubmittingPopup ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ImageIconLucide className="mr-2 h-4 w-4" />}
+                        {popupData?.imageUrl ? 'Ganti Gambar' : 'Upload Gambar'}
+                    </Button>
+                </div>
+                )}
+            </CardContent>
+        </Card>
+
         <div className="flex justify-between items-center mb-4">
-             <h1 className="text-xl font-bold">Manajemen Pengumuman</h1>
+             <h1 className="text-xl font-bold">Manajemen Pengumuman Teks</h1>
             <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <Button onClick={() => handleDialogOpen()} disabled={isSubmitting} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -218,15 +291,16 @@ export default function AnnouncementsAdminPage() {
           ) : (
              <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
                 <Megaphone className="h-10 w-10 mb-2"/>
-                <p>Belum ada pengumuman.</p>
+                <p>Belum ada pengumuman teks.</p>
             </div>
           )}
         </div>
+      </div>
 
-        <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DrawerContent>
             <DrawerHeader>
-              <DrawerTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DrawerTitle>
+              <DrawerTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman Teks</DrawerTitle>
             </DrawerHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
