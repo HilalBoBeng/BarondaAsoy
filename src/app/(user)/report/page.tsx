@@ -2,15 +2,15 @@
 "use client";
 
 import ReportActivity from '@/components/dashboard/report-activity';
-import ReportHistory from '@/components/profile/report-history';
+import MyReportHistory from '@/components/profile/my-report-history';
+
 
 export default function ReportPage() {
 
     return (
         <div className="space-y-6">
             <ReportActivity />
-            <ReportHistory />
+            <MyReportHistory />
         </div>
     )
 }
-

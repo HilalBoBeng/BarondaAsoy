@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import MyReportHistory from '@/components/profile/my-report-history';
 
 
 const profileSchema = z.object({
@@ -478,6 +479,8 @@ export default function ProfilePage() {
                          
                     </CardContent>
                 </Card>
+
+                 <MyReportHistory />
 
                 <Card>
                     <CardHeader>

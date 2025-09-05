@@ -14,9 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin, ShieldBan } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import type { User } from 'firebase/auth';
+import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { db, app } from '@/lib/firebase/client';
+import { getAuth, type User } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import Link from 'next/link';
 import { Input } from '../ui/input';
@@ -51,10 +51,14 @@ const ThreatLevelBadge = ({ level }: { level: TriageReportOutput['threatLevel'] 
     </Badge>
 }
 
-export default function ReportActivity({ user, userInfo }: { user: User | null, userInfo: AppUser | null }) {
+export default function ReportActivity() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [triageResult, setTriageResult] = useState<TriageReportOutput | null>(null);
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [userInfo, setUserInfo] = useState<AppUser | null>(null);
+  const auth = getAuth(app);
+
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -66,13 +70,27 @@ export default function ReportActivity({ user, userInfo }: { user: User | null, 
   });
   
   useEffect(() => {
-    if (user) {
-      form.setValue('reporterName', user.displayName || user.email || '');
-    }
-  }, [user, form]);
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+        setUser(currentUser);
+        if (currentUser) {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data() as AppUser;
+                setUserInfo(userData);
+                form.setValue('reporterName', userData.displayName || currentUser.email || '');
+            }
+        }
+    });
+    return () => unsubscribe();
+  }, [auth, form]);
 
 
   const onSubmit = async (data: ReportFormValues) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Anda harus masuk untuk melapor.' });
+        return;
+    }
     setIsSubmitting(true);
     setTriageResult(null);
     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
@@ -110,27 +128,6 @@ export default function ReportActivity({ user, userInfo }: { user: User | null, 
       setIsSubmitting(false);
     }
   };
-  
-  if (!user) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-center p-4 border-2 border-dashed rounded-lg">
-                    <p className="mb-4 text-muted-foreground">Anda harus masuk untuk membuat laporan.</p>
-                    <Button asChild>
-                        <Link href="/auth/login">
-                            <LogIn className="mr-2 h-4 w-4" />
-                            Masuk untuk Melapor
-                        </Link>
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
-    );
-  }
   
   if (userInfo?.isBlocked) {
     return (
