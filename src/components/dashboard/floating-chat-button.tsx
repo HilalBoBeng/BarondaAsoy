@@ -71,7 +71,7 @@ export default function FloatingChatButton() {
   return (
     <Link href="/chat">
         <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-40 bg-primary hover:bg-primary/90 flex items-center justify-center"
+        className="fixed bottom-20 sm:bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-40 bg-primary hover:bg-primary/90 flex items-center justify-center"
         >
         <MessageSquare className="h-7 w-7 text-primary-foreground" />
         {unreadCount > 0 && (
