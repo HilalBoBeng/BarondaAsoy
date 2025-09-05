@@ -130,7 +130,19 @@ export default function MainDashboardView() {
     <div className="flex min-h-screen flex-col bg-muted/40">
         <WelcomeAnnouncement />
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <h1 className="text-xl font-bold text-primary">Baronda</h1>
+            <div className="flex items-center gap-2 text-right">
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+              <div className="flex flex-col">
+                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+            </div>
              <div className="flex items-center gap-1">
                 <UserNav user={user} userInfo={userInfo} />
              </div>

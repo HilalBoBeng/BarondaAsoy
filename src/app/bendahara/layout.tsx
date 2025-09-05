@@ -138,17 +138,19 @@ export default function BendaharaLayout({
     <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <div className="w-full flex justify-between items-center">
-           <div className="flex-1">
-                 <Link href="/bendahara" className="flex items-center gap-2">
-                    <Image 
-                    src="https://iili.io/KJ4aGxp.png"
-                    alt="Logo" 
-                    width={32} 
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                    />
-                </Link>
-           </div>
+            <div className="flex items-center gap-2 text-right">
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+              <div className="flex flex-col">
+                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+            </div>
         </div>
       </header>
       <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
