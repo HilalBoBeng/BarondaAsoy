@@ -251,9 +251,11 @@ export default function BendaharaHonorariumPage() {
                               <AvatarImage src={s.photoURL || undefined} />
                               <AvatarFallback>{s.name.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
-                            <div>
+                            <div className="flex flex-col items-start">
                                 <p className="font-medium">{s.name}</p>
-                                {s.role && <Badge variant="outline" className="mt-1">{roleDisplay[s.role] || s.role}</Badge>}
+                                {s.role && (s.role === 'admin' || s.role === 'bendahara') && (
+                                    <Badge variant="outline" className="mt-1">{roleDisplay[s.role] || s.role}</Badge>
+                                )}
                             </div>
                           </div>
                         </TableCell>
