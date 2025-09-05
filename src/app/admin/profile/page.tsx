@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { KeyRound, User, Phone, MapPin, Lock, Pencil, Camera, Trash } from "lucide-react";
+import { KeyRound, User, Phone, MapPin, Lock, Pencil, Camera, Trash, LogOut } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Staff } from "@/lib/types";
@@ -409,6 +409,18 @@ export default function AdminProfilePage() {
                 </CardContent>
             </Card>
 
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-base text-destructive">Keluar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                     <Button variant="destructive" className="w-full" onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
+                    </Button>
+                </CardContent>
+            </Card>
+
+
             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
                 <DialogContent>
                     <DialogHeader>
@@ -465,3 +477,5 @@ export default function AdminProfilePage() {
         </div>
     );
 }
+
+    
