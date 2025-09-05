@@ -70,8 +70,7 @@ export default function UsersAdminPage() {
     const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
     const staffQuery = query(
         collection(db, "staff"), 
-        where('role', 'in', ['petugas', 'bendahara']),
-        orderBy("createdAt", "desc")
+        where('role', 'in', ['petugas', 'bendahara'])
     );
     
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -95,6 +94,7 @@ export default function UsersAdminPage() {
             createdAt: doc.data().createdAt?.toDate() || new Date()
         })) as Staff[];
         
+        staffData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
         setStaff(staffData);
         setLoading(false);
     }, (error) => {
