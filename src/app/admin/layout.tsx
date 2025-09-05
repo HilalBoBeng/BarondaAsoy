@@ -25,8 +25,8 @@ import { getAuth } from "firebase/auth";
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
     { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan', id: 'reports', roles: ['admin'], badgeKey: 'newReports' },
-    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal', id: 'schedule', roles: ['admin'], badgeKey: 'newReports' },
-    { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin', 'bendahara'], badgeKey: 'unreadNotifications' },
+    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal', id: 'schedule', roles: ['admin'] },
+    { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin', 'bendahara'] },
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
 ];
 
@@ -54,7 +54,7 @@ export default function AdminLayout({
   const router = useRouter();
   const auth = getAuth();
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, unreadNotifications: 0 });
+  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0 });
 
   useInactivityTimeout();
 
@@ -77,7 +77,7 @@ export default function AdminLayout({
         const regex = new RegExp(`^${key.replace(/\[.*?\]/g, '[^/]+')}$`);
         return regex.test(pathname);
     });
-    return dynamicRouteMatch ? pageTitles[dynamicRouteMatch] : '';
+    return dynamicRouteMatch ? pageTitles[dynamicRouteMatch] : 'Admin';
   };
 
 
@@ -106,14 +106,10 @@ export default function AdminLayout({
 
     const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
     const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
-    
-    const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', storedStaffInfo.id), where('read', '==', false));
-    const unsubNotifs = onSnapshot(notifsQuery, (snap) => setBadgeCounts(prev => ({...prev, unreadNotifications: snap.size})));
 
     return () => {
       unsubStaff();
       unsubReports();
-      unsubNotifs();
     }
   }, [router, auth]);
   

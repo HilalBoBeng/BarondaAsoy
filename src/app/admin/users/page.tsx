@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,7 +52,7 @@ export default function UsersAdminPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
+  const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
   const [selectedUserForAction, setSelectedUserForAction] = useState<AppUser | Staff | null>(null);
   const [actionType, setActionType] = useState<'suspend' | 'block' | 'delete' | null>(null);
 
@@ -118,11 +118,11 @@ export default function UsersAdminPage() {
       });
   };
 
-  const openActionDialog = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete') => {
+  const openActionDrawer = (user: AppUser | Staff, type: 'suspend' | 'block' | 'delete') => {
       setSelectedUserForAction(user);
       setActionType(type);
       actionReasonForm.reset();
-      setIsActionDialogOpen(true);
+      setIsActionDrawerOpen(true);
   }
 
   const onActionSubmit = async (values: ActionReasonFormValues) => {
@@ -170,7 +170,7 @@ export default function UsersAdminPage() {
             toast({ title: 'Berhasil', description: `Pengguna berhasil di${actionType === 'suspend' ? 'tangguhkan' : 'blokir'}.` });
             await createLog(logAction, userName || docId);
         }
-        setIsActionDialogOpen(false);
+        setIsActionDrawerOpen(false);
         if (isUserDetailOpen) setIsUserDetailOpen(false);
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal', description: `Gagal melakukan tindakan.` });
@@ -368,100 +368,101 @@ export default function UsersAdminPage() {
       </CardContent>
     </Card>
 
-    <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-      <DialogContent className="p-0 border-0 max-w-sm">
-       <DialogTitle className="sr-only">Detail Pengguna</DialogTitle>
-          {selectedUserForDetail && (
-              <Card className="border-0 shadow-none">
-                  <CardContent className="p-6 text-center">
-                      <button onClick={() => handleImageZoom('photoURL' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)} className="mx-auto">
-                          <Avatar className="h-24 w-24 border-4 border-muted">
-                              <AvatarImage src={'photoURL' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
-                              <AvatarFallback className="text-4xl">
-                                  {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
-                              </AvatarFallback>
-                          </Avatar>
-                      </button>
-                      <h2 className="text-xl font-bold mt-2">
-                          {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
-                      </h2>
-                      <p className="text-sm text-muted-foreground">{selectedUserForDetail.email}</p>
-                      <div className="space-y-3 text-sm text-left border-t mt-4 pt-4">
-                          <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
-                          <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
-                           {'points' in selectedUserForDetail && (
-                              <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
-                          )}
-                           {'role' in selectedUserForDetail && selectedUserForDetail.role && (
-                              <div className="flex items-start gap-3"><Wallet className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Peran: {toTitleCase(selectedUserForDetail.role)}</span></div>
-                          )}
-                          {'createdAt' in selectedUserForDetail && selectedUserForDetail.createdAt && (
-                             <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format(selectedUserForDetail.createdAt as Date, "d MMMM yyyy", { locale: localeId })}</span></div>
+    <Drawer open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
+      <DrawerContent>
+        {selectedUserForDetail && (
+          <>
+            <DrawerHeader className="text-center">
+              <button onClick={() => handleImageZoom('photoURL' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined)} className="mx-auto">
+                <Avatar className="h-24 w-24 border-4 border-muted">
+                    <AvatarImage src={'photoURL' in selectedUserForDetail ? selectedUserForDetail.photoURL : undefined} />
+                    <AvatarFallback className="text-4xl">
+                        {('displayName' in selectedUserForDetail ? selectedUserForDetail.displayName?.charAt(0) : selectedUserForDetail.name.charAt(0))?.toUpperCase()}
+                    </AvatarFallback>
+                </Avatar>
+              </button>
+              <DrawerTitle className="mt-2">
+                {'displayName' in selectedUserForDetail ? selectedUserForDetail.displayName : selectedUserForDetail.name}
+              </DrawerTitle>
+              <DrawerDescription>{selectedUserForDetail.email}</DrawerDescription>
+            </DrawerHeader>
+            <DrawerBody>
+              <div className="space-y-3 text-sm text-left border-t mt-4 pt-4">
+                  <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.phone || 'Tidak ada no. HP'}</span></div>
+                  <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{'addressDetail' in selectedUserForDetail ? (selectedUserForDetail.addressType === 'kilongan' ? 'Kilongan' : selectedUserForDetail.addressDetail) : 'Alamat tidak tersedia'}</span></div>
+                   {'points' in selectedUserForDetail && (
+                      <div className="flex items-start gap-3"><Star className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{selectedUserForDetail.points || 0} Poin</span></div>
+                  )}
+                   {'role' in selectedUserForDetail && selectedUserForDetail.role && (
+                      <div className="flex items-start gap-3"><Wallet className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Peran: {toTitleCase(selectedUserForDetail.role)}</span></div>
+                  )}
+                  {'createdAt' in selectedUserForDetail && selectedUserForDetail.createdAt && (
+                     <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format(selectedUserForDetail.createdAt as Date, "d MMMM yyyy", { locale: localeId })}</span></div>
+                  )}
+              </div>
+            </DrawerBody>
+            <DrawerFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4 border-t bg-muted/50">
+              {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? null : (
+                  <>
+                      <div className="flex gap-2 justify-end">
+                          {('isBlocked' in selectedUserForDetail && (selectedUserForDetail.isBlocked || selectedUserForDetail.isSuspended)) || ('status' in selectedUserForDetail && selectedUserForDetail.status === 'suspended') ? (
+                              <Button variant="outline" onClick={() => handleRemoveRestriction(selectedUserForDetail)} className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700">
+                                  <ShieldCheck className="mr-2 h-4 w-4" /> Cabut Batasan
+                              </Button>
+                          ) : (
+                              <>
+                                  <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDrawer(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
+                                    <ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan
+                                  </Button>
+                                  <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDrawer(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
+                                    <ShieldX className="mr-2 h-4 w-4"/> Blokir
+                                  </Button>
+                              </>
                           )}
                       </div>
-                  </CardContent>
-                  <CardFooter className="flex-col sm:flex-col sm:space-x-0 gap-2 items-stretch pt-4 border-t bg-muted/50 p-6">
-                      {'status' in selectedUserForDetail && selectedUserForDetail.status === 'pending' ? null : (
-                          <>
-                              <div className="flex gap-2 justify-end">
-                                  {('isBlocked' in selectedUserForDetail && (selectedUserForDetail.isBlocked || selectedUserForDetail.isSuspended)) || ('status' in selectedUserForDetail && selectedUserForDetail.status === 'suspended') ? (
-                                      <Button variant="outline" onClick={() => handleRemoveRestriction(selectedUserForDetail)} className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700">
-                                          <ShieldCheck className="mr-2 h-4 w-4" /> Cabut Batasan
-                                      </Button>
-                                  ) : (
-                                      <>
-                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
-                                            <ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan
-                                          </Button>
-                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
-                                            <ShieldX className="mr-2 h-4 w-4"/> Blokir
-                                          </Button>
-                                      </>
-                                  )}
-                              </div>
-                              <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id || (selectedUserForDetail as Staff)?.role === 'admin'}>
-                                        <Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini
-                                      </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                          <AlertDialogTitle>Hapus Pengguna Ini?</AlertDialogTitle>
-                                          <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Semua data terkait pengguna ini akan dihapus.</AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => openActionDialog(selectedUserForDetail, 'delete')}>Ya, Hapus</AlertDialogAction>
-                                      </AlertDialogFooter>
-                                  </AlertDialogContent>
-                              </AlertDialog>
-                          </>
-                      )}
-                  </CardFooter>
-              </Card>
-          )}
-      </DialogContent>
-    </Dialog>
+                      <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id || (selectedUserForDetail as Staff)?.role === 'admin'}>
+                                <Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>Hapus Pengguna Ini?</AlertDialogTitle>
+                                  <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Semua data terkait pengguna ini akan dihapus.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => openActionDrawer(selectedUserForDetail, 'delete')}>Ya, Hapus</AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                  </>
+              )}
+            </DrawerFooter>
+          </>
+        )}
+      </DrawerContent>
+    </Drawer>
 
     
-    <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                 <DialogTitle>
+    <Drawer open={isActionDrawerOpen} onOpenChange={setIsActionDrawerOpen}>
+        <DrawerContent>
+            <DrawerHeader>
+                 <DrawerTitle>
                     {actionType === 'block' ? 'Blokir' :
                      actionType === 'suspend' ? 'Tangguhkan' :
                      'Hapus'} Pengguna
-                </DialogTitle>
-                <DialogDescription>
+                </DrawerTitle>
+                <DrawerDescription>
                   {actionType === 'delete' ? 'Tindakan ini akan menghapus akun secara permanen. Mohon jelaskan alasannya.' :
                    `Pengguna yang di${actionType === 'block' ? 'blokir' : 'tangguhkan'} tidak akan bisa masuk ke aplikasi. Mohon jelaskan alasannya.`
                   }
-                </DialogDescription>
-            </DialogHeader>
+                </DrawerDescription>
+            </DrawerHeader>
              <Form {...actionReasonForm}>
                 <form onSubmit={actionReasonForm.handleSubmit(onActionSubmit)}>
-                    <DialogBody className="space-y-4">
+                    <DrawerBody className="space-y-4">
                         <FormField
                         control={actionReasonForm.control}
                         name="reason"
@@ -498,27 +499,20 @@ export default function UsersAdminPage() {
                             )}
                             />
                         )}
-                    </DialogBody>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsActionDialogOpen(false)}>Batal</Button>
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsActionDrawerOpen(false)}>Batal</Button>
                         <Button type="submit" variant={'destructive'} disabled={isSubmitting || !actionReasonForm.formState.isValid}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {actionType === 'block' ? 'Blokir Pengguna' :
                               actionType === 'suspend' ? 'Tangguhkan' :
                               'Hapus Permanen'}
                         </Button>
-                    </DialogFooter>
+                    </DrawerFooter>
                 </form>
             </Form>
-        </DialogContent>
-    </Dialog>
-    
-    <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-        <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
-            <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
-            <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-        </DialogContent>
-    </Dialog>
+        </DrawerContent>
+    </Drawer>
     </>
   );
 }
