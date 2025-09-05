@@ -18,16 +18,8 @@ import { collection, onSnapshot, query, where, getDoc, doc, updateDoc } from "fi
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import NotPermittedPage from "@/app/not-permitted/page";
 import type { Staff } from "@/lib/types";
 import { getAuth } from "firebase/auth";
-
-interface MenuConfig {
-  id: string;
-  label: string;
-  visible: boolean;
-  locked: boolean;
-}
 
 const navItemsList = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
@@ -63,9 +55,6 @@ export default function PetugasLayout({
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, unreadNotifications: 0 });
-  const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
-  const [loadingConfig, setLoadingConfig] = useState(true);
-  const [isAccessDenied, setIsAccessDenied] = useState(false);
   const [isScanPage, setIsScanPage] = useState(false);
 
   useInactivityTimeout();
@@ -77,11 +66,7 @@ export default function PetugasLayout({
   }
   
   const navItems = useMemo(() => navItemsList
-    .map(item => {
-      const config = menuConfig.find(c => c.id === item.id);
-      return { ...item, ...config, badge: getBadgeCount(item.badgeKey) };
-    })
-    .filter(item => item.visible), [menuConfig, badgeCounts]);
+    .map(item => ({ ...item, badge: getBadgeCount(item.badgeKey) })), [badgeCounts]);
 
 
   useEffect(() => {
@@ -108,20 +93,6 @@ export default function PetugasLayout({
             }
         });
 
-        const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-        const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const fullConfig = navItemsList.map(initial => {
-              const saved = docSnap.data().config?.find((c: MenuConfig) => c.id === initial.id);
-              return { ...initial, ...saved };
-            });
-            setMenuConfig(fullConfig);
-          } else {
-            setMenuConfig(navItemsList.map(item => ({...item, visible: true, locked: false})));
-          }
-          setLoadingConfig(false);
-        });
-
         const reportsRef = collection(db, 'reports');
         const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
         const myReportsQuery = query(reportsRef, where('handlerId', '==', storedStaffInfo.id), where('status', '==', 'in_progress'));
@@ -135,7 +106,7 @@ export default function PetugasLayout({
         const unsubNotifs = onSnapshot(notifsQuery, (snap) => setBadgeCounts(prev => ({...prev, unreadNotifications: snap.size})));
         
         return () => {
-          unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubMenu(); unsubNotifs();
+          unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubNotifs();
         }
     } else {
       router.replace('/auth/staff-login');
@@ -143,39 +114,11 @@ export default function PetugasLayout({
   }, [router, auth]);
   
   useEffect(() => {
-    if (loadingConfig) return;
-
-    const currentTopLevelPath = `/petugas/${pathname.split('/')[2] || ''}`;
-    const currentNavItem = navItemsList.find(item => item.href === currentTopLevelPath);
-    
-    if (currentNavItem) {
-        const config = menuConfig.find(c => c.id === currentNavItem.id);
-        if (config && (config.locked || !config.visible)) {
-            setIsAccessDenied(true);
-        } else {
-            setIsAccessDenied(false);
-        }
-    } else {
-        setIsAccessDenied(false);
-    }
-    
     setIsScanPage(pathname === '/petugas/scan');
-  }, [pathname, menuConfig, loadingConfig]);
+  }, [pathname]);
   
-  if (!isClient || loadingConfig || !staffInfo) {
+  if (!isClient || !staffInfo) {
       return <LoadingSkeleton />;
-  }
-
-  if (isAccessDenied) {
-    return (
-      <html lang="id">
-        <body>
-          <Suspense fallback={<LoadingSkeleton />}>
-            <NotPermittedPage />
-          </Suspense>
-        </body>
-      </html>
-    );
   }
   
   if (isScanPage) {

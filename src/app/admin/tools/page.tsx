@@ -30,28 +30,11 @@ const toolPageItems = [
     { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin'] },
 ];
 
-interface MenuConfig {
-  id: string;
-  label: string;
-  visible: boolean;
-  locked: boolean;
-}
-
-const initialMenuConfig: MenuConfig[] = [
-    { id: 'dashboard', label: 'Dasbor', visible: true, locked: false },
-    { id: 'reports', label: 'Laporan', visible: true, locked: false },
-    { id: 'schedule', label: 'Jadwal', visible: true, locked: false },
-    { id: 'tools', label: 'Lainnya', visible: true, locked: false },
-    { id: 'profile', label: 'Profil', visible: true, locked: false },
-];
-
 export default function ToolsAdminPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
-  const [loadingMenuConfig, setLoadingMenuConfig] = useState(true);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [menuConfig, setMenuConfig] = useState<MenuConfig[]>(initialMenuConfig);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -63,19 +46,6 @@ export default function ToolsAdminPage() {
         if (docSnap.exists()) setMaintenanceMode(docSnap.data().maintenanceMode || false);
         setLoadingMaintenance(false);
     });
-
-    const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-    const unsubMenuConfig = onSnapshot(menuConfigRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const savedConfig = docSnap.data().config;
-            const fullConfig = initialMenuConfig.map(initialItem => {
-                const savedItem = savedConfig.find((item: MenuConfig) => item.id === initialItem.id);
-                return savedItem ? savedItem : initialItem;
-            });
-            setMenuConfig(fullConfig);
-        }
-        setLoadingMenuConfig(false);
-    });
     
     if (info?.id) {
         const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', info.id), where('read', '==', false));
@@ -83,13 +53,11 @@ export default function ToolsAdminPage() {
         return () => {
             unsubSettings();
             unsubNotifs();
-            unsubMenuConfig();
         };
     }
 
     return () => {
         unsubSettings();
-        unsubMenuConfig();
     };
   }, []);
 
@@ -108,23 +76,7 @@ export default function ToolsAdminPage() {
         setLoadingMaintenance(false);
     }
   }
-
-  const handleMenuConfigChange = async (id: string, key: 'visible' | 'locked', value: boolean) => {
-    const newConfig = menuConfig.map(item => item.id === id ? { ...item, [key]: value } : item);
-    setMenuConfig(newConfig);
-
-    try {
-        const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-        await setDoc(menuConfigRef, { config: newConfig });
-        toast({ title: 'Pengaturan Menu Disimpan', description: `Pengaturan untuk menu ${id} telah diperbarui.` });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Gagal menyimpan pengaturan menu.' });
-        // Revert UI change on failure
-        setMenuConfig(menuConfig.map(item => item.id === id ? { ...item, [key]: !value } : item));
-    }
-  };
-
-
+  
   const isAdmin = currentAdmin?.role === 'admin';
 
   return (
@@ -178,35 +130,6 @@ export default function ToolsAdminPage() {
                             </div>
                             {loadingMaintenance ? <Skeleton className="h-6 w-10" /> : <Switch id="maintenance-mode" checked={maintenanceMode} onCheckedChange={handleMaintenanceToggle} />}
                         </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Pengaturan Menu Petugas</CardTitle>
-                        <CardDescription>Atur menu yang dapat diakses oleh petugas.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {loadingMenuConfig ? (
-                            Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
-                        ) : (
-                           menuConfig.map((item, index) => (
-                               <div key={item.id}>
-                                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                                       <Label htmlFor={`visible-${item.id}`} className="flex-1 font-semibold">{item.label}</Label>
-                                       <div className="flex items-center space-x-4">
-                                            <div className="flex items-center space-x-2">
-                                                <Label htmlFor={`visible-${item.id}`} className="text-xs text-muted-foreground">Tampilkan</Label>
-                                                <Switch id={`visible-${item.id}`} checked={item.visible} onCheckedChange={(checked) => handleMenuConfigChange(item.id, 'visible', checked)} />
-                                            </div>
-                                             <div className="flex items-center space-x-2">
-                                                <Label htmlFor={`locked-${item.id}`} className="text-xs text-muted-foreground">Kunci</Label>
-                                                <Switch id={`locked-${item.id}`} checked={item.locked} onCheckedChange={(checked) => handleMenuConfigChange(item.id, 'locked', checked)} disabled={!item.visible} />
-                                            </div>
-                                       </div>
-                                   </div>
-                               </div>
-                           ))
-                        )}
                     </CardContent>
                 </Card>
             </>
