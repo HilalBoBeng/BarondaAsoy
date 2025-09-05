@@ -23,7 +23,6 @@ import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,6 +61,7 @@ export default function BendaharaProfilePage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
     const [zoomedImageUrl, setZoomedImageUrl] = useState('');
+    const [isLogoutDrawerOpen, setIsLogoutDrawerOpen] = useState(false);
     const router = useRouter();
     const { toast } = useToast();
 
@@ -374,25 +374,9 @@ export default function BendaharaProfilePage() {
                     <CardTitle className="text-base text-destructive">Keluar</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="w-full">
-                                <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                             <AlertDialogHeader>
-                                <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Anda yakin ingin keluar dari akun Anda?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleLogout}>Ya, Keluar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    <Button variant="destructive" className="w-full" onClick={() => setIsLogoutDrawerOpen(true)}>
+                        <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
+                    </Button>
                 </CardContent>
             </Card>
             
@@ -456,6 +440,23 @@ export default function BendaharaProfilePage() {
                             </DrawerFooter>
                         </form>
                     </Form>
+                </DrawerContent>
+            </Drawer>
+
+            <Drawer open={isLogoutDrawerOpen} onOpenChange={setIsLogoutDrawerOpen}>
+                <DrawerContent>
+                    <DrawerHeader className="text-center">
+                        <DrawerTitle>Konfirmasi Keluar</DrawerTitle>
+                        <DrawerDescription>
+                            Anda yakin ingin keluar dari akun Anda?
+                        </DrawerDescription>
+                    </DrawerHeader>
+                    <DrawerFooter className="flex-col-reverse">
+                        <DrawerClose asChild>
+                            <Button variant="secondary">Batal</Button>
+                        </DrawerClose>
+                        <Button variant="destructive" onClick={handleLogout}>Ya, Keluar</Button>
+                    </DrawerFooter>
                 </DrawerContent>
             </Drawer>
 
