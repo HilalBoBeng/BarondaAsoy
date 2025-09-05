@@ -21,7 +21,7 @@ import { db } from "@/lib/firebase/client";
 import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -415,9 +415,25 @@ export default function AdminProfilePage() {
                     <CardTitle className="text-base text-destructive">Keluar</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     <Button variant="destructive" className="w-full" onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" className="w-full">
+                                <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Anda yakin ingin keluar dari akun Anda?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleLogout}>Ya, Keluar</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </CardContent>
             </Card>
 

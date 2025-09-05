@@ -7,7 +7,7 @@ import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ScheduleEntry } from '@/lib/types';
-import { notFound, useSearchParams } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Calendar, Clock, User, MapPin, Loader2, RefreshCw, QrCode, CheckCircle, Hourglass } from 'lucide-react';
@@ -19,8 +19,9 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-export default function ScheduleDetailPage({ params }: { params: { scheduleId: string } }) {
-  const { scheduleId } = params;
+export default function ScheduleDetailPage() {
+  const params = useParams();
+  const scheduleId = params.scheduleId as string;
   const [schedule, setSchedule] = useState<ScheduleEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
