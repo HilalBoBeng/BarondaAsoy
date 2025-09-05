@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { DuesPayment, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Loader2, ArrowLeft, Eye, Edit, Trash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -221,14 +221,14 @@ export default function BendaharaUserDuesHistoryPage() {
         </CardContent>
       </Card>
       
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Jumlah Iuran</DialogTitle>
-          </DialogHeader>
+      <Drawer open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Edit Jumlah Iuran</DrawerTitle>
+          </DrawerHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onEditSubmit)}>
-              <DialogBody className="space-y-4 pt-4">
+              <DrawerBody>
                 <FormField
                   control={form.control}
                   name="amount"
@@ -252,18 +252,18 @@ export default function BendaharaUserDuesHistoryPage() {
                     </FormItem>
                   )}
                 />
-              </DialogBody>
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+              </DrawerBody>
+              <DrawerFooter>
+                <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>
                 <Button type="submit" disabled={isSubmitting || !isValid}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Simpan Perubahan
                 </Button>
-              </DialogFooter>
+              </DrawerFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

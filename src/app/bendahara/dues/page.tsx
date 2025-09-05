@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Bell, Loader2, Search, MessageSquareWarning, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody, DialogDescription } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose, DrawerBody, DrawerDescription } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -350,7 +350,7 @@ export default function BendaharaDuesPage() {
             </Table>
           </div>
         </div>
-      </CardContent>
+      </CardFooter>
       <CardFooter>
         <div className="flex items-center justify-end space-x-2 w-full">
             <Button
@@ -374,15 +374,16 @@ export default function BendaharaDuesPage() {
       </CardFooter>
     </Card>
 
-    <Dialog open={isRecordDuesOpen} onOpenChange={setIsRecordDuesOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Catat Pembayaran Iuran</DialogTitle>
-                <DialogDescription>Periode: {selectedMonth} {selectedYear}</DialogDescription>
-            </DialogHeader>
+    <Drawer open={isRecordDuesOpen} onOpenChange={setIsRecordDuesOpen}>
+        <DrawerContent>
+            <DrawerHeader>
+                <DrawerTitle>Catat Pembayaran Iuran</DrawerTitle>
+                <DrawerDescription>Periode: {selectedMonth} {selectedYear}</DrawerDescription>
+            </DrawerHeader>
             <Form {...recordDuesForm}>
                 <form onSubmit={recordDuesForm.handleSubmit(onRecordDuesSubmit)}>
-                    <DialogBody className="space-y-4">
+                    <DrawerBody>
+                      <div className="space-y-4">
                         <FormField
                             control={recordDuesForm.control}
                             name="userId"
@@ -428,18 +429,19 @@ export default function BendaharaDuesPage() {
                                 </FormItem>
                             )}
                         />
-                    </DialogBody>
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                      </div>
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Simpan Pembayaran
                         </Button>
-                    </DialogFooter>
+                    </DrawerFooter>
                 </form>
             </Form>
-        </DialogContent>
-    </Dialog>
+        </DrawerContent>
+    </Drawer>
     </>
   );
 }

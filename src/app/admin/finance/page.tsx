@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -175,6 +175,7 @@ export default function FinancePage() {
   const canAddTransaction = adminInfo?.role === 'bendahara';
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -266,14 +267,15 @@ export default function FinancePage() {
           </div>
         </div>
       </CardContent>
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Tambah Transaksi Baru</DialogTitle>
-              </DialogHeader>
+      </Card>
+      <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DrawerContent>
+              <DrawerHeader>
+                  <DrawerTitle>Tambah Transaksi Baru</DrawerTitle>
+              </DrawerHeader>
               <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)}>
-                      <DialogBody className="space-y-4">
+                      <DrawerBody className="space-y-4">
                           <FormField control={form.control} name="type" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Tipe Transaksi</FormLabel>
@@ -315,18 +317,18 @@ export default function FinancePage() {
                                 <FormItem><FormLabel>Sebutkan Kategori Lainnya</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                              )} />
                           )}
-                      </DialogBody>
-                      <DialogFooter>
-                          <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                      </DrawerBody>
+                      <DrawerFooter>
+                          <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>
                           <Button type="submit" disabled={isSubmitting}>
                               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                               Simpan Transaksi
                           </Button>
-                      </DialogFooter>
+                      </DrawerFooter>
                   </form>
               </Form>
-          </DialogContent>
-      </Dialog>
-    </Card>
+          </DrawerContent>
+      </Drawer>
+    </>
   );
 }

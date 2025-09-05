@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, Timestamp, where, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -297,15 +297,15 @@ export default function BendaharaHonorariumPage() {
         </CardContent>
       </Card>
       
-      <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Catat Pembayaran Honor</DialogTitle>
+      <Drawer open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
+        <DrawerContent>
+            <DrawerHeader>
+                <DrawerTitle>Catat Pembayaran Honor</DrawerTitle>
                 <CardDescription>Untuk: <strong>{selectedStaffForPayment?.name}</strong><br/>Periode: {selectedMonth} {selectedYear}</CardDescription>
-            </DialogHeader>
+            </DrawerHeader>
              <Form {...paymentForm}>
                 <form onSubmit={paymentForm.handleSubmit(onPaymentSubmit)}>
-                    <DialogBody>
+                    <DrawerBody>
                          <FormField control={paymentForm.control} name="amount" render={({ field }) => (
                             <FormItem>
                             <FormLabel>Jumlah (Rp)</FormLabel>
@@ -325,18 +325,18 @@ export default function BendaharaHonorariumPage() {
                             <FormMessage />
                             </FormItem>
                         )} />
-                    </DialogBody>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="secondary" type="button">Batal</Button></DialogClose>
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <DrawerClose asChild><Button variant="secondary" type="button">Batal</Button></DrawerClose>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Konfirmasi Pembayaran
                         </Button>
-                    </DialogFooter>
+                    </DrawerFooter>
                 </form>
              </Form>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

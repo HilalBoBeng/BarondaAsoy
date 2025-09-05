@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -118,6 +118,7 @@ export default function EmergencyContactsAdminPage() {
   );
 
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -191,47 +192,51 @@ export default function EmergencyContactsAdminPage() {
                 </TableBody>
             </Table>
           </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-lg w-[90%] rounded-lg">
-            <DialogHeader>
-              <DialogTitle>{currentContact ? 'Edit' : 'Tambah'} Kontak</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nama Kontak</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="number" render={({ field }) => (
-                  <FormItem><FormLabel>Nomor Telepon</FormLabel><FormControl><Input {...field} type="tel" /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="type" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Tipe Kontak</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="police">Polisi</SelectItem>
-                                <SelectItem value="fire">Pemadam Kebakaran</SelectItem>
-                                <SelectItem value="medical">Medis/Ambulans</SelectItem>
-                                <SelectItem value="other">Lainnya</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-                    <Button type="submit" disabled={isSubmitting || !isValid}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Simpan
-                    </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
+    <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DrawerContent>
+            <DrawerHeader>
+                <DrawerTitle>{currentContact ? 'Edit' : 'Tambah'} Kontak</DrawerTitle>
+            </DrawerHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <DrawerBody>
+                        <div className="space-y-4">
+                            <FormField control={form.control} name="name" render={({ field }) => (
+                                <FormItem><FormLabel>Nama Kontak</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="number" render={({ field }) => (
+                                <FormItem><FormLabel>Nomor Telepon</FormLabel><FormControl><Input {...field} type="tel" /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={form.control} name="type" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tipe Kontak</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="police">Polisi</SelectItem>
+                                            <SelectItem value="fire">Pemadam Kebakaran</SelectItem>
+                                            <SelectItem value="medical">Medis/Ambulans</SelectItem>
+                                            <SelectItem value="other">Lainnya</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>
+                        <Button type="submit" disabled={isSubmitting || !isValid}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Simpan
+                        </Button>
+                    </DrawerFooter>
+                </form>
+            </Form>
+        </DrawerContent>
+    </Drawer>
+    </>
   );
 }
