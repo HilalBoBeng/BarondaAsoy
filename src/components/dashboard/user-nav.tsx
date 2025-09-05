@@ -163,7 +163,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
       </div>
 
      {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-in fade-in-0">
+        <div className="fixed inset-0 z-50 bg-background animate-in fade-in-0">
             <div className="flex items-center border-b px-4 h-16">
                  <Input 
                    ref={searchInputRef}
@@ -258,7 +258,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                     <div className="relative w-full h-full">
                        <Image
                            src={imagePopupNotification.imageUrl}
-                           alt={imagePopupNotification.title}
+                           alt={imagePopupNotification.title || 'Pengumuman'}
                            layout="fill"
                            objectFit="contain"
                            className="rounded-lg"
