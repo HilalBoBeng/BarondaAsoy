@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, PlusCircle, Trash, User, Eye } from 'lucide-react';
+import { Loader2, Send, PlusCircle, Trash, User, Eye, Bell } from 'lucide-react';
 import type { AppUser, Notification, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
