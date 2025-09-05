@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc, Timestamp, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc, Timestamp, getDocs, deleteDoc, increment } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,46 @@ interface Chat {
   userPhotos: { [key: string]: string };
   typing?: { [key: string]: boolean };
   lastActive?: { [key: string]: Timestamp };
+  unreadCount?: { [key: string]: number };
 }
+
+function ChatSkeleton() {
+    return (
+        <div className="flex flex-col h-screen">
+            <header className="sticky top-0 z-10 flex items-center gap-4 p-3 border-b bg-background shadow-sm">
+                <Skeleton className="h-9 w-9 rounded-md" />
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 space-y-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                </div>
+            </header>
+            <div className="flex-1 p-4 space-y-4">
+                <div className="flex items-end gap-2 justify-start">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-10 w-48 rounded-lg" />
+                </div>
+                <div className="flex items-end gap-2 justify-end">
+                    <Skeleton className="h-10 w-32 rounded-lg" />
+                </div>
+                 <div className="flex items-end gap-2 justify-start">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-16 w-64 rounded-lg" />
+                </div>
+                 <div className="flex items-end gap-2 justify-end">
+                    <Skeleton className="h-10 w-40 rounded-lg" />
+                </div>
+            </div>
+            <footer className="sticky bottom-0 bg-background border-t p-2">
+                <div className="flex items-center gap-2 p-2">
+                    <Skeleton className="h-10 flex-1 rounded-lg" />
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                </div>
+            </footer>
+        </div>
+    );
+}
+
 
 export default function ChatPage() {
   const { chatId } = useParams();
@@ -57,10 +96,11 @@ export default function ChatPage() {
         }
         setChatInfo(chatData);
 
-        // Update user's last active timestamp
-        updateDoc(chatDocRef, {
+        const lastActiveUpdate: { [key: string]: any } = {
           [`lastActive.${currentUser.uid}`]: serverTimestamp(),
-        });
+          [`unreadCount.${currentUser.uid}`]: 0,
+        };
+        updateDoc(chatDocRef, lastActiveUpdate);
 
       } else {
         notFound();
@@ -72,12 +112,6 @@ export default function ChatPage() {
     const unsubMessages = onSnapshot(messagesQuery, async (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       setMessages(msgs);
-      
-      const unreadMessages = snapshot.docs.filter(d => !d.data().isRead && d.data().senderId !== currentUser.uid);
-      for(const docSnap of unreadMessages) {
-          await updateDoc(doc(db, 'chats', chatId as string, 'messages', docSnap.id), { isRead: true });
-      }
-
     });
     
      const handleVisibilityChange = () => {
@@ -133,7 +167,7 @@ export default function ChatPage() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === '' || !currentUser || !chatId) return;
+    if (newMessage.trim() === '' || !currentUser || !chatId || !chatInfo) return;
     
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -147,16 +181,18 @@ export default function ChatPage() {
       text: newMessage,
       senderId: currentUser.uid,
       timestamp: serverTimestamp(),
-      isRead: false,
     });
     
     const chatDocRef = doc(db, 'chats', chatId as string);
+    const otherUserId = chatInfo.users.find(uid => uid !== currentUser.uid);
+
     await updateDoc(chatDocRef, {
       lastMessage: {
         text: newMessage,
         senderId: currentUser.uid,
         timestamp: serverTimestamp()
-      }
+      },
+      [`unreadCount.${otherUserId}`]: increment(1)
     });
 
     setNewMessage('');
@@ -185,40 +221,7 @@ export default function ChatPage() {
 
 
   if (loading) {
-    return (
-        <div className="flex flex-col h-screen">
-            <header className="sticky top-0 z-10 flex items-center gap-4 p-3 border-b bg-background shadow-sm">
-                <Skeleton className="h-9 w-9 rounded-md" />
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1 space-y-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-16" />
-                </div>
-            </header>
-            <div className="flex-1 p-4 space-y-4">
-                <div className="flex items-end gap-2 justify-start">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <Skeleton className="h-10 w-48 rounded-lg" />
-                </div>
-                <div className="flex items-end gap-2 justify-end">
-                    <Skeleton className="h-10 w-32 rounded-lg" />
-                </div>
-                 <div className="flex items-end gap-2 justify-start">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <Skeleton className="h-16 w-64 rounded-lg" />
-                </div>
-                 <div className="flex items-end gap-2 justify-end">
-                    <Skeleton className="h-10 w-40 rounded-lg" />
-                </div>
-            </div>
-            <footer className="sticky bottom-0 bg-background border-t p-2">
-                <div className="flex items-center gap-2 p-2">
-                    <Skeleton className="h-10 flex-1 rounded-lg" />
-                    <Skeleton className="h-10 w-10 rounded-md" />
-                </div>
-            </footer>
-        </div>
-    );
+    return <ChatSkeleton />;
   }
 
   return (
@@ -249,7 +252,7 @@ export default function ChatPage() {
                       )}
                       <div className={cn(
                           "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col relative",
-                          msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-card border'
+                           msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-card border'
                       )}>
                            {msg.senderId === currentUser?.uid && (
                                 <DropdownMenu>
@@ -270,15 +273,6 @@ export default function ChatPage() {
                               <span className="text-xs opacity-70">
                                   {msg.timestamp ? format((msg.timestamp as Timestamp).toDate(), 'HH:mm') : '...'}
                               </span>
-                              {msg.senderId === currentUser?.uid && (
-                                  <>
-                                  {msg.isRead ? (
-                                      <CheckCheck className="h-4 w-4 text-accent" />
-                                  ) : (
-                                      <Check className="h-4 w-4 opacity-50"/>
-                                  )}
-                                  </>
-                              )}
                           </div>
                       </div>
                   </div>

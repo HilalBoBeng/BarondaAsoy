@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, query, where, onSnapshot, orderBy, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +14,6 @@ import Link from 'next/link';
 import { Home, UserCircle, MessageSquare, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
 
 interface Conversation {
   id: string;
@@ -26,7 +25,7 @@ interface Conversation {
     senderId: string;
     timestamp: any;
   } | null;
-  unreadCount?: number;
+  unreadCount?: { [key: string]: number };
 }
 
 const navItems = [
@@ -56,21 +55,7 @@ export default function ConversationsPage() {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const convosPromises = snapshot.docs.map(async (doc) => {
-        const convoData = { id: doc.id, ...doc.data() } as Conversation;
-        
-        // Fetch all messages and count unread on client
-        const messagesSnapshot = await getDocs(collection(db, 'chats', doc.id, 'messages'));
-        const unreadCount = messagesSnapshot.docs.filter(d => 
-          !d.data().isRead && d.data().senderId !== currentUser.uid
-        ).length;
-        
-        convoData.unreadCount = unreadCount;
-
-        return convoData;
-      });
-
-      const convos = await Promise.all(convosPromises);
+      let convos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
 
       convos.sort((a, b) => {
         const timeA = (a.lastMessage?.timestamp as Timestamp)?.toMillis() || 0;
@@ -115,6 +100,7 @@ export default function ConversationsPage() {
                 ) : conversations.length > 0 ? (
                     conversations.map(convo => {
                         const otherUser = getOtherUserInfo(convo);
+                        const unread = convo.unreadCount?.[currentUser?.uid || ''] || 0;
                         return (
                             <Link key={convo.id} href={`/chat/${convo.id}`} className="block">
                                 <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
@@ -132,12 +118,12 @@ export default function ConversationsPage() {
                                             )}
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <p className="text-sm text-muted-foreground truncate">
+                                            <p className={cn("text-sm text-muted-foreground truncate", unread > 0 && "font-bold text-foreground")}>
                                                 {convo.lastMessage ? `${convo.lastMessage.senderId === currentUser?.uid ? 'Anda: ' : ''}${convo.lastMessage.text}` : 'Belum ada pesan.'}
                                             </p>
-                                            {convo.unreadCount && convo.unreadCount > 0 && (
+                                            {unread > 0 && (
                                                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                                                    {convo.unreadCount}
+                                                    {unread}
                                                 </span>
                                             )}
                                         </div>

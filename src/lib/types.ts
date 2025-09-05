@@ -190,5 +190,19 @@ export interface Message {
   text: string;
   senderId: string;
   timestamp: Timestamp;
-  isRead: boolean;
+}
+
+export interface Chat {
+    id: string;
+    users: string[];
+    userNames: { [key: string]: string };
+    userPhotos: { [key: string]: string };
+    lastMessage?: {
+        text: string;
+        senderId: string;
+        timestamp: Timestamp;
+    } | null;
+    lastActive?: { [key: string]: Timestamp };
+    typing?: { [key: string]: boolean };
+    unreadCount?: { [key: string]: number };
 }
