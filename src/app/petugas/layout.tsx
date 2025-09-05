@@ -4,36 +4,22 @@
 import Link from "next/link";
 import {
   Home,
-  LogOut,
   ShieldAlert,
   Calendar,
-  Menu,
-  FileText,
-  Landmark,
-  Phone,
-  ArrowLeft,
-  Bell,
-  Megaphone,
-  Banknote,
-  Lock,
   User as UserIcon,
   Wrench,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { cn, truncateName } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useEffect, useState, Suspense, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotPermittedPage from "@/app/not-permitted/page";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Staff } from "@/lib/types";
-
 
 interface MenuConfig {
   id: string;
@@ -42,7 +28,7 @@ interface MenuConfig {
   locked: boolean;
 }
 
-const getNavItemsList = () => [
+const navItemsList = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
     { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan", badgeKey: 'newReports' },
     { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal", badgeKey: 'pendingSchedules' },
@@ -51,9 +37,56 @@ const getNavItemsList = () => [
 ];
 
 
+function HeaderContent() {
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
+    const [isDetailPage, setIsDetailPage] = useState(false);
+
+    useEffect(() => {
+        const detailPage = pathname.split('/').filter(Boolean).length > 2;
+        setIsDetailPage(detailPage);
+        
+        let newPageTitle = "Dasbor Petugas";
+        const allNavItems = [...navItemsList, { href: "/petugas/patrol-log", label: "Patroli & Log" }, { href: "/petugas/honor", label: "Honor Saya" }, { href: "/petugas/announcements", label: "Pengumuman" }, { href: "/petugas/notifications", label: "Notifikasi" }, { href: "/petugas/emergency-contacts", label: "Kontak Darurat" }];
+        const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
+        if (activeItem) newPageTitle = activeItem.label;
+        
+        setPageTitle(newPageTitle);
+    }, [pathname]);
+
+    return (
+        <div className="flex w-full items-center justify-between">
+            <div className="flex-1">
+                {isDetailPage ? (
+                   <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                      <ArrowLeft className="h-4 w-4" />
+                      <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                   </Button>
+                ) : (
+                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                )}
+            </div>
+            <div className="flex items-center gap-2 text-right">
+                 <Link href="/petugas" className="flex items-center gap-2">
+                     <Image
+                      src="https://iili.io/KJ4aGxp.png"
+                      alt="Logo"
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full object-cover"
+                      priority
+                    />
+                </Link>
+            </div>
+        </div>
+    );
+}
+
 function LoadingSkeleton() {
   return (
-    <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Image 
             src="https://iili.io/KJ4aGxp.png"
             alt="Loading Logo" 
@@ -73,20 +106,13 @@ export default function PetugasLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, newHonors: 0 });
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [pageTitle, setPageTitle] = useState("Dasbor Petugas");
-  const [isDetailPage, setIsDetailPage] = useState(false);
-  const [isScanPage, setIsScanPage] = useState(false);
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
-
-  const navItemsList = getNavItemsList();
+  const [isScanPage, setIsScanPage] = useState(false);
 
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
@@ -94,65 +120,68 @@ export default function PetugasLayout({
     return badgeCounts[badgeKey as keyof typeof badgeCounts] || 0;
   }
   
-  const navItems = navItemsList
+  const navItems = useMemo(() => navItemsList
     .map(item => {
       const config = menuConfig.find(c => c.id === item.id);
       return { ...item, ...config, badge: getBadgeCount(item.badgeKey) };
-    });
+    })
+    .filter(item => item.visible), [menuConfig, badgeCounts]);
 
-  const visibleNavItems = navItems.filter(item => item.visible);
 
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    const validRoles = ['petugas']; // Only petugas can access this layout
     if (localStorage.getItem('userRole') !== 'petugas') {
       router.replace('/auth/staff-login');
       return;
     }
 
-    const staffDocRef = doc(db, "staff", storedStaffInfo.id);
-    const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-            setStaffInfo(staffData);
-            localStorage.setItem('staffInfo', JSON.stringify(staffData));
-        } else {
-            toast({ variant: "destructive", title: "Akses Ditolak", description: "Data petugas tidak ditemukan." });
-            handleLogout(true);
-        }
-    });
-
-    const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
-    const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const fullConfig = navItemsList.map(initial => {
-          const saved = docSnap.data().config?.find((c: MenuConfig) => c.id === initial.id);
-          return { ...initial, ...saved };
+    if (storedStaffInfo.id) {
+        const staffDocRef = doc(db, "staff", storedStaffInfo.id);
+        const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+                setStaffInfo(staffData);
+                localStorage.setItem('staffInfo', JSON.stringify(staffData));
+            } else {
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('staffInfo');
+                router.replace('/auth/staff-login');
+            }
         });
-        setMenuConfig(fullConfig);
-      } else {
-        setMenuConfig(navItemsList.map(item => ({...item, visible: true, locked: false})));
-      }
-      setLoadingConfig(false);
-    });
 
-    const reportsRef = collection(db, 'reports');
-    const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
-    const myReportsQuery = query(reportsRef, where('handlerId', '==', storedStaffInfo.id), where('status', '==', 'in_progress'));
-    const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', storedStaffInfo.id), where('status', '==', 'Pending'));
-    const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', storedStaffInfo.id), where('status', '==', 'Tertunda'));
+        const menuConfigRef = doc(db, 'app_settings', 'petugas_menu');
+        const unsubMenu = onSnapshot(menuConfigRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const fullConfig = navItemsList.map(initial => {
+              const saved = docSnap.data().config?.find((c: MenuConfig) => c.id === initial.id);
+              return { ...initial, ...saved };
+            });
+            setMenuConfig(fullConfig);
+          } else {
+            setMenuConfig(navItemsList.map(item => ({...item, visible: true, locked: false})));
+          }
+          setLoadingConfig(false);
+        });
 
-    const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
-    const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
-    const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
-    const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
-    
-    return () => {
-      unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
+        const reportsRef = collection(db, 'reports');
+        const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
+        const myReportsQuery = query(reportsRef, where('handlerId', '==', storedStaffInfo.id), where('status', '==', 'in_progress'));
+        const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', storedStaffInfo.id), where('status', '==', 'Pending'));
+        const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', storedStaffInfo.id), where('status', '==', 'Tertunda'));
+
+        const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
+        const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
+        const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
+        const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
+        
+        return () => {
+          unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
+        }
+    } else {
+      router.replace('/auth/staff-login');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
   useEffect(() => {
@@ -173,30 +202,9 @@ export default function PetugasLayout({
     }
     
     setIsScanPage(pathname === '/petugas/scan');
-    
-    const duesDetailRegex = /^\/petugas\/dues\/(.+)$/;
-    const duesDetailMatch = pathname.match(duesDetailRegex);
-    const isDuesRecord = pathname === '/petugas/dues/record';
-
-    const detailPage = pathname.split('/').filter(Boolean).length > 2;
-    setIsDetailPage(detailPage);
-    
-    let newPageTitle = "Dasbor Petugas";
-    const allNavItems = [...navItems, { href: "/petugas/patrol-log", label: "Patroli & Log" }, { href: "/petugas/honor", label: "Honor Saya" }, { href: "/petugas/announcements", label: "Pengumuman" }, { href: "/petugas/notifications", label: "Notifikasi" }, { href: "/petugas/emergency-contacts", label: "Kontak Darurat" }];
-    const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
-    if (activeItem) newPageTitle = activeItem.label;
-    
-    setPageTitle(newPageTitle);
-  }, [pathname, menuConfig, loadingConfig, navItems, navItemsList]);
-
-  const handleLogout = (silent = false) => {
-    if (!silent) setIsLoggingOut(true);
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('staffInfo');
-    setTimeout(() => { router.push('/'); }, silent ? 0 : 1500);
-  };
+  }, [pathname, menuConfig, loadingConfig]);
   
-  if (!isClient || isLoggingOut || loadingConfig || !staffInfo) {
+  if (!isClient || loadingConfig || !staffInfo) {
       return <LoadingSkeleton />;
   }
 
@@ -223,28 +231,7 @@ export default function PetugasLayout({
   return (
     <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-         <div className="w-full flex-1">
-           {isDetailPage ? (
-               <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                  <ArrowLeft className="h-4 w-4" />
-                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-               </Button>
-           ) : (
-              <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-           )}
-        </div>
-          <div className="flex items-center gap-2 text-right">
-             <Link href="/petugas" className="flex items-center gap-2">
-                 <Image
-                  src="https://iili.io/KJ4aGxp.png"
-                  alt="Logo"
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full object-cover"
-                  priority
-                />
-            </Link>
-        </div>
+        <HeaderContent />
       </header>
       <main className="flex-1 overflow-y-auto p-4 lg:p-6 pb-20 animate-fade-in-up">
          <div className="mx-auto w-full max-w-screen-2xl">
@@ -273,14 +260,6 @@ export default function PetugasLayout({
                 ))}
             </div>
         </nav>
-      <Dialog open={false}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
-                <DialogDescription className="sr-only">Dialog</DialogDescription>
-            </DialogHeader>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -3,32 +3,17 @@
 
 import Link from "next/link";
 import {
-  Bell,
   Home,
   Users,
-  FileText,
   Calendar,
-  LogOut,
-  ShieldAlert,
-  Phone,
-  MessageSquare,
-  Settings,
-  Landmark,
-  QrCode,
-  Banknote,
-  ClipboardList,
   User as UserIcon,
   Wrench,
-  History,
-  Edit,
-  Wallet,
-  Mail,
-  ArrowLeft
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -43,6 +28,68 @@ const navItemsList = [
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
 ];
 
+function HeaderContent() {
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const [pageTitle, setPageTitle] = useState("Dasbor Admin");
+    const [isDetailPage, setIsDetailPage] = useState(false);
+    
+    useEffect(() => {
+        const segments = pathname.split('/').filter(Boolean);
+        const detailPage = segments.length > 2 && segments[1] !== 'tools';
+        setIsDetailPage(detailPage);
+        
+        const allNavItems = [...navItemsList, 
+          { href: "/admin/reports", label: 'Laporan Warga', roles: [] },
+          { href: "/admin/announcements", label: 'Pengumuman', roles: [] },
+          { href: "/admin/attendance", label: 'Kehadiran', roles: [] },
+          { href: "/admin/dues", label: 'Iuran', roles: [] },
+          { href: "/admin/honor", label: 'Honorarium', roles: [] },
+          { href: "/admin/honor-saya", label: 'Honor Saya', roles: [] },
+          { href: "/admin/finance", label: 'Keuangan', roles: [] },
+          { href: "/admin/activity-log", label: 'Log Admin', roles: [] },
+          { href: "/admin/emergency-contacts", label: 'Kontak Darurat', roles: [] },
+          { href: "/admin/notifications", label: 'Notifikasi', roles: [] },
+        ];
+        let newPageTitle = "Dasbor Admin";
+        const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
+
+        if (activeItem) {
+            newPageTitle = activeItem.label;
+        } else if (pathname === '/admin') {
+            newPageTitle = "Dasbor Admin";
+        }
+
+        setPageTitle(newPageTitle);
+    }, [pathname]);
+
+    return (
+        <div className="flex w-full items-center justify-between">
+            <div className="flex items-center gap-2">
+                {isDetailPage ? (
+                     <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                     </Button>
+                 ) : (
+                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                 )}
+            </div>
+             <Link href="/admin" className="flex items-center gap-2">
+                 <Image 
+                    src="https://iili.io/KJ4aGxp.png" 
+                    alt="Logo" 
+                    width={32} 
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                />
+            </Link>
+        </div>
+    );
+}
+
+
 export default function AdminLayout({
   children,
 }: {
@@ -52,20 +99,19 @@ export default function AdminLayout({
   const router = useRouter();
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0 });
-  const [pageTitle, setPageTitle] = useState("Dasbor");
-  const [isDetailPage, setIsDetailPage] = useState(false);
 
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
     return badgeCounts[badgeKey as keyof typeof badgeCounts] || 0;
   };
     
-  const navItems = navItemsList
+  const navItems = useMemo(() => navItemsList
     .filter(item => adminInfo?.role && item.roles.includes(adminInfo.role))
     .map(item => ({
       ...item,
       badge: getBadgeCount(item.badgeKey)
-    }));
+    })), [adminInfo, badgeCounts]);
+
 
   useEffect(() => {
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -103,58 +149,11 @@ export default function AdminLayout({
     }
   }, [router]);
   
-  useEffect(() => {
-    const segments = pathname.split('/').filter(Boolean);
-    const detailPage = segments.length > 2 && segments[1] !== 'tools';
-    setIsDetailPage(detailPage);
-    
-    const allNavItems = [...navItems, 
-      { href: "/admin/reports", label: 'Laporan Warga' },
-      { href: "/admin/announcements", label: 'Pengumuman' },
-      { href: "/admin/attendance", label: 'Kehadiran' },
-      { href: "/admin/dues", label: 'Iuran' },
-      { href: "/admin/honor", label: 'Honorarium' },
-      { href: "/admin/honor-saya", label: 'Honor Saya' },
-      { href: "/admin/finance", label: 'Keuangan' },
-      { href: "/admin/activity-log", label: 'Log Admin' },
-      { href: "/admin/emergency-contacts", label: 'Kontak Darurat' },
-      { href: "/admin/notifications", label: 'Notifikasi' },
-    ];
-    let newPageTitle = "Dasbor Admin";
-    const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
-
-    if (activeItem) {
-        newPageTitle = activeItem.label;
-    } else if (pathname === '/admin') {
-        newPageTitle = "Dasbor Admin";
-    }
-
-    setPageTitle(newPageTitle);
-  }, [pathname, navItems]);
-
 
   return (
     <div className="flex h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-             <div className="flex items-center gap-2">
-                {isDetailPage ? (
-                     <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                        <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                     </Button>
-                 ) : (
-                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                 )}
-            </div>
-             <Link href="/admin" className="flex items-center gap-2">
-                 <Image 
-                    src="https://iili.io/KJ4aGxp.png" 
-                    alt="Logo" 
-                    width={32} 
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                />
-            </Link>
+            <HeaderContent />
         </header>
         <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
             {children}

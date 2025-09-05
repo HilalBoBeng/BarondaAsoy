@@ -4,18 +4,16 @@
 import Link from "next/link";
 import {
   Home,
-  LogOut,
   Landmark,
   ArrowLeft,
-  Banknote,
   User as UserIcon,
   Wallet,
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
-import { cn, truncateName } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { onSnapshot, doc } from "firebase/firestore";
@@ -31,6 +29,65 @@ const navItemsList = [
 ];
 
 
+function HeaderContent() {
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const [pageTitle, setPageTitle] = useState("Dasbor Bendahara");
+    const [isDetailPage, setIsDetailPage] = useState(false);
+    
+    useEffect(() => {
+        const detailPage = pathname.split('/').filter(Boolean).length > 2;
+        setIsDetailPage(detailPage);
+        
+        const allNavItems = [...navItemsList, { href: "/bendahara/honor", label: 'Honorarium' }, { href: "/bendahara/notifications", label: 'Notifikasi' }];
+        const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/bendahara');
+        setPageTitle(activeItem?.label || "Dasbor Bendahara");
+        
+    }, [pathname]);
+
+    return (
+        <div className="w-full flex justify-between items-center">
+           <div className="flex-1">
+               {isDetailPage ? (
+                   <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                      <ArrowLeft className="h-4 w-4" />
+                      <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                   </Button>
+               ) : (
+                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+               )}
+           </div>
+           <div className="flex items-center gap-2 text-right">
+                 <Link href="/bendahara" className="flex items-center gap-2">
+                    <Image 
+                    src="https://iili.io/KJ4aGxp.png"
+                    alt="Logo" 
+                    width={32} 
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                    />
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+        <Image 
+            src="https://iili.io/KJ4aGxp.png"
+            alt="Loading Logo" 
+            width={120} 
+            height={120} 
+            className="animate-logo-pulse"
+            priority
+        />
+    </div>
+  );
+}
+
 export default function BendaharaLayout({
   children,
 }: {
@@ -38,13 +95,9 @@ export default function BendaharaLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [pageTitle, setPageTitle] = useState("Dasbor Bendahara");
-  const [isDetailPage, setIsDetailPage] = useState(false);
-  
+
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -60,14 +113,17 @@ export default function BendaharaLayout({
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                 if (staffData.role !== 'bendahara') {
-                    handleLogout(true);
+                    localStorage.removeItem('userRole');
+                    localStorage.removeItem('staffInfo');
+                    router.replace('/auth/staff-login');
                     return;
                 }
                 setStaffInfo(staffData);
                 localStorage.setItem('staffInfo', JSON.stringify(staffData));
             } else {
-                toast({ variant: "destructive", title: "Akses Ditolak", description: "Data bendahara tidak ditemukan." });
-                handleLogout(true);
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('staffInfo');
+                router.replace('/auth/staff-login');
             }
         });
         return () => unsubStaff();
@@ -75,69 +131,17 @@ export default function BendaharaLayout({
         router.replace('/auth/staff-login');
         return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
-  useEffect(() => {
-    const detailPage = pathname.split('/').filter(Boolean).length > 2;
-    setIsDetailPage(detailPage);
-    
-    const allNavItems = [...navItemsList, { href: "/bendahara/honor", label: 'Honorarium' }, { href: "/bendahara/notifications", label: 'Notifikasi' }];
-    const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/bendahara');
-    setPageTitle(activeItem?.label || "Dasbor Bendahara");
-    
-  }, [pathname]);
-
-  const handleLogout = (silent = false) => {
-    if (!silent) setIsLoggingOut(true);
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('staffInfo');
-
-    setTimeout(() => {
-        router.push('/');
-    }, silent ? 0 : 1500); 
-  };
   
-  if (!isClient || isLoggingOut || !staffInfo) {
-      return (
-        <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
-            <Image 
-                src="https://iili.io/KJ4aGxp.png"
-                alt="Loading Logo" 
-                width={120} 
-                height={120} 
-                className="animate-logo-pulse"
-                priority
-            />
-            {isLoggingOut && <p className="mt-4 text-lg text-muted-foreground animate-fade-in">Anda sedang dialihkan...</p>}
-        </div>
-      );
+  if (!isClient || !staffInfo) {
+      return <LoadingSkeleton />;
   }
 
   return (
     <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-        <div className="w-full flex-1">
-           {isDetailPage ? (
-               <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                  <ArrowLeft className="h-4 w-4" />
-                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-               </Button>
-           ) : (
-              <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-           )}
-        </div>
-        <div className="flex items-center gap-2 text-right">
-             <Link href="/bendahara" className="flex items-center gap-2">
-                <Image 
-                src="https://iili.io/KJ4aGxp.png"
-                alt="Logo" 
-                width={32} 
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-                />
-            </Link>
-        </div>
+        <HeaderContent />
       </header>
       <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
         <div className="mx-auto w-full max-w-screen-2xl">
