@@ -3,12 +3,10 @@
 
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
-import { Megaphone, Calendar, ChevronRight, X } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { X } from 'lucide-react';
 import { db } from '@/lib/firebase/client';
-import type { Announcement } from '@/lib/types';
 import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
+import { Dialog, DialogContent, DialogClose } from '../ui/dialog';
 import Image from 'next/image';
 
 interface PopupAnnouncement {
@@ -25,9 +23,14 @@ export default function WelcomeAnnouncement() {
     const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         const announcementData = docSnap.data() as PopupAnnouncement;
-        setPopupAnnouncement(announcementData);
-        // Always show the dialog if there's data
-        setIsDialogOpen(true);
+        
+        const shouldShow = sessionStorage.getItem('showWelcomePopup') === 'true';
+
+        if (shouldShow && announcementData.imageUrl) {
+            setPopupAnnouncement(announcementData);
+            setIsDialogOpen(true);
+            sessionStorage.removeItem('showWelcomePopup');
+        }
       }
     });
 

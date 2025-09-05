@@ -134,6 +134,7 @@ function LoginForm() {
             title: "Login Berhasil",
             description: "Selamat datang kembali!",
         });
+        sessionStorage.setItem('showWelcomePopup', 'true');
         router.push("/");
     } catch (error) {
        const currentAttempts = (loginAttempts[data.email] || 0) + 1;
