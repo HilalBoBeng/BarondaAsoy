@@ -8,6 +8,7 @@ export interface Announcement {
   content: string;
   date: string | Date | Timestamp;
   target?: 'all' | 'users' | 'staff';
+  imageUrl?: string;
 }
 
 export interface ScheduleEntry {

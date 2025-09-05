@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,22 +9,24 @@ import { db } from '@/lib/firebase/client';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody, DialogDescription } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash, Loader2, Megaphone } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Loader2, Megaphone, Image as ImageIconLucide } from 'lucide-react';
 import type { Announcement, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createLog } from '@/lib/utils';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import Image from 'next/image';
 
 const announcementSchema = z.object({
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   content: z.string().min(1, "Isi pengumuman tidak boleh kosong.").max(1200, "Isi pengumuman tidak boleh lebih dari 1200 karakter."),
+  imageUrl: z.string().optional(),
 });
 
 type AnnouncementFormValues = z.infer<typeof announcementSchema>;
@@ -36,10 +38,11 @@ export default function AnnouncementsAdminPage() {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema),
-    defaultValues: { title: '', content: '' },
+    defaultValues: { title: '', content: '', imageUrl: '' },
   });
 
   const { formState: { isSubmitting, isValid } } = form;
@@ -58,6 +61,7 @@ export default function AnnouncementsAdminPage() {
             title: data.title,
             content: data.content,
             date: date instanceof Timestamp ? date.toDate() : date,
+            imageUrl: data.imageUrl,
         }
       }) as Announcement[];
       setAnnouncements(announcementsData);
@@ -72,9 +76,27 @@ export default function AnnouncementsAdminPage() {
   
   useEffect(() => {
     if (isDialogOpen) {
-      form.reset(currentAnnouncement ? { title: currentAnnouncement.title, content: currentAnnouncement.content } : { title: '', content: '' });
+      form.reset(currentAnnouncement ? 
+        { title: currentAnnouncement.title, content: currentAnnouncement.content, imageUrl: currentAnnouncement.imageUrl || '' } : 
+        { title: '', content: '', imageUrl: '' }
+      );
     }
   }, [isDialogOpen, currentAnnouncement, form]);
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            form.setValue('imageUrl', reader.result as string);
+        };
+    }
+  };
 
   const handleDialogOpen = (announcement: Announcement | null = null) => {
     setCurrentAnnouncement(announcement);
@@ -84,20 +106,18 @@ export default function AnnouncementsAdminPage() {
   const onSubmit = async (values: AnnouncementFormValues) => {
     if (!currentAdmin) return;
     try {
+      const dataToSave = {
+        ...values,
+        date: serverTimestamp(),
+      };
+
       if (currentAnnouncement) {
         const docRef = doc(db, 'announcements', currentAnnouncement.id);
-        await updateDoc(docRef, values);
+        await updateDoc(docRef, dataToSave);
         await createLog(currentAdmin, `Memperbarui pengumuman: "${values.title}"`);
         toast({ title: "Berhasil", description: "Pengumuman berhasil diperbarui." });
       } else {
-        await addDoc(collection(db, 'announcements'), {
-          ...values,
-          date: serverTimestamp(),
-          likes: 0,
-          dislikes: 0,
-          likesBy: [],
-          dislikesBy: [],
-        });
+        await addDoc(collection(db, 'announcements'), dataToSave);
         await createLog(currentAdmin, `Membuat pengumuman baru: "${values.title}"`);
         toast({ title: "Berhasil", description: "Pengumuman berhasil dibuat." });
       }
@@ -209,6 +229,11 @@ export default function AnnouncementsAdminPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-3">{ann.content}</p>
+                   {ann.imageUrl && (
+                     <div className="mt-4 relative w-full h-40">
+                        <Image src={ann.imageUrl} alt="Gambar pengumuman" layout="fill" objectFit="cover" className="rounded-md" />
+                     </div>
+                   )}
                 </CardContent>
               </Card>
             ))
@@ -220,14 +245,14 @@ export default function AnnouncementsAdminPage() {
           )}
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
-            </DialogHeader>
+        <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DrawerTitle>
+            </DrawerHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <DialogBody className="space-y-4">
+                <DrawerBody className="space-y-4 px-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -238,11 +263,6 @@ export default function AnnouncementsAdminPage() {
                           <Input 
                             {...field} 
                             maxLength={50} 
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                              }
-                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -260,20 +280,47 @@ export default function AnnouncementsAdminPage() {
                       </FormItem>
                     )}
                   />
-                </DialogBody>
-                <DialogFooter>
-                    <DialogClose asChild>
+                   <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2">Gambar <span className="text-xs text-muted-foreground">(Opsional)</span></FormLabel>
+                            <FormControl>
+                                <Input 
+                                    type="file" 
+                                    className="hidden" 
+                                    ref={fileInputRef} 
+                                    onChange={handleFileChange} 
+                                    accept="image/*" 
+                                />
+                            </FormControl>
+                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                <ImageIconLucide className="mr-2 h-4 w-4" /> Pilih Gambar
+                            </Button>
+                            {field.value && (
+                                <div className="mt-2 relative w-32 h-32">
+                                    <Image src={field.value} alt="Preview" layout="fill" objectFit="cover" className="rounded-md" />
+                                </div>
+                            )}
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                  />
+                </DrawerBody>
+                <DrawerFooter>
+                    <DrawerClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>
-                    </DialogClose>
+                    </DrawerClose>
                     <Button type="submit" disabled={isSubmitting || !isValid}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Simpan
                     </Button>
-                </DialogFooter>
+                </DrawerFooter>
               </form>
             </Form>
-          </DialogContent>
-        </Dialog>
+          </DrawerContent>
+        </Drawer>
     </>
   );
 }

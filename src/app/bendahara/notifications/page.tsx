@@ -30,7 +30,6 @@ const notificationSchema = z.object({
   recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   message: z.string().min(1, "Pesan tidak boleh kosong.").max(1200, "Pesan tidak boleh lebih dari 1200 karakter."),
-  imageUrl: z.string().optional(),
 });
 
 type NotificationFormValues = z.infer<typeof notificationSchema>;
@@ -47,7 +46,6 @@ export default function BendaharaNotificationsPage() {
   const [isViewMessageOpen, setIsViewMessageOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState('');
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
@@ -57,7 +55,7 @@ export default function BendaharaNotificationsPage() {
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
-    defaultValues: { recipientIds: [], title: '', message: '', imageUrl: '' },
+    defaultValues: { recipientIds: [], title: '', message: '' },
   });
 
   const fetchRecipients = async () => {
@@ -148,21 +146,6 @@ export default function BendaharaNotificationsPage() {
     fetchNotifications(newPage, 'prev');
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
-            return;
-        }
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            form.setValue('imageUrl', reader.result as string);
-        };
-    }
-  };
-
   const onSubmit = async (values: NotificationFormValues) => {
     setIsSubmitting(true);
     try {
@@ -187,14 +170,14 @@ export default function BendaharaNotificationsPage() {
             message: formattedMessage,
             read: false,
             createdAt: serverTimestamp(),
-            imageUrl: values.imageUrl || null,
+            imageUrl: null,
           });
         });
         await batch.commit();
 
         toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${values.recipientIds.length} penerima.` });
       
-        form.reset({ recipientIds: [], title: '', message: '', imageUrl: '' });
+        form.reset({ recipientIds: [], title: '', message: ''});
         setIsDialogOpen(false);
         await fetchNotifications(1); // Refresh list
     } catch (error) {
@@ -476,33 +459,6 @@ export default function BendaharaNotificationsPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-2">Gambar <span className="text-xs text-muted-foreground">(Opsional)</span></FormLabel>
-                            <FormControl>
-                                <Input 
-                                    type="file" 
-                                    className="hidden" 
-                                    ref={fileInputRef} 
-                                    onChange={handleFileChange} 
-                                    accept="image/*" 
-                                />
-                            </FormControl>
-                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                <ImageIconLucide className="mr-2 h-4 w-4" /> Pilih Gambar
-                            </Button>
-                            {field.value && (
-                                <div className="mt-2 relative w-32 h-32">
-                                    <Image src={field.value} alt="Preview" layout="fill" objectFit="cover" className="rounded-md" />
-                                </div>
-                            )}
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                  />
                 </DrawerBody>
                 <DrawerFooter>
                     <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>

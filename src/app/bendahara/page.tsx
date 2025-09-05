@@ -18,39 +18,6 @@ export default function BendaharaPage() {
         totalUsers: 0,
     });
     const [loadingStats, setLoadingStats] = useState(true);
-    const [greeting, setGreeting] = useState("Selamat Datang");
-    const [currentTime, setCurrentTime] = useState("");
-    const [currentDate, setCurrentDate] = useState("");
-    const [bendaharaName, setBendaharaName] = useState<string | null>(null);
-    const [loadingName, setLoadingName] = useState(true);
-
-    useEffect(() => {
-        const getGreeting = () => {
-          const hour = new Date().getHours();
-          if (hour >= 5 && hour < 12) return "Selamat Pagi";
-          if (hour >= 12 && hour < 15) return "Selamat Siang";
-          if (hour >= 15 && hour < 19) return "Selamat Sore";
-          return "Selamat Malam";
-        };
-
-        const timer = setInterval(() => {
-          const now = new Date();
-          setGreeting(getGreeting());
-          setCurrentTime(now.toLocaleTimeString('id-ID'));
-          setCurrentDate(now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-        }, 1000);
-        
-        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-        if (staffInfo.name) {
-            setBendaharaName(staffInfo.name);
-        } else {
-            setBendaharaName("Bendahara");
-        }
-        setLoadingName(false);
-
-
-        return () => clearInterval(timer);
-    }, []);
 
     useEffect(() => {
         let mounted = true;
@@ -100,27 +67,7 @@ export default function BendaharaPage() {
 
     return (
         <div className="space-y-6">
-            <div className="animate-fade-in-up">
-                 {loadingName ? (
-                    <>
-                        <Skeleton className="h-8 w-64 mb-2" />
-                        <Skeleton className="h-5 w-72" />
-                        <Skeleton className="h-5 w-80 mt-1" />
-                    </>
-                 ) : (
-                    <>
-                     <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
-                        {greeting}, {bendaharaName}!
-                    </h1>
-                    <p className="text-muted-foreground text-sm sm:text-base mt-1">
-                        Selamat datang di Dasbor Bendahara Baronda.
-                    </p>
-                    <p className="text-muted-foreground text-sm sm:text-base">
-                        {currentDate} | {currentTime}
-                    </p>
-                    </>
-                 )}
-            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dasbor Bendahara</h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in-up" style={{animationDelay: '200ms'}}>
                 {loadingStats ? (
                     Array.from({ length: 3 }).map((_, i) => (
