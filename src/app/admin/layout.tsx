@@ -30,6 +30,21 @@ const navItemsList = [
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
 ];
 
+const pageTitles: { [key: string]: string } = {
+  "/admin/users": "Manajemen Pengguna",
+  "/admin/announcements": "Manajemen Pengumuman",
+  "/admin/attendance": "Daftar Kehadiran",
+  "/admin/dues": "Manajemen Iuran",
+  "/admin/finance": "Manajemen Keuangan",
+  "/admin/honor": "Manajemen Honorarium",
+  "/admin/honor-saya": "Honor Saya",
+  "/admin/activity-log": "Log Aktivitas",
+  "/admin/emergency-contacts": "Kontak Darurat",
+  "/admin/notifications": "Notifikasi",
+  "/admin/schedule/[scheduleId]": "Detail Jadwal",
+};
+
+
 export default function AdminLayout({
   children,
 }: {
@@ -55,11 +70,21 @@ export default function AdminLayout({
       badge: getBadgeCount(item.badgeKey)
     })), [adminInfo, badgeCounts]);
 
+  const isMainPage = useMemo(() => navItems.some(item => item.href === pathname), [pathname, navItems]);
+  
+  const getPageTitle = () => {
+    const dynamicRouteMatch = Object.keys(pageTitles).find(key => {
+        const regex = new RegExp(`^${key.replace(/\[.*?\]/g, '[^/]+')}$`);
+        return regex.test(pathname);
+    });
+    return dynamicRouteMatch ? pageTitles[dynamicRouteMatch] : '';
+  };
+
 
   useEffect(() => {
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    if (!storedStaffInfo.id || localStorage.getItem('userRole') !== 'admin') {
+    if (!storedStaffInfo.id || !['admin', 'bendahara'].includes(localStorage.getItem('userRole') as string)) {
       router.replace('/auth/staff-login');
       return;
     }
@@ -69,7 +94,7 @@ export default function AdminLayout({
     const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-            if (staffData.role !== 'admin') {
+             if (!['admin', 'bendahara'].includes(staffData.role as string)) {
                 router.replace('/auth/staff-login');
                 return;
             }
@@ -95,19 +120,28 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-             <div className="flex items-center gap-2 text-left">
-              <Image 
-                src="https://iili.io/KJ4aGxp.png" 
-                alt="Logo" 
-                width={32} 
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-              <div className="flex flex-col">
-                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-              </div>
-            </div>
+             {isMainPage ? (
+                 <div className="flex items-center gap-2 text-left">
+                  <Image 
+                    src="https://iili.io/KJ4aGxp.png" 
+                    alt="Logo" 
+                    width={32} 
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                  <div className="flex flex-col">
+                      <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                      <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+                  </div>
+                </div>
+            ) : (
+                 <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <h1 className="text-lg font-semibold truncate">{getPageTitle()}</h1>
+                  </div>
+            )}
         </header>
         <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
             {children}

@@ -29,6 +29,14 @@ const navItemsList = [
     { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil" },
 ];
 
+const pageTitles: { [key: string]: string } = {
+  "/petugas/patrol-log": "Log Patroli",
+  "/petugas/honor": "Riwayat Honor",
+  "/petugas/announcements": "Pengumuman",
+  "/petugas/notifications": "Notifikasi",
+  "/petugas/emergency-contacts": "Kontak Darurat",
+};
+
 function LoadingSkeleton() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background">
@@ -116,6 +124,10 @@ export default function PetugasLayout({
   useEffect(() => {
     setIsScanPage(pathname === '/petugas/scan');
   }, [pathname]);
+
+  const isMainPage = useMemo(() => navItems.some(item => item.href === pathname), [pathname, navItems]);
+  const pageTitle = pageTitles[pathname] || '';
+
   
   if (!isClient || !staffInfo) {
       return <LoadingSkeleton />;
@@ -132,19 +144,28 @@ export default function PetugasLayout({
   return (
     <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-        <div className="flex items-center gap-2 text-left">
-            <Image 
-            src="https://iili.io/KJ4aGxp.png" 
-            alt="Logo" 
-            width={32} 
-            height={32}
-            className="h-8 w-8 rounded-full object-cover"
-            />
-            <div className="flex flex-col">
-                <span className="text-base font-bold text-primary leading-tight">Baronda</span>
-                <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+        {isMainPage ? (
+            <div className="flex items-center gap-2 text-left">
+                <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+                />
+                <div className="flex flex-col">
+                    <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                    <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+                </div>
             </div>
-        </div>
+        ) : (
+             <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className="text-lg font-semibold truncate">{pageTitle}</h1>
+            </div>
+        )}
       </header>
       <main className="flex-1 overflow-y-auto p-4 lg:p-6 pb-20 animate-fade-in-up">
          <div className="mx-auto w-full max-w-screen-2xl">
