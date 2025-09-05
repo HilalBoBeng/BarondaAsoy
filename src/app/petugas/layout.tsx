@@ -33,7 +33,7 @@ const navItemsList = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
     { id: 'reports', href: "/petugas/reports", icon: ShieldAlert, label: "Laporan", badgeKey: 'newReports' },
     { id: 'schedule', href: "/petugas/schedule", icon: Calendar, label: "Jadwal", badgeKey: 'pendingSchedules' },
-    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
+    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya", badgeKey: 'unreadNotifications' },
     { id: 'profile', href: "/petugas/profile", icon: UserIcon, label: "Profil" },
 ];
 
@@ -62,7 +62,7 @@ export default function PetugasLayout({
   const auth = getAuth();
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, newHonors: 0 });
+  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, unreadNotifications: 0 });
   const [menuConfig, setMenuConfig] = useState<MenuConfig[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
@@ -126,15 +126,16 @@ export default function PetugasLayout({
         const newReportsQuery = query(reportsRef, where('status', '==', 'new'));
         const myReportsQuery = query(reportsRef, where('handlerId', '==', storedStaffInfo.id), where('status', '==', 'in_progress'));
         const scheduleQuery = query(collection(db, 'schedules'), where('officerId', '==', storedStaffInfo.id), where('status', '==', 'Pending'));
-        const honorQuery = query(collection(db, 'honorariums'), where('staffId', '==', storedStaffInfo.id), where('status', '==', 'Tertunda'));
+        const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', storedStaffInfo.id), where('read', '==', false));
+
 
         const unsubNewReports = onSnapshot(newReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
         const unsubMyReports = onSnapshot(myReportsQuery, (snap) => setBadgeCounts(prev => ({...prev, myReports: snap.size})));
         const unsubSchedules = onSnapshot(scheduleQuery, (snap) => setBadgeCounts(prev => ({...prev, pendingSchedules: snap.size})));
-        const unsubHonors = onSnapshot(honorQuery, (snap) => setBadgeCounts(prev => ({...prev, newHonors: snap.size})));
+        const unsubNotifs = onSnapshot(notifsQuery, (snap) => setBadgeCounts(prev => ({...prev, unreadNotifications: snap.size})));
         
         return () => {
-          unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubHonors(); unsubMenu();
+          unsubStaff(); unsubNewReports(); unsubMyReports(); unsubSchedules(); unsubMenu(); unsubNotifs();
         }
     } else {
       router.replace('/auth/staff-login');

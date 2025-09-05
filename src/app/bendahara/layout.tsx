@@ -26,8 +26,8 @@ const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
     { href: "/bendahara/dues", icon: Landmark, label: 'Iuran', id: 'dues' },
     { href: "/bendahara/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
-    { href: "/bendahara/tools", icon: Wrench, label: 'Lainnya', id: 'tools' },
-    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', badgeKey: 'unreadNotifications' },
+    { href: "/bendahara/tools", icon: Wrench, label: 'Lainnya', id: 'tools', badgeKey: 'unreadNotifications' },
+    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
 ];
 
 function LoadingSkeleton() {
