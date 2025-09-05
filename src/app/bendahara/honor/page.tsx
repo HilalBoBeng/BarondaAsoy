@@ -41,12 +41,6 @@ const statusConfig: Record<Honorarium['status'], { className: string }> = {
     'Belum Dibayar': { className: 'bg-yellow-100 text-yellow-800' },
 };
 
-const roleDisplay: Record<string, string> = {
-    admin: 'Administrator',
-    bendahara: 'Bendahara',
-    petugas: 'Petugas',
-};
-
 export default function BendaharaHonorariumPage() {
   const [honorariums, setHonorariums] = useState<Honorarium[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -251,12 +245,7 @@ export default function BendaharaHonorariumPage() {
                               <AvatarImage src={s.photoURL || undefined} />
                               <AvatarFallback>{s.name.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
-                            <div className="flex flex-col items-start">
-                                <p className="font-medium">{s.name}</p>
-                                {s.role && (
-                                    <Badge variant="outline" className="mt-1">{roleDisplay[s.role] || s.role}</Badge>
-                                )}
-                            </div>
+                            <p className="font-medium">{s.name}</p>
                           </div>
                         </TableCell>
                         <TableCell>
