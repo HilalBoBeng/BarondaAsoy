@@ -7,19 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -154,44 +145,40 @@ export default function StaffLoginPage() {
 
   return (
     <>
-      <div className="flex flex-col items-center justify-center mb-6 text-center">
-        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
-        <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
-        <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
+      <div className="flex flex-col items-center justify-center text-center">
+        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto mb-4" />
+        <h1 className="text-2xl font-bold">Akses Staf & Admin</h1>
+        <p className="text-sm text-muted-foreground">Masuk dengan kode akses unik Anda.</p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Halaman Akses Staf &amp; Admin</CardTitle>
-          <CardDescription>
-             Masuk dengan kode akses unik Anda.
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardContent className="space-y-4">
-                <FormField control={form.control} name="accessCode" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Kode Akses</FormLabel>
-                        <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                </CardContent>
-                <CardFooter className="flex-col gap-4">
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Masuk
-                    </Button>
-                    <div className="text-center text-sm text-muted-foreground">
-                        Bukan staf?{" "}
-                        <Link href="/auth/login" className="underline text-primary">
-                            Masuk sebagai warga
-                        </Link>
-                    </div>
-                </CardFooter>
-            </form>
-        </Form>
-      </Card>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField control={form.control} name="accessCode" render={({ field }) => (
+                <FormItem>
+                    <FormControl>
+                        <Input type="password" placeholder="Kode Akses" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
+            <div className="text-right">
+                <Button asChild variant="link" size="sm" className="px-0">
+                    <Link href="/auth/staff-forgot-password">Lupa kode akses?</Link>
+                </Button>
+            </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Masuk
+            </Button>
+        </form>
+      </Form>
+      
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        Bukan staf?{" "}
+        <Link href="/auth/login" className="font-semibold text-primary hover:text-primary/80 no-underline">
+            Masuk sebagai warga
+        </Link>
+      </div>
 
       <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
         <DialogContent className="sm:max-w-md text-center">
