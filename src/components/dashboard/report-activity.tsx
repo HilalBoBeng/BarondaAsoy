@@ -113,18 +113,22 @@ export default function ReportActivity({ user, userInfo }: { user: User | null, 
   
   if (!user) {
     return (
-        <div className="text-center p-8 border-2 border-dashed rounded-lg">
-            <p className="mb-4 text-muted-foreground">Anda harus masuk untuk membuat laporan.</p>
-            <Button asChild>
-                <Link href="/auth/login">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Masuk untuk Melapor
-                </Link>
-            </Button>
-            <p className="mt-4 text-sm text-muted-foreground">
-                Belum punya akun? <Link href="/auth/register" className="underline text-primary">Daftar di sini</Link>.
-            </p>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-lg">Lapor Aktivitas</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-center p-4 border-2 border-dashed rounded-lg">
+                    <p className="mb-4 text-muted-foreground">Anda harus masuk untuk membuat laporan.</p>
+                    <Button asChild>
+                        <Link href="/auth/login">
+                            <LogIn className="mr-2 h-4 w-4" />
+                            Masuk untuk Melapor
+                        </Link>
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     );
   }
   
@@ -143,26 +147,14 @@ export default function ReportActivity({ user, userInfo }: { user: User | null, 
   return (
     <Card className="w-full">
       <CardHeader>
+        <CardTitle className="text-lg">Lapor Aktivitas Mencurigakan</CardTitle>
         <CardDescription>
-          Laporan Anda akan dianalisis oleh AI untuk penilaian segera dan disimpan.
+          Laporan Anda akan dianalisis oleh AI untuk penilaian segera.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
-             <FormField
-                control={form.control}
-                name="reporterName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nama Pelapor</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly className="bg-muted/50" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             <FormField
               control={form.control}
               name="reportText"
@@ -215,30 +207,22 @@ export default function ReportActivity({ user, userInfo }: { user: User | null, 
                     <RadioGroup
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      className="flex flex-col space-y-1"
+                      className="flex space-x-4"
                     >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="public" />
                         </FormControl>
                         <FormLabel className="font-normal flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          <div>
-                            <p>Publik</p>
-                            <p className="text-xs text-muted-foreground">Bisa dilihat oleh semua warga di dasbor.</p>
-                          </div>
+                          <Globe className="h-4 w-4" /> Publik
                         </FormLabel>
                       </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="private" />
                         </FormControl>
                         <FormLabel className="font-normal flex items-center gap-2">
-                           <Eye className="h-4 w-4" />
-                           <div>
-                                <p>Privat</p>
-                                <p className="text-xs text-muted-foreground">Hanya bisa dilihat oleh Anda dan petugas.</p>
-                           </div>
+                           <Eye className="h-4 w-4" /> Privat
                         </FormLabel>
                       </FormItem>
                     </RadioGroup>

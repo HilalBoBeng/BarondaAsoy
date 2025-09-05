@@ -4,8 +4,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MainDashboardView from "@/components/dashboard/main-dashboard-view";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const router = useRouter();

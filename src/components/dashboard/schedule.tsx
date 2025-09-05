@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -14,6 +15,9 @@ import { Badge } from '@/components/ui/badge';
 import { db } from '@/lib/firebase/client';
 import type { ScheduleEntry } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const statusMap: Record<ScheduleEntry['status'], string> = {
   Completed: 'Selesai',
@@ -22,6 +26,7 @@ const statusMap: Record<ScheduleEntry['status'], string> = {
   Izin: 'Izin',
   Sakit: 'Sakit',
   'Pending Review': 'Review',
+  'Tanpa Keterangan': 'Tanpa Keterangan'
 };
 
 const statusVariant: Record<
@@ -34,6 +39,7 @@ const statusVariant: Record<
   Izin: 'destructive',
   Sakit: 'destructive',
   'Pending Review': 'default',
+  'Tanpa Keterangan': 'destructive',
 };
 
 export default function Schedule() {
@@ -48,9 +54,9 @@ export default function Schedule() {
     
     const q = query(
       collection(db, 'schedules'),
-      where('date', '>=', Timestamp.fromDate(todayStart)),
-      where('date', '<=', Timestamp.fromDate(todayEnd)),
-      orderBy('date', 'asc')
+      where('startDate', '>=', Timestamp.fromDate(todayStart)),
+      where('startDate', '<=', Timestamp.fromDate(todayEnd)),
+      orderBy('startDate', 'asc')
     );
       
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -60,7 +66,8 @@ export default function Schedule() {
         scheduleData.push({ 
             id: doc.id,
              ...data,
-            date: data.date.toDate ? data.date.toDate().toLocaleDateString('id-ID') : data.date
+            startDate: data.startDate.toDate(),
+            endDate: data.endDate.toDate(),
         } as ScheduleEntry);
       });
       setSchedule(scheduleData);
@@ -71,48 +78,48 @@ export default function Schedule() {
   }, []);
 
   return (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Waktu</TableHead>
-            <TableHead>Petugas</TableHead>
-            <TableHead>Area</TableHead>
-            <TableHead className="text-right">Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
-                </TableRow>
-            ))
-          ) : schedule.length > 0 ? (
-            schedule.map((entry) => (
-                <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.time}</TableCell>
-                <TableCell>{entry.officer}</TableCell>
-                <TableCell>{entry.area}</TableCell>
-                <TableCell className="text-right">
-                    <Badge variant={statusVariant[entry.status]}>
-                    {statusMap[entry.status]}
-                    </Badge>
-                </TableCell>
-                </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center">
-                Tidak ada jadwal patroli untuk hari ini.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <Card>
+        <CardHeader>
+            <CardTitle className="text-lg">Jadwal Patroli Hari Ini</CardTitle>
+        </CardHeader>
+        <CardContent>
+             <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead>Petugas</TableHead>
+                    <TableHead className="text-right">Area</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                        </TableRow>
+                    ))
+                  ) : schedule.length > 0 ? (
+                    schedule.map((entry) => (
+                        <TableRow key={entry.id}>
+                        <TableCell className="font-medium">{entry.time}</TableCell>
+                        <TableCell>{entry.officer}</TableCell>
+                        <TableCell className="text-right">{entry.area}</TableCell>
+                        </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="h-24 text-center">
+                        Tidak ada jadwal patroli untuk hari ini.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+        </CardContent>
+    </Card>
   );
 }

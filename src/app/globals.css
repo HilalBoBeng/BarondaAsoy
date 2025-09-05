@@ -11,25 +11,25 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* White */
-    --foreground: 222 84% 5%; /* Bluish Black */
+    --background: 210 25% 96%; /* #F0F4F8 */
+    --foreground: 210 29% 29%; /* #2C3E50 */
     --card: 0 0% 100%;
-    --card-foreground: 222 84% 5%;
+    --card-foreground: 210 29% 29%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 84% 5%;
-    --primary: 25 95% 53%; /* Orange */
+    --popover-foreground: 210 29% 29%;
+    --primary: 210 29% 29%; /* #2C3E50 - Midnight Blue */
     --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 84% 5%;
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 210 29% 29%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%; /* Darker for better contrast */
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222 84% 5%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 204 70% 53%; /* #3498DB - Vibrant Cyan */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 25 95% 53%;
+    --ring: 204 70% 53%;
     --radius: 0.5rem;
   }
 }
