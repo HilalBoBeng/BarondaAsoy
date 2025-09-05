@@ -3,7 +3,7 @@
 "use client";
 
 import ReportActivity from '@/components/dashboard/report-activity';
-import WelcomeAnnouncement from "@/components/dashboard/announcements";
+import WelcomeAnnouncement from "@/components/dashboard/welcome-announcement";
 import Schedule from '@/components/dashboard/schedule';
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
 import { Button } from "@/components/ui/button";
@@ -105,8 +105,8 @@ export default function MainDashboardView() {
                         {loading ? (
                              <Skeleton className="h-8 w-64 mb-2" />
                         ) : (
-                            <h2 className="text-xl sm:text-2xl font-bold tracking-tight break-word">
-                                {greeting}, {user?.displayName || 'Warga'}!
+                             <h2 className="text-xl sm:text-2xl font-normal tracking-tight">
+                                {greeting}, <span className="font-bold">{user?.displayName || 'Warga'}!</span>
                             </h2>
                         )}
                     </div>

@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase/client';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogClose, DialogTitle } from '../ui/dialog';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface PopupAnnouncement {
     imageUrl: string;
@@ -43,17 +44,18 @@ export default function WelcomeAnnouncement() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-auto">
+      <DialogContent className={cn(
+          "p-0 border-0 bg-transparent shadow-none max-w-md flex items-center justify-center rounded-lg",
+          "w-[90vw] h-[90vw] sm:w-96 sm:h-96 aspect-square" // Enforce 1:1 aspect ratio
+          )}>
         <DialogTitle className="sr-only">Pengumuman</DialogTitle>
         {popupAnnouncement.imageUrl && (
             <div className="relative w-full h-full">
                <Image
                    src={popupAnnouncement.imageUrl}
                    alt="Pengumuman"
-                   layout="responsive"
-                   width={16}
-                   height={9}
-                   objectFit="contain"
+                   layout="fill"
+                   objectFit="contain" // Fit inside the square container
                    className="rounded-lg"
                />
                 <DialogClose asChild>
