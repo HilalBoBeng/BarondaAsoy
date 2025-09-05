@@ -241,7 +241,7 @@ export default function HonorariumAdminPage() {
                       <TableRow key={s.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
+                             <Avatar className="h-10 w-10 cursor-pointer" onClick={() => handleOpenPayDialog(s)}>
                               <AvatarImage src={s.photoURL || undefined} />
                               <AvatarFallback>{s.name.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>

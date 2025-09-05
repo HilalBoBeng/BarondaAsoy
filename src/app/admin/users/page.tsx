@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,6 +29,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import Image from 'next/image';
 
 const toTitleCase = (str: string) => {
   return str.replace(
@@ -283,13 +285,13 @@ export default function UsersAdminPage() {
                     filteredUsers.map((user) => (
                       <TableRow key={user.uid}>
                         <TableCell>
-                          <div className="flex items-center gap-4">
+                          <button className="flex items-center gap-4 text-left" onClick={() => showUserDetail(user)}>
                             <Avatar>
                                 <AvatarImage src={user.photoURL || undefined} />
                                 <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <p className="font-medium">{user.displayName || 'Tanpa Nama'}</p>
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <Badge variant={'secondary'} className={getUserStatus(user).className}>
@@ -336,12 +338,12 @@ export default function UsersAdminPage() {
                     filteredStaff.map((s) => (
                       <TableRow key={s.id}>
                         <TableCell>
-                          <div className="flex items-center gap-4">
+                          <button className="flex items-center gap-4 text-left" onClick={() => showUserDetail(s)}>
                             <Avatar><AvatarImage src={s.photoURL || undefined} /><AvatarFallback>{s.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
                             <div>
                                 <p className="font-medium">{s.name}</p>
                             </div>
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <Badge variant={'secondary'} className={s.status === 'suspended' ? getStaffStatus(s).className : 'bg-green-100 text-green-800'}>
@@ -513,6 +515,13 @@ export default function UsersAdminPage() {
             </Form>
         </DrawerContent>
     </Drawer>
+    
+    <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+        <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
+             <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
+             <Image src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" width={500} height={500} objectFit="contain" />
+        </DialogContent>
+    </Dialog>
     </>
   );
 }

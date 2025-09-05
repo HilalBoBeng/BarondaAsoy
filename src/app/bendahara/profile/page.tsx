@@ -23,6 +23,7 @@ import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -373,9 +374,25 @@ export default function BendaharaProfilePage() {
                     <CardTitle className="text-base text-destructive">Keluar</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     <Button variant="destructive" className="w-full" onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" className="w-full">
+                                <LogOut className="mr-2 h-4 w-4" /> Keluar dari Akun
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                             <AlertDialogHeader>
+                                <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Anda yakin ingin keluar dari akun Anda?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleLogout}>Ya, Keluar</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </CardContent>
             </Card>
             
@@ -445,7 +462,7 @@ export default function BendaharaProfilePage() {
              <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
                 <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
                     <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
-                    <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
+                    <Image src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" width={500} height={500} objectFit="contain" />
                 </DialogContent>
             </Dialog>
         </div>
