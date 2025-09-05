@@ -253,8 +253,8 @@ export default function AdminLayout({
             <NavContent />
         </div>
       </div>
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+      <div className="flex flex-col relative h-screen">
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button
@@ -311,3 +311,5 @@ export default function AdminLayout({
     </div>
   );
 }
+
+    
