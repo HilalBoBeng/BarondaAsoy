@@ -158,7 +158,7 @@ export default function DuesAdminPage() {
     return filterStatus === 'unpaid' && unpaidUsers.length > 0;
   }, [filterStatus, unpaidUsers]);
   
-  const canPerformActions = adminInfo?.role === 'bendahara' || adminInfo?.role === 'super_admin';
+  const canPerformActions = adminInfo?.role === 'bendahara';
 
 
   return (
@@ -218,7 +218,7 @@ export default function DuesAdminPage() {
                         Broadcast Pengingat
                     </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
                         <AlertDialogDescription>

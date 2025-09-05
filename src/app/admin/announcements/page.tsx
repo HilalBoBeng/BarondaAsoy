@@ -17,8 +17,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash, Loader2, ThumbsUp, ThumbsDown, X } from 'lucide-react';
-import type { Announcement } from '@/lib/types';
+import type { Announcement, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { createLog } from '@/lib/utils';
+
 
 const announcementSchema = z.object({
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
@@ -32,6 +34,7 @@ export default function AnnouncementsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
   const { toast } = useToast();
 
   const form = useForm<AnnouncementFormValues>({
@@ -41,7 +44,10 @@ export default function AnnouncementsAdminPage() {
 
   const { formState: { isSubmitting, isValid } } = form;
 
-  useEffect(() => {
+   useEffect(() => {
+    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (info) setCurrentAdmin(info);
+    
     const q = query(collection(db, 'announcements'), orderBy('date', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const announcementsData: Announcement[] = snapshot.docs.map(doc => {
@@ -76,10 +82,12 @@ export default function AnnouncementsAdminPage() {
   };
 
   const onSubmit = async (values: AnnouncementFormValues) => {
+    if (!currentAdmin) return;
     try {
       if (currentAnnouncement) {
         const docRef = doc(db, 'announcements', currentAnnouncement.id);
         await updateDoc(docRef, values);
+        await createLog(currentAdmin, `Memperbarui pengumuman: "${values.title}"`);
         toast({ title: "Berhasil", description: "Pengumuman berhasil diperbarui." });
       } else {
         await addDoc(collection(db, 'announcements'), {
@@ -90,6 +98,7 @@ export default function AnnouncementsAdminPage() {
           likesBy: [],
           dislikesBy: [],
         });
+        await createLog(currentAdmin, `Membuat pengumuman baru: "${values.title}"`);
         toast({ title: "Berhasil", description: "Pengumuman berhasil dibuat." });
       }
       setIsDialogOpen(false);
@@ -100,9 +109,11 @@ export default function AnnouncementsAdminPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, title: string) => {
+    if (!currentAdmin) return;
     try {
       await deleteDoc(doc(db, 'announcements', id));
+      await createLog(currentAdmin, `Menghapus pengumuman: "${title}"`);
       toast({ title: "Berhasil", description: "Pengumuman berhasil dihapus." });
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Tidak dapat menghapus pengumuman." });
@@ -110,7 +121,7 @@ export default function AnnouncementsAdminPage() {
   };
   
   const handleDeleteAll = async () => {
-    if (announcements.length === 0) return;
+    if (announcements.length === 0 || !currentAdmin) return;
     const batch = writeBatch(db);
     announcements.forEach(ann => {
       const docRef = doc(db, 'announcements', ann.id);
@@ -118,6 +129,7 @@ export default function AnnouncementsAdminPage() {
     });
     try {
       await batch.commit();
+      await createLog(currentAdmin, `Menghapus semua ${announcements.length} pengumuman.`);
       toast({ title: 'Berhasil', description: 'Semua pengumuman telah dihapus.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus semua pengumuman.' });
@@ -137,7 +149,7 @@ export default function AnnouncementsAdminPage() {
             <span className="sr-only">Hapus</span>
           </Button>
         </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -146,7 +158,7 @@ export default function AnnouncementsAdminPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleDelete(ann.id)}>Hapus</AlertDialogAction>
+            <AlertDialogAction onClick={() => handleDelete(ann.id, ann.title)}>Hapus</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -172,7 +184,7 @@ export default function AnnouncementsAdminPage() {
                   <Trash className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Hapus Semua Pengumuman?</AlertDialogTitle>
                   <AlertDialogDescription>Tindakan ini akan menghapus semua {announcements.length} pengumuman.</AlertDialogDescription>
@@ -271,7 +283,7 @@ export default function AnnouncementsAdminPage() {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
+          <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{currentAnnouncement ? 'Edit' : 'Buat'} Pengumuman</DialogTitle>
             </DialogHeader>
