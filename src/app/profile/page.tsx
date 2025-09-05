@@ -24,10 +24,10 @@ import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose, DrawerBody, DrawerDescription } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -276,6 +276,17 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    signOut(auth).then(() => {
+      router.push('/auth/login');
+    }).catch((error) => {
+        toast({ variant: 'destructive', title: 'Gagal Keluar', description: 'Terjadi kesalahan saat mencoba keluar.' });
+    }).finally(() => {
+        setIsLoggingOut(false);
+    });
+  }
+
 
   if (loading || isLoggingOut) {
      return (
@@ -477,6 +488,18 @@ export default function ProfilePage() {
                         <ReportHistory />
                     </CardContent>
                 </Card>
+                
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base text-destructive">Keluar</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <Button variant="destructive" className="w-full" onClick={handleLogout} disabled={isLoggingOut}>
+                            {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOut className="mr-2 h-4 w-4" />}
+                            Keluar dari Akun
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </main>
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
@@ -495,64 +518,66 @@ export default function ProfilePage() {
             </div>
         </nav>
         
-        <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
-            <DialogContent className="rounded-lg">
-                <DialogHeader>
-                    <DialogTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DialogTitle>
-                </DialogHeader>
+        <Drawer open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
+            <DrawerContent>
+                <DrawerHeader>
+                    <DrawerTitle>Edit {editingField ? fieldLabels[editingField] : ''}</DrawerTitle>
+                </DrawerHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                        {editingField && editingField === 'bio' && (
-                           <FormField
-                                control={form.control}
-                                name="bio"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{fieldLabels.bio}</FormLabel>
-                                    <FormControl><Textarea {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        )}
-                        {editingField && editingField !== 'photoURL' && editingField !== 'bio' && (
-                           <FormField
-                                control={form.control}
-                                name={editingField}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{fieldLabels[editingField]}</FormLabel>
-                                    <FormControl><Input {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        )}
-                        {editingField === 'photoURL' && (
+                         <DrawerBody>
+                            {editingField && editingField === 'bio' && (
                             <FormField
-                                control={form.control}
-                                name="photoURL"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormControl>
-                                        <div className="hidden"><Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} /></div>
-                                    </FormControl>
-                                    {field.value && (
-                                       <div className="flex flex-col items-center gap-4">
-                                            <Avatar className="h-40 w-40 mt-2">
-                                                <AvatarImage src={field.value} alt="Preview" />
-                                                <AvatarFallback>
-                                                    <Loader2 className="animate-spin" />
-                                                </AvatarFallback>
-                                            </Avatar>
-                                       </div>
+                                    control={form.control}
+                                    name="bio"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{fieldLabels.bio}</FormLabel>
+                                        <FormControl><Textarea {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
                                     )}
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        )}
-                         <DialogFooter className="sm:justify-between gap-2 pt-4">
+                                />
+                            )}
+                            {editingField && editingField !== 'photoURL' && editingField !== 'bio' && (
+                            <FormField
+                                    control={form.control}
+                                    name={editingField}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{fieldLabels[editingField]}</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
+                            {editingField === 'photoURL' && (
+                                <FormField
+                                    control={form.control}
+                                    name="photoURL"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <div className="hidden"><Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} /></div>
+                                        </FormControl>
+                                        {field.value && (
+                                        <div className="flex flex-col items-center gap-4">
+                                                <Avatar className="h-40 w-40 mt-2">
+                                                    <AvatarImage src={field.value} alt="Preview" />
+                                                    <AvatarFallback>
+                                                        <Loader2 className="animate-spin" />
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                        </div>
+                                        )}
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
+                        </DrawerBody>
+                         <DrawerFooter className="sm:justify-between gap-2 pt-4">
                            {editingField === 'photoURL' && user?.photoURL ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -579,17 +604,16 @@ export default function ProfilePage() {
                                     Simpan
                                 </Button>
                            </div>
-                        </DialogFooter>
+                        </DrawerFooter>
                     </form>
                 </Form>
-            </DialogContent>
-        </Dialog>
-        <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-            <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg">
-                <DialogTitle className="sr-only">Zoomed Profile Photo</DialogTitle>
+            </DrawerContent>
+        </Drawer>
+        <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+            <DrawerContent>
                 <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-            </DialogContent>
-        </Dialog>
+            </DrawerContent>
+        </Drawer>
 
     </div>
   );

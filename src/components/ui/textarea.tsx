@@ -20,6 +20,7 @@ const Textarea = React.forwardRef<
     if (internalRef.current) {
         handleInput({ currentTarget: internalRef.current } as React.FormEvent<HTMLTextAreaElement>);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value]);
 
   return (

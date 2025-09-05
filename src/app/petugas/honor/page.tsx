@@ -16,9 +16,7 @@ import { Banknote } from 'lucide-react';
 
 const statusConfig: Record<Honorarium['status'], { className: string }> = {
     'Dibayarkan': { className: 'bg-green-100 text-green-800' },
-    'Tertunda': { className: 'bg-yellow-100 text-yellow-800' },
-    'Dipotong': { className: 'bg-orange-100 text-orange-800' },
-    'Batal': { className: 'bg-red-100 text-red-800' },
+    'Belum Dibayar': { className: 'bg-yellow-100 text-yellow-800' },
 };
 
 export default function HonorariumPetugasPage() {
@@ -40,7 +38,8 @@ export default function HonorariumPetugasPage() {
 
     const honorQuery = query(
       collection(db, 'honorariums'),
-      where('staffId', '==', staffId)
+      where('staffId', '==', staffId),
+      orderBy('issueDate', 'desc')
     );
 
     const unsubscribe = onSnapshot(honorQuery, (snapshot) => {
@@ -50,9 +49,6 @@ export default function HonorariumPetugasPage() {
         issueDate: (doc.data().issueDate as Timestamp)?.toDate(),
       } as Honorarium));
       
-      // Sort on the client side
-      honorData.sort((a, b) => (b.issueDate as Date).getTime() - (a.issueDate as Date).getTime());
-
       setHonorariums(honorData);
       setLoading(false);
     });
@@ -69,9 +65,9 @@ export default function HonorariumPetugasPage() {
                 <CardHeader className="pb-2">
                      <div className="flex justify-between items-start">
                         <CardTitle className="text-base">{h.period}</CardTitle>
-                        <Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge>
+                        <Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge>
                      </div>
-                     <CardDescription>{format(h.issueDate as Date, "PPP", { locale: id })}</CardDescription>
+                     <CardDescription>{h.issueDate ? format(h.issueDate as Date, "PPP", { locale: id }) : 'N/A'}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="text-lg font-bold text-primary">{formatCurrency(h.amount)}</p>
@@ -98,10 +94,10 @@ export default function HonorariumPetugasPage() {
                 <TableBody>
                     {honorariums.map((h) => (
                         <TableRow key={h.id}>
-                            <TableCell>{format(h.issueDate as Date, "PPP", { locale: id })}</TableCell>
+                            <TableCell>{h.issueDate ? format(h.issueDate as Date, "PPP", { locale: id }) : 'N/A'}</TableCell>
                             <TableCell>{h.period}</TableCell>
                             <TableCell>{formatCurrency(h.amount)}</TableCell>
-                            <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status].className)}>{h.status}</Badge></TableCell>
+                            <TableCell><Badge variant="secondary" className={cn(statusConfig[h.status]?.className)}>{h.status}</Badge></TableCell>
                             <TableCell className="max-w-xs truncate">{h.notes || '-'}</TableCell>
                         </TableRow>
                     ))}
