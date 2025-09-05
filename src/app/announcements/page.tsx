@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Announcement } from '@/lib/types';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Megaphone, Calendar, Home, UserCircle, Settings } from 'lucide-react';
+import { Megaphone, Calendar, Home, UserCircle, Settings, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ import Image from 'next/image';
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
-    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
+    { href: "/report", icon: Shield, label: "Laporan" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ];

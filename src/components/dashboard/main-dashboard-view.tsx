@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import ReportActivity from '@/components/dashboard/report-activity';
+import ReportHistory from '@/components/profile/report-history';
 import WelcomeAnnouncement from "@/components/dashboard/welcome-announcement";
 import Schedule from '@/components/dashboard/schedule';
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
@@ -14,17 +13,19 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AppUser, PatrolLog } from "@/lib/types";
+import type { AppUser, PatrolLog, Announcement } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone } from 'lucide-react';
+import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone, Calendar } from 'lucide-react';
 import { usePathname } from "next/navigation";
 import { UserNav } from './user-nav';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
-    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
+    { href: "/report", icon: Shield, label: "Laporan" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
@@ -34,6 +35,9 @@ export default function MainDashboardView() {
   const [userInfo, setUserInfo] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("Selamat Datang");
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   
   const pathname = usePathname();
   const auth = getAuth(app);
@@ -67,9 +71,25 @@ export default function MainDashboardView() {
         setLoading(false);
       }
     });
+    
+    const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(5));
+    const unsubscribeAnnouncements = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => {
+        const docData = doc.data();
+        return {
+          id: doc.id,
+          ...docData,
+          date: docData.date instanceof Timestamp ? docData.date.toDate() : docData.date,
+        } as Announcement;
+      });
+      setAnnouncements(data);
+      setLoadingAnnouncements(false);
+    });
+
 
     return () => {
       unsubscribeAuth();
+      unsubscribeAnnouncements();
     };
   }, [auth]);
 
@@ -113,8 +133,29 @@ export default function MainDashboardView() {
                 </div>
 
                 <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Pengumuman Terbaru</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             {loadingAnnouncements ? (
+                                Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full mb-2" />)
+                            ) : announcements.length > 0 ? (
+                                announcements.map((ann) => (
+                                    <div key={ann.id} className="border-b last:border-b-0 py-3 cursor-pointer" onClick={() => setSelectedAnnouncement(ann)}>
+                                        <p className="font-semibold text-sm">{ann.title}</p>
+                                        <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center text-muted-foreground py-4">
+                                    Tidak ada pengumuman.
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                     <Schedule />
-                    <ReportActivity user={user} userInfo={userInfo} />
+                    <ReportHistory />
                     <EmergencyContacts />
                 </div>
             </div>
@@ -135,6 +176,33 @@ export default function MainDashboardView() {
                 ))}
             </div>
         </nav>
+        
+        <Drawer open={!!selectedAnnouncement} onOpenChange={(open) => !open && setSelectedAnnouncement(null)}>
+            <DrawerContent>
+                {selectedAnnouncement && (
+                    <div className="mx-auto w-full max-w-sm">
+                    <DrawerHeader className="text-left">
+                        <DrawerTitle className="flex items-center gap-2">
+                            <Megaphone className="h-5 w-5 text-primary" />
+                            <span>{selectedAnnouncement.title}</span>
+                        </DrawerTitle>
+                        <DrawerDescription className="flex items-center gap-2 text-xs pt-1">
+                           <Calendar className="h-4 w-4" />
+                           <span>{selectedAnnouncement.date instanceof Date ? format(selectedAnnouncement.date, 'PPP', { locale: id }) : 'N/A'}</span>
+                        </DrawerDescription>
+                    </DrawerHeader>
+                    <div className="p-4 pt-0">
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedAnnouncement.content}</p>
+                    </div>
+                    <DrawerFooter>
+                        <DrawerClose asChild>
+                        <Button>Tutup</Button>
+                        </DrawerClose>
+                    </DrawerFooter>
+                    </div>
+                )}
+            </DrawerContent>
+        </Drawer>
     </div>
   );
 }

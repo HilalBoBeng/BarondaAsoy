@@ -12,11 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, Megaphone, UserCircle, ScrollText } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, Megaphone, UserCircle, ScrollText, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
-import ReportHistory from '@/components/profile/report-history';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, formatDistanceToNow, isBefore, addDays, subDays } from 'date-fns';
@@ -41,7 +40,7 @@ const profileSchema = z.object({
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
-    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
+    { href: "/report", icon: Shield, label: "Laporan" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
@@ -475,16 +474,6 @@ export default function ProfilePage() {
                                 </TableBody>
                             </Table>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card id="laporan">
-                    <CardHeader>
-                    <CardTitle>Riwayat Laporan Saya</CardTitle>
-                    <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ReportHistory />
                     </CardContent>
                 </Card>
                 
