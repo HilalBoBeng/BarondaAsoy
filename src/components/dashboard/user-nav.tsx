@@ -38,11 +38,6 @@ import Image from "next/image";
 
 
 export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUser | null }) {
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<AppUser[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -53,7 +48,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
   const auth = getAuth(app);
   const { toast } = useToast();
   const router = useRouter();
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -93,36 +87,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     }
   }, [user]);
 
-  useEffect(() => {
-    if (isSearchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isSearchOpen]);
-
-  const handleSearch = async (queryText: string) => {
-    setSearchQuery(queryText);
-    if (!queryText.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setIsSearching(true);
-    try {
-      const usersRef = collection(db, "users");
-      const querySnapshot = await getDocs(usersRef);
-      const allUsers = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
-      
-      const lowerCaseQuery = queryText.toLowerCase();
-      const results = allUsers.filter(u => 
-          u.displayName?.toLowerCase().includes(lowerCaseQuery) && u.uid !== user?.uid
-      );
-      setSearchResults(results.slice(0, 10)); // Limit results
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Pencarian Gagal' });
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const handleNotificationClick = async (notification: Notification) => {
     setSelectedNotification(notification);
     setIsNotificationsOpen(false);
@@ -144,9 +108,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
       <div className="flex items-center gap-1 sm:gap-2">
          {user && (
           <>
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
-              <Search className="h-5 w-5" />
-            </Button>
              <div className="relative">
                 <Button variant="ghost" size="icon" onClick={() => setIsNotificationsOpen(true)}>
                     <Bell className="h-5 w-5" />
@@ -162,47 +123,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
          )}
       </div>
 
-     {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-background animate-in fade-in-0">
-            <div className="flex items-center border-b px-4 h-16">
-                 <Input 
-                   ref={searchInputRef}
-                   value={searchQuery}
-                   onChange={(e) => handleSearch(e.target.value)}
-                   placeholder="Cari warga lain..."
-                   className="h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-base"
-                  />
-                  {isSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-3" />}
-                  <Button variant="ghost" size="icon" onClick={() => { setIsSearchOpen(false); setSearchResults([]); setSearchQuery(''); }}>
-                      <X className="h-5 w-5" />
-                  </Button>
-            </div>
-            <div className="p-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
-                {!searchQuery.trim() ? (
-                    <div className="text-center text-muted-foreground pt-20">
-                        <p>Cari orang yang ingin Anda cari</p>
-                    </div>
-                ) : !isSearching && searchResults.length === 0 ? (
-                     <div className="text-center text-muted-foreground pt-20">
-                        <p>Orang yang Anda cari tidak tersedia</p>
-                    </div>
-                ) : (
-                    searchResults.map(foundUser => (
-                        <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
-                            <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
-                                <Avatar>
-                                    <AvatarImage src={foundUser.photoURL || ''} alt={foundUser.displayName || 'User'}/>
-                                    <AvatarFallback>{foundUser.displayName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <p className="font-medium">{foundUser.displayName}</p>
-                            </div>
-                        </Link>
-                    ))
-                )}
-            </div>
-        </div>
-      )}
-       
       <Drawer open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
         <DrawerContent>
           <div className="mx-auto w-full max-w-md">
@@ -252,7 +172,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         </Drawer>
         
         <Dialog open={!!imagePopupNotification} onOpenChange={() => setImagePopupNotification(null)}>
-            <DialogContent className="p-0 border-0 bg-black/50 max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-square">
+            <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
                  <DialogTitle className="sr-only">{imagePopupNotification?.title}</DialogTitle>
                  {imagePopupNotification?.imageUrl && (
                     <div className="relative w-full h-full">
@@ -275,4 +195,3 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     </>
   );
 }
-

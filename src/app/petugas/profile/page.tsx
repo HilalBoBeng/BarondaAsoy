@@ -25,6 +25,7 @@ import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerD
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const profileEditSchema = z.object({
   displayName: z.string().optional(),
@@ -452,13 +453,12 @@ export default function PetugasProfilePage() {
                 </DrawerContent>
             </Drawer>
 
-            <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-                <DrawerContent>
+            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
+                    <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-                </DrawerContent>
-            </Drawer>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
-
-    

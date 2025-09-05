@@ -429,7 +429,7 @@ export default function AdminProfilePage() {
                     </DrawerHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
-                            <DrawerBody className="space-y-4 px-4">
+                            <DrawerBody className="px-4">
                                {editingField && editingField !== 'photoURL' && (
                                 <FormField
                                     control={form.control}
@@ -472,7 +472,7 @@ export default function AdminProfilePage() {
             </Drawer>
 
             <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-                <DialogContent>
+                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
                     <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
                 </DialogContent>

@@ -442,8 +442,8 @@ export default function BendaharaProfilePage() {
                 </DrawerContent>
             </Drawer>
 
-            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-                <DialogContent>
+             <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
                     <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
                 </DialogContent>
