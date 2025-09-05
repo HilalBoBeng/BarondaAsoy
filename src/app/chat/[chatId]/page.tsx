@@ -1,0 +1,168 @@
+
+"use client";
+
+import { useState, useEffect, useRef } from 'react';
+import { db } from '@/lib/firebase/client';
+import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { notFound, useParams, useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ArrowLeft, Send } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
+
+interface Message {
+  id: string;
+  text: string;
+  senderId: string;
+  timestamp: any;
+}
+
+interface Chat {
+  id: string;
+  users: string[];
+  userNames: { [key: string]: string };
+  userPhotos: { [key: string]: string };
+}
+
+export default function ChatPage() {
+  const { chatId } = useParams();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [chatInfo, setChatInfo] = useState<Chat | null>(null);
+  const [loading, setLoading] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/auth/login');
+      return;
+    }
+    if (!chatId) return;
+
+    const chatDocRef = doc(db, 'chats', chatId as string);
+    const unsubChat = onSnapshot(chatDocRef, (doc) => {
+      if (doc.exists()) {
+        const chatData = { id: doc.id, ...doc.data() } as Chat;
+        if (!chatData.users.includes(currentUser.uid)) {
+            notFound();
+            return;
+        }
+        setChatInfo(chatData);
+      } else {
+        notFound();
+      }
+      setLoading(false);
+    });
+
+    const messagesQuery = query(collection(db, 'chats', chatId as string, 'messages'), orderBy('timestamp', 'asc'));
+    const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+      setMessages(msgs);
+    });
+
+    return () => {
+      unsubChat();
+      unsubMessages();
+    };
+  }, [chatId, currentUser, router]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newMessage.trim() === '' || !currentUser || !chatId) return;
+
+    const messagesColRef = collection(db, 'chats', chatId as string, 'messages');
+    await addDoc(messagesColRef, {
+      text: newMessage,
+      senderId: currentUser.uid,
+      timestamp: serverTimestamp()
+    });
+    setNewMessage('');
+    
+    // Update last message in chat document
+    const chatDocRef = doc(db, 'chats', chatId as string);
+    await updateDoc(chatDocRef, {
+      lastMessage: {
+        text: newMessage,
+        senderId: currentUser.uid,
+        timestamp: serverTimestamp()
+      }
+    });
+  };
+
+  const otherUser = chatInfo && currentUser ? chatInfo.users.find(uid => uid !== currentUser.uid) : null;
+  const otherUserName = otherUser ? chatInfo?.userNames[otherUser] : 'Warga';
+  const otherUserPhoto = otherUser ? chatInfo?.userPhotos[otherUser] : '';
+
+
+  if (loading) {
+    return (
+        <div className="flex flex-col h-screen">
+            <header className="flex items-center justify-between p-4 border-b">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 mx-4"><Skeleton className="h-6 w-1/3" /></div>
+            </header>
+            <div className="flex-1 p-4 space-y-4">
+                <Skeleton className="h-10 w-3/4" />
+                <Skeleton className="h-10 w-3/4 ml-auto" />
+                <Skeleton className="h-10 w-2/3" />
+            </div>
+            <footer className="p-4 border-t"><Skeleton className="h-10 w-full" /></footer>
+        </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-muted/40">
+        <header className="sticky top-0 z-10 flex items-center gap-4 p-3 border-b bg-background shadow-sm">
+             <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
+                <Link href="/chat"><ArrowLeft /></Link>
+             </Button>
+            <Avatar>
+                <AvatarImage src={otherUserPhoto} />
+                <AvatarFallback>{otherUserName?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <h2 className="font-semibold">{otherUserName}</h2>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map(msg => (
+                <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start')}>
+                     {msg.senderId !== currentUser?.uid && (
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={otherUserPhoto} />
+                            <AvatarFallback>{otherUserName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                     )}
+                     <div className={cn(
+                        "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words",
+                        msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background'
+                     )}>
+                         {msg.text}
+                     </div>
+                </div>
+            ))}
+            <div ref={messagesEndRef} />
+        </main>
+        
+        <footer className="sticky bottom-0 bg-background border-t p-2">
+            <form onSubmit={sendMessage} className="flex items-center gap-2">
+                <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan..." autoComplete="off" />
+                <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+                    <Send className="h-4 w-4" />
+                </Button>
+            </form>
+        </footer>
+    </div>
+  );
+}

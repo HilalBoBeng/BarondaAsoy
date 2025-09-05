@@ -63,6 +63,7 @@ export interface AppUser {
   email?: string | null;
   displayName?: string | null;
   photoURL?: string | null;
+  bio?: string;
   createdAt?: Timestamp | Date;
   phone?: string;
   addressType?: 'kilongan' | 'luar_kilongan';
@@ -92,7 +93,7 @@ export interface Staff {
   lastCodeChangeTimestamp?: Timestamp;
   createdAt?: Timestamp | Date;
   expiresAt?: Timestamp;
-  role?: 'petugas' | 'admin' | 'super_admin' | 'bendahara';
+  role?: 'petugas' | 'admin' | 'bendahara';
   photoURL?: string | null;
   lastUpdated_name?: Timestamp;
   lastUpdated_phone?: Timestamp;

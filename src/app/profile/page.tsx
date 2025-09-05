@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const profileSchema = z.object({
@@ -36,6 +37,7 @@ const profileSchema = z.object({
   phone: z.string().optional(),
   addressDetail: z.string().optional(),
   photoURL: z.string().optional(),
+  bio: z.string().max(150, "Bio tidak boleh lebih dari 150 karakter.").optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -71,8 +73,7 @@ export default function ProfilePage() {
 
   const canEditField = useCallback((field: FieldName) => {
     if (!user) return false;
-    // Always allow photo change
-    if (field === 'photoURL') return true;
+    if (field === 'photoURL' || field === 'bio') return true;
     
     let lastUpdateTimestamp: Timestamp | undefined | null = null;
     if (field === 'phone') {
@@ -104,6 +105,7 @@ export default function ProfilePage() {
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
                     photoURL: null,
+                    bio: '',
                     lastUpdated_displayName: null,
                     lastUpdated_phone: null,
                     lastUpdated_addressDetail: null,
@@ -121,28 +123,12 @@ export default function ProfilePage() {
                 userData = { uid: currentUser.uid, ...newUserSnap.data() } as AppUser;
             }
             
-            if (userData.isBlocked) {
-                const dialog = document.createElement('div');
-                document.body.appendChild(dialog);
-                alert(`Akun Diblokir. Alasan: Anda tidak dapat mengakses aplikasi.`);
+            if (userData.isBlocked || userData.isSuspended) {
+                alert(`Akun Anda sedang dalam status ditangguhkan atau diblokir.`);
                 auth.signOut();
                 router.push('/auth/login');
                 return;
             }
-             if (userData.isSuspended) {
-                const endDate = (userData.suspensionEndDate as Timestamp)?.toDate() || null;
-                const endDateString = endDate ? formatDistanceToNow(endDate, { addSuffix: true, locale: id }) : 'permanen';
-                 
-                const dialog = document.createElement('div');
-                document.body.appendChild(dialog);
-                
-                alert(`Akun Ditangguhkan. Alasan: ${userData.suspensionReason || 'Tidak ada alasan'}. Penangguhan berakhir ${endDateString}.`);
-                 
-                 auth.signOut();
-                 router.push('/auth/login');
-                 return;
-             }
-
 
             setUser(userData);
             form.reset({
@@ -150,6 +136,7 @@ export default function ProfilePage() {
                 phone: userData.phone || '',
                 addressDetail: userData.addressDetail || '',
                 photoURL: userData.photoURL || '',
+                bio: userData.bio || '',
             });
 
             const duesQuery = query(collection(db, 'dues'), where('userId', '==', currentUser.uid));
@@ -179,7 +166,7 @@ export default function ProfilePage() {
   }, [auth, router, toast]);
 
   const handleEditClick = (field: FieldName) => {
-    if (field === 'displayName') return; // Nama tidak bisa diganti
+    if (field === 'displayName') return;
     if (!canEditField(field)) {
         toast({ variant: 'destructive', title: 'Data Dikunci', description: `Anda baru bisa mengubah data ini lagi setelah 7 hari dari pembaruan terakhir.` });
         return;
@@ -190,6 +177,7 @@ export default function ProfilePage() {
       phone: user?.phone || '',
       addressDetail: user?.addressDetail || '',
       photoURL: user?.photoURL || '',
+      bio: user?.bio || '',
     });
     if (field === 'photoURL') {
         fileInputRef.current?.click();
@@ -229,13 +217,19 @@ export default function ProfilePage() {
           
           const updateData: { [key: string]: any } = {};
           updateData[editingField] = valueToUpdate;
-          updateData[`lastUpdated_${editingField}`] = serverTimestamp();
+          if (editingField !== 'bio' && editingField !== 'photoURL') {
+            updateData[`lastUpdated_${editingField}`] = serverTimestamp();
+          }
           
           await updateDoc(userDocRef, updateData);
           
           toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui.' });
           
-          const updatedUser = { ...user, [editingField]: valueToUpdate, [`lastUpdated_${editingField}`]: Timestamp.now() } as AppUser;
+          const updatedUser = { ...user, [editingField]: valueToUpdate } as AppUser;
+          if (editingField !== 'bio' && editingField !== 'photoURL') {
+             updatedUser[`lastUpdated_${editingField}`] = Timestamp.now();
+          }
+
           setUser(updatedUser);
 
           setIsEditDialogOpen(false);
@@ -312,37 +306,6 @@ export default function ProfilePage() {
                              </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader>
-                           <Skeleton className="h-6 w-48" />
-                           <Skeleton className="h-4 w-64" />
-                        </CardHeader>
-                        <CardContent>
-                           <div className="rounded-lg border">
-                              <Table>
-                                  <TableHeader>
-                                      <TableRow>
-                                        <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                        <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                        <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                      </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                      <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
-                                  </TableBody>
-                              </Table>
-                           </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <Skeleton className="h-6 w-48" />
-                           <Skeleton className="h-4 w-64" />
-                        </CardHeader>
-                        <CardContent>
-                           <Skeleton className="h-40 w-full" />
-                        </CardContent>
-                    </Card>
                 </div>
             </main>
         </div>
@@ -353,7 +316,8 @@ export default function ProfilePage() {
     displayName: "Nama Lengkap",
     phone: "Nomor HP / WhatsApp",
     addressDetail: "Alamat",
-    photoURL: "Foto Profil"
+    photoURL: "Foto Profil",
+    bio: "Bio"
   };
 
   const fieldIcons: Record<keyof ProfileFormValues | 'email' | 'address', React.ElementType> = {
@@ -362,6 +326,7 @@ export default function ProfilePage() {
     phone: Phone,
     addressDetail: MapPin,
     photoURL: Camera,
+    bio: AlignLeft,
   };
 
   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
@@ -451,6 +416,7 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y">
+                            {renderDataRow("bio", user?.bio)}
                             {renderDataRow("phone", user?.phone)}
                             {renderDataRow("addressDetail", user?.addressType === 'kilongan' ? 'Kilongan' : user?.addressDetail)}
                         </div>
@@ -518,7 +484,20 @@ export default function ProfilePage() {
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                        {editingField && editingField !== 'photoURL' && (
+                        {editingField && editingField === 'bio' && (
+                           <FormField
+                                control={form.control}
+                                name="bio"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{fieldLabels.bio}</FormLabel>
+                                    <FormControl><Textarea {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        )}
+                        {editingField && editingField !== 'photoURL' && editingField !== 'bio' && (
                            <FormField
                                 control={form.control}
                                 name={editingField}
