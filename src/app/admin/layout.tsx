@@ -64,6 +64,7 @@ export default function AdminLayout({
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0 });
   const [pageTitle, setPageTitle] = useState("Dasbor");
+  const [isDetailPage, setIsDetailPage] = useState(false);
 
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
@@ -114,28 +115,36 @@ export default function AdminLayout({
   }, [router]);
   
   useEffect(() => {
-    const isDetailPage = pathname.split('/').length > 3;
+    const segments = pathname.split('/').filter(Boolean);
+    // Detail page if more than 2 segments, e.g., /admin/users/[id]
+    const detailPage = segments.length > 2;
+    setIsDetailPage(detailPage);
+
     const activeItem = navItems.find(item => pathname.startsWith(item.href));
     setPageTitle(activeItem?.label || 'Dasbor');
   }, [pathname, navItems]);
 
   const NavContent = () => (
     <div className="flex h-full flex-col bg-background/95 backdrop-blur-sm">
-        <header className="flex h-16 items-center border-b px-4 shrink-0">
-             <Link href="/admin" className="flex items-center gap-2 font-bold text-primary">
-                 <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={32} height={32} />
-                 <span>Baronda Admin</span>
-             </Link>
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+             {isDetailPage ? (
+                 <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
+                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                 </Button>
+             ) : (
+                <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+             )}
         </header>
-        <main className="flex-1 overflow-auto p-4">
+        <main className="flex-1 overflow-auto p-4 pb-20">
             {children}
         </main>
-        <nav className="sticky bottom-0 z-10 grid grid-cols-5 border-t bg-background">
+        <nav className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-5 border-t bg-background">
             {navItems.filter(item => ['/admin', '/admin/users', '/admin/schedule', '/admin/tools', '/admin/profile'].includes(item.href)).map(item => (
                 <Link key={item.href} href={item.href} passHref>
                     <Button variant="ghost" className={cn(
                         "flex h-full w-full flex-col items-center justify-center gap-1 rounded-none p-2 text-xs",
-                        pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
+                        pathname.startsWith(item.href) && item.href !== '/admin' ? "text-primary bg-primary/10" : pathname === '/admin' && item.href === '/admin' ? "text-primary bg-primary/10" : "text-muted-foreground"
                     )}>
                         <div className="relative">
                             <item.icon className="h-5 w-5" />

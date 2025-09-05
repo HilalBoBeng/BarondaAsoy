@@ -183,18 +183,13 @@ export default function PetugasLayout({
     const duesDetailMatch = pathname.match(duesDetailRegex);
     const isDuesRecord = pathname === '/petugas/dues/record';
 
-    const isDetail = !!duesDetailMatch || isDuesRecord;
-    setIsDetailPage(isDetail);
-
+    const detailPage = pathname.split('/').filter(Boolean).length > 2;
+    setIsDetailPage(detailPage);
+    
     let newPageTitle = "Dasbor Petugas";
-    if (duesDetailMatch) {
-        newPageTitle = "Riwayat Iuran";
-    } else if (isDuesRecord) {
-        newPageTitle = "Catat Iuran Warga";
-    } else {
-        const activeItem = navItemsList.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
-        if (activeItem) newPageTitle = activeItem.label;
-    }
+    const activeItem = navItemsList.find(item => pathname.startsWith(item.href) && item.href !== '/petugas');
+    if (activeItem) newPageTitle = activeItem.label;
+    
     setPageTitle(newPageTitle);
   }, [pathname, menuConfig, loadingConfig, navItemsList]);
 
@@ -220,7 +215,7 @@ export default function PetugasLayout({
       </html>
     );
   }
-  
+
   const NavHeader = () => (
     <Link href="/petugas" className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-14 w-14">
@@ -234,7 +229,6 @@ export default function PetugasLayout({
         </div>
     </Link>
   );
-
 
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="flex flex-col h-full">
@@ -294,67 +288,57 @@ export default function PetugasLayout({
   }
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
-        <div className="flex h-auto items-center border-b px-2 lg:h-auto lg:px-4 py-2">
-          <NavHeader />
-        </div>
-        <div className="flex-1 overflow-auto py-2">
-          <NavContent />
-        </div>
-      </div>
-      <div className="flex flex-col relative h-screen">
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
-                <SheetHeader className="p-4 border-b">
-                   <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                   <NavHeader />
-                </SheetHeader>
-                <div className="flex-1 overflow-auto py-2">
-                  <NavContent onLinkClick={() => setIsSheetOpen(false)} />
-                </div>
-            </SheetContent>
-          </Sheet>
-
-           <div className="w-full flex-1">
-             {isDetailPage ? (
-                 <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
-                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                 </Button>
-             ) : (
-                <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-             )}
-          </div>
-            <div className="flex items-center gap-2 text-right">
-              <div className="flex flex-col">
-                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+    <div className="flex flex-col h-screen">
+      <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
+              <SheetHeader className="p-4 border-b">
+                 <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
+                 <NavHeader />
+              </SheetHeader>
+              <div className="flex-1 overflow-auto py-2">
+                <NavContent onLinkClick={() => setIsSheetOpen(false)} />
               </div>
-               <Image
-                src="https://iili.io/KJ4aGxp.png"
-                alt="Logo"
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-                priority
-              />
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
-           <div className="mx-auto w-full max-w-screen-2xl">
-            {children}
-          </div>
-        </main>
-      </div>
-       <Dialog open={false}>
+          </SheetContent>
+        </Sheet>
+
+         <div className="w-full flex-1">
+           {isDetailPage ? (
+               <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                  <ArrowLeft className="h-4 w-4" />
+                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+               </Button>
+           ) : (
+              <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+           )}
+        </div>
+          <div className="flex items-center gap-2 text-right">
+            <div className="flex flex-col">
+                <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+            </div>
+             <Image
+              src="https://iili.io/KJ4aGxp.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+              priority
+            />
+        </div>
+      </header>
+      <main className="flex-1 overflow-auto p-4 lg:p-6 bg-gray-100/40 dark:bg-muted/40 pb-20">
+         <div className="mx-auto w-full max-w-screen-2xl">
+          {children}
+        </div>
+      </main>
+      <Dialog open={false}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle className="sr-only">Akun Ditangguhkan</DialogTitle>
@@ -365,5 +349,3 @@ export default function PetugasLayout({
     </div>
   );
 }
-
-    

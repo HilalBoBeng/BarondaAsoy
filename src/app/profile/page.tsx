@@ -12,9 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, MessageSquare, UserCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
 import ReportHistory from '@/components/profile/report-history';
 import Link from 'next/link';
@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import FloatingChatButton from '@/components/dashboard/floating-chat-button';
 
 
 const profileSchema = z.object({
@@ -39,6 +40,13 @@ const profileSchema = z.object({
   photoURL: z.string().optional(),
   bio: z.string().max(150, "Bio tidak boleh lebih dari 150 karakter.").optional(),
 });
+
+const navItems = [
+    { href: "/", icon: Home, label: "Beranda" },
+    { href: "/profile", icon: UserCircle, label: "Profil" },
+    { href: "/chat", icon: MessageSquare, label: "Pesan" },
+    { href: "/settings", icon: Settings, label: "Pengaturan" },
+]
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type FieldName = keyof ProfileFormValues;
@@ -62,6 +70,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const auth = getAuth(app);
   const router = useRouter();
+  const pathname = usePathname();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -364,12 +373,7 @@ export default function ProfilePage() {
      <div className="flex min-h-screen flex-col bg-muted/40">
        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <div className="flex items-center gap-2">
-                <Button asChild variant="outline" size="sm">
-                    <Link href="/">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Kembali
-                    </Link>
-                </Button>
+                <h1 className="text-lg font-semibold">Profil Saya</h1>
             </div>
             <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
@@ -386,7 +390,7 @@ export default function ProfilePage() {
             </div>
        </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20">
             <div className="container mx-auto max-w-4xl space-y-8">
                <Card className="overflow-hidden">
                     <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
@@ -476,6 +480,23 @@ export default function ProfilePage() {
                 </Card>
             </div>
         </main>
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
+            <div className="grid h-16 grid-cols-4 items-center justify-center gap-2 px-2">
+                {navItems.map(item => (
+                    <Link key={item.href} href={item.href} passHref>
+                        <Button variant="ghost" className={cn(
+                            "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                            pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
+                            )}>
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.label}</span>
+                        </Button>
+                    </Link>
+                ))}
+            </div>
+        </nav>
+
+        {auth.currentUser && <FloatingChatButton />}
         
         <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
             <DialogContent className="rounded-lg">
@@ -576,5 +597,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

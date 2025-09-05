@@ -50,8 +50,7 @@ export default function BendaharaLayout({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pageTitle, setPageTitle] = useState("Dasbor Bendahara");
   const [isDetailPage, setIsDetailPage] = useState(false);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-    
+  
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -86,27 +85,12 @@ export default function BendaharaLayout({
   }, [router]);
   
   useEffect(() => {
-    const duesDetailRegex = /^\/bendahara\/dues\/(.+)$/;
-    const honorDetailRegex = /^\/bendahara\/honor\/(.+)$/;
-    const duesDetailMatch = pathname.match(duesDetailRegex);
-    const honorDetailMatch = pathname.match(honorDetailRegex);
-
-    let newPageTitle = "Dasbor Bendahara";
-    let detailPage = false;
-    
-    if (duesDetailMatch) {
-      detailPage = true;
-      newPageTitle = 'Riwayat Iuran';
-    } else if (honorDetailMatch) {
-        detailPage = true;
-        newPageTitle = 'Detail Honorarium';
-    } else {
-      const activeItem = navItemsList.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/bendahara'));
-      if(activeItem) newPageTitle = activeItem.label;
-    }
-    
-    setPageTitle(newPageTitle);
+    const detailPage = pathname.split('/').filter(Boolean).length > 2;
     setIsDetailPage(detailPage);
+    
+    const activeItem = navItemsList.find(item => pathname.startsWith(item.href) && item.href !== '/bendahara');
+    setPageTitle(activeItem?.label || "Dasbor Bendahara");
+    
   }, [pathname]);
 
   const handleLogout = (silent = false) => {
@@ -118,16 +102,6 @@ export default function BendaharaLayout({
         router.push('/');
     }, silent ? 0 : 1500); 
   };
-  
-  const getRoleDisplayName = (role?: 'admin' | 'super_admin' | 'bendahara' | 'petugas') => {
-      switch (role) {
-          case 'super_admin': return 'Super Admin';
-          case 'admin': return 'Administrator';
-          case 'bendahara': return 'Bendahara';
-          case 'petugas': return 'Petugas';
-          default: return 'Staf';
-      }
-  }
   
   if (!isClient || isLoggingOut || !staffInfo) {
       return (
@@ -145,118 +119,51 @@ export default function BendaharaLayout({
       );
   }
 
-  const NavHeader = () => (
-    <Link href="/bendahara" className="flex items-center gap-4 p-4 text-left">
-        <Avatar className="h-14 w-14">
-            <AvatarImage src={staffInfo?.photoURL || undefined} />
-            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col min-w-0">
-            <p className="font-bold text-base truncate">{truncateName(staffInfo.name)}</p>
-            <p className="text-sm text-muted-foreground truncate">{staffInfo.email}</p>
-            <Badge variant="secondary" className="mt-2 w-fit bg-indigo-500 text-white hover:bg-indigo-600">
-              {getRoleDisplayName(staffInfo.role)}
-            </Badge>
-        </div>
-    </Link>
-  );
-
-  const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
-    <div className="flex flex-col h-full">
-      <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-        {navItemsList.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onLinkClick}
-            className={cn(
-              "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/bendahara')) && "bg-muted text-primary"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </div>
-          </Link>
-        ))}
-      </nav>
-      <div className="mt-auto p-4">
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-primary" onClick={() => handleLogout()} disabled={isLoggingOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Keluar
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:flex md:flex-col">
-        <div className="flex h-auto items-center border-b px-2 lg:h-auto lg:px-4 py-2">
-            <NavHeader />
+    <div className="flex flex-col h-screen">
+      <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+        <div className="w-full flex-1">
+           {isDetailPage ? (
+               <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                  <ArrowLeft className="h-4 w-4" />
+                  <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+               </Button>
+           ) : (
+              <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+           )}
         </div>
-        <div className="flex-1 overflow-auto py-2">
-            <NavContent />
+        <div className="flex items-center gap-2 text-right">
+            <div className="flex flex-col">
+                <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
+                <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+            </div>
+            <Image 
+              src="https://iili.io/KJ4aGxp.png"
+              alt="Logo" 
+              width={32} 
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+            />
         </div>
-      </div>
-      <div className="flex flex-col relative h-screen">
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
-               <SheetHeader className="p-4 border-b">
-                   <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                   <NavHeader />
-               </SheetHeader>
-              <div className="flex-1 overflow-auto py-2">
-                <NavContent onLinkClick={() => setIsSheetOpen(false)} />
-              </div>
-            </SheetContent>
-          </Sheet>
-          
-          <div className="w-full flex-1">
-             {isDetailPage ? (
-                 <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
-                    <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                 </Button>
-             ) : (
-                <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-             )}
-          </div>
-
-          <div className="flex items-center gap-2 text-right">
-              <div className="flex flex-col">
-                  <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-              </div>
-              <Image 
-                src="https://iili.io/KJ4aGxp.png"
-                alt="Logo" 
-                width={32} 
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-gray-100/40 dark:bg-muted/40 overflow-auto">
-          <div className="mx-auto w-full max-w-screen-2xl">
-            {children}
-          </div>
-        </main>
-      </div>
+      </header>
+      <main className="flex-1 overflow-auto p-4 lg:p-6 bg-gray-100/40 dark:bg-muted/40 pb-20">
+        <div className="mx-auto w-full max-w-screen-2xl">
+          {children}
+        </div>
+      </main>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 items-center justify-center gap-1 border-t bg-background/95 p-1 backdrop-blur-sm">
+          {navItemsList.slice(0, 5).map(item => (
+              <Link key={item.href} href={item.href} passHref>
+                   <Button variant="ghost" className={cn(
+                      "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                      pathname.startsWith(item.href) && item.href !== '/bendahara' ? "text-primary bg-primary/10" : pathname === '/bendahara' && item.href === '/bendahara' ? "text-primary bg-primary/10" : "text-muted-foreground"
+                   )}>
+                      <item.icon className="h-5 w-5" />
+                      <span className="truncate">{item.label}</span>
+                  </Button>
+              </Link>
+          ))}
+      </nav>
     </div>
   );
 }
-
-    

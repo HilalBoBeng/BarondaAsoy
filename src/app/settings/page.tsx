@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2 } from "lucide-react"
+import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2, UserCircle, MessageSquare, Settings } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -20,12 +20,13 @@ import { Separator } from "@/components/ui/separator"
 import { useState, useEffect, useCallback } from 'react'
 import { useToast } from "@/hooks/use-toast"
 import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword, signOut, deleteUser } from "firebase/auth"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { db } from "@/lib/firebase/client"
 import { doc, deleteDoc } from "firebase/firestore"
 import { cn } from "@/lib/utils"
+import FloatingChatButton from "@/components/dashboard/floating-chat-button"
 
 // Schemas
 const passwordSchema = z.object({
@@ -45,6 +46,12 @@ const deleteAccountSchema = z.object({
 });
 type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
+const navItems = [
+    { href: "/", icon: Home, label: "Beranda" },
+    { href: "/profile", icon: UserCircle, label: "Profil" },
+    { href: "/chat", icon: MessageSquare, label: "Pesan" },
+    { href: "/settings", icon: Settings, label: "Pengaturan" },
+]
 
 export default function SettingsPage() {
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
@@ -54,6 +61,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const auth = getAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const user = auth.currentUser;
 
   const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema) });
@@ -134,12 +142,7 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Kembali
-            </Link>
-          </Button>
+          <h1 className="text-lg font-semibold">Pengaturan</h1>
            <div className="flex items-center gap-2 text-right">
               <div className="flex flex-col">
                   <span className="text-base font-bold text-primary leading-tight">Baronda</span>
@@ -154,12 +157,12 @@ export default function SettingsPage() {
               />
           </div>
        </header>
-        <main className="flex-1 p-4 sm:p-6 md:p-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20">
              <div className="mx-auto max-w-2xl space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pengaturan</CardTitle>
-                        <CardDescription>Kelola akun Anda.</CardDescription>
+                        <CardTitle>Pengaturan Akun</CardTitle>
+                        <CardDescription>Kelola detail dan keamanan akun Anda.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
                       {user ? (
@@ -281,13 +284,22 @@ export default function SettingsPage() {
                 </Card>
             </div>
         </main>
-        <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
-            <div className="space-y-2">
-                <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
+            <div className="grid h-16 grid-cols-4 items-center justify-center gap-2 px-2">
+                {navItems.map(item => (
+                    <Link key={item.href} href={item.href} passHref>
+                        <Button variant="ghost" className={cn(
+                            "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                            pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
+                            )}>
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.label}</span>
+                        </Button>
+                    </Link>
+                ))}
             </div>
-        </footer>
+        </nav>
+        {user && <FloatingChatButton />}
     </div>
   )
 }
-
-    
