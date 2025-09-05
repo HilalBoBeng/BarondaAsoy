@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, Timestamp, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,6 +25,7 @@ interface Conversation {
     senderId: string;
     timestamp: any;
   } | null;
+  unreadCount?: number;
 }
 
 export default function ConversationsPage() {
@@ -45,13 +46,24 @@ export default function ConversationsPage() {
       where('users', 'array-contains', currentUser.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const convos = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Conversation));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const convosPromises = snapshot.docs.map(async (doc) => {
+        const convoData = { id: doc.id, ...doc.data() } as Conversation;
+        
+        // Get unread count
+        const unreadQuery = query(
+          collection(db, 'chats', doc.id, 'messages'),
+          where('isRead', '==', false),
+          where('senderId', '!=', currentUser.uid)
+        );
+        const unreadSnapshot = await getDocs(unreadQuery);
+        convoData.unreadCount = unreadSnapshot.size;
 
-      // Sort client-side to avoid composite index
+        return convoData;
+      });
+
+      const convos = await Promise.all(convosPromises);
+
       convos.sort((a, b) => {
         const timeA = (a.lastMessage?.timestamp as Timestamp)?.toMillis() || 0;
         const timeB = (b.lastMessage?.timestamp as Timestamp)?.toMillis() || 0;
@@ -118,9 +130,16 @@ export default function ConversationsPage() {
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground truncate">
-                                                        {convo.lastMessage ? `${convo.lastMessage.senderId === currentUser?.uid ? 'Anda: ' : ''}${convo.lastMessage.text}` : 'Belum ada pesan.'}
-                                                    </p>
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-sm text-muted-foreground truncate">
+                                                            {convo.lastMessage ? `${convo.lastMessage.senderId === currentUser?.uid ? 'Anda: ' : ''}${convo.lastMessage.text}` : 'Belum ada pesan.'}
+                                                        </p>
+                                                        {convo.unreadCount && convo.unreadCount > 0 && (
+                                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                                                                {convo.unreadCount}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </Link>

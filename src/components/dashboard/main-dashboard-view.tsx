@@ -25,6 +25,7 @@ import type { AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import FloatingChatButton from "./floating-chat-button";
 
 export default function MainDashboardView() {
   const [user, setUser] = useState<User | null>(null);
@@ -225,6 +226,7 @@ export default function MainDashboardView() {
           </div>
         </div>
       </main>
+      {user && <FloatingChatButton />}
       <footer className="border-t bg-background py-6 text-center text-sm text-muted-foreground px-4">
         <div className="space-y-2">
             <p>© {new Date().getFullYear()} Baronda by BoBeng - Siskamling Digital Kelurahan Kilongan.</p>
