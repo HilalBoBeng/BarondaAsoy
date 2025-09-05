@@ -158,7 +158,7 @@ export default function LettersPage() {
                                     <table style={{ border: 'none', marginLeft: '20px' }}>
                                         <tbody>
                                             <tr><td style={{ padding: '2px 10px 2px 0' }}>Nama</td><td>: {selectedSchedule.officer}</td></tr>
-                                            <tr><td style={{ padding: '2px 10px 2px 0' }}>Jabatan</td><td>: &lt;Jabatan&gt;</td></tr>
+                                            <tr><td style={{ padding: '2px 10px 2px 0' }}>Jabatan</td><td>: Petugas Keamanan</td></tr>
                                         </tbody>
                                     </table>
                                     <p>Untuk melaksanakan tugas patroli keamanan (siskamling) di wilayah Kelurahan Kilongan, dengan jadwal sebagai berikut:</p>
