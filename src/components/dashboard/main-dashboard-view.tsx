@@ -13,7 +13,6 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
-import { UserNav } from "@/components/dashboard/user-nav";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
@@ -108,7 +107,6 @@ export default function MainDashboardView() {
     <div className="flex min-h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <h1 className="text-xl font-bold text-primary">Baronda</h1>
-            <UserNav user={user} userInfo={userInfo} />
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
@@ -126,7 +124,7 @@ export default function MainDashboardView() {
                 </div>
 
                 <div className="space-y-6">
-                    <Announcements userInfo={userInfo} />
+                    <Announcements />
                     <Schedule />
                     <ReportActivity user={user} userInfo={userInfo} />
                     <ReportHistory />

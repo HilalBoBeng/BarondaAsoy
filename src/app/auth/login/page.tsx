@@ -6,22 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, Suspense } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +52,6 @@ function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState<Record<string, number>>({});
-  const [showResetPasswordAlert, setShowResetPasswordAlert] = useState(false);
   const [suspensionInfo, setSuspensionInfo] = useState<SuspensionInfo | null>(null);
   const [countdown, setCountdown] = useState('');
 
@@ -106,11 +90,15 @@ function LoginForm() {
     const resetAlert = searchParams.get('resetAlert');
     const emailForReset = searchParams.get('email');
     if (resetAlert && emailForReset) {
-      setShowResetPasswordAlert(true);
+      toast({
+        variant: "destructive",
+        title: "Terlalu Banyak Percobaan Login",
+        description: "Demi keamanan, silakan atur ulang kata sandi Anda.",
+      });
       form.setValue('email', emailForReset);
     }
 
-  }, [searchParams, form]);
+  }, [searchParams, form, toast]);
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
@@ -152,17 +140,12 @@ function LoginForm() {
        setLoginAttempts(prev => ({...prev, [data.email]: currentAttempts}));
 
        if (currentAttempts >= 3) {
-            toast({
-                variant: "destructive",
-                title: "Terlalu Banyak Percobaan Login",
-                description: "Anda akan dialihkan untuk mengatur ulang kata sandi.",
-            });
             router.push(`/auth/forgot-password?email=${encodeURIComponent(data.email)}&resetAlert=true`);
        } else {
             toast({
                 variant: "destructive",
                 title: "Login Gagal",
-                description: `Email atau kata sandi salah. Percobaan ke-${currentAttempts} dari 3.`,
+                description: `Email atau kata sandi salah. Sisa percobaan: ${3 - currentAttempts}.`,
             });
        }
     } finally {
@@ -172,13 +155,13 @@ function LoginForm() {
 
   return (
      <>
-      <div className="flex flex-col items-center justify-center mb-6 text-center">
-        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
-        <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
-        <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
+      <div className="flex flex-col items-center justify-center text-center">
+        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto mb-4" />
+        <h1 className="text-2xl font-bold">Selamat Datang Kembali</h1>
+        <p className="text-sm text-muted-foreground">Masuk untuk melanjutkan ke Baronda.</p>
       </div>
        {showSuccessMessage && (
-        <Alert className="mb-4 bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300 [&>svg]:text-green-600 animate-fade-in">
+        <Alert className="mt-6 bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300 [&>svg]:text-green-600 animate-fade-in">
             <CheckCircle className="h-4 w-4" />
             <AlertTitle>Registrasi Berhasil!</AlertTitle>
             <AlertDescription>
@@ -186,79 +169,56 @@ function LoginForm() {
             </AlertDescription>
         </Alert>
       )}
-       {showResetPasswordAlert && (
-        <Alert variant="destructive" className="mb-4 animate-fade-in">
-            <AlertTitle>Terlalu Banyak Percobaan Login Gagal</AlertTitle>
-            <AlertDescription>
-              Demi keamanan, silakan atur ulang kata sandi Anda.
-            </AlertDescription>
-        </Alert>
-       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Masuk Akun</CardTitle>
-          <CardDescription>
-            Masukkan email dan kata sandi Anda untuk melanjutkan.
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="email@anda.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                     <div className="flex items-center">
-                      <FormLabel>Kata Sandi</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                     <div className="text-right mt-2">
-                      <Link
-                        href="/auth/forgot-password"
-                        className="ml-auto inline-block text-xs text-primary hover:text-primary/80"
-                      >
-                        Lupa kata sandi?
-                      </Link>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Masuk
-              </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                  Belum punya akun?{" "}
-                  <Link
-                      href="/auth/register"
-                      className="text-primary hover:text-primary/80 no-underline"
-                  >
-                      Daftar di sini
-                  </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input placeholder="Email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input type="password" placeholder="Kata Sandi" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          <div className="text-right">
+            <Button asChild variant="link" size="sm" className="px-0">
+               <Link href="/auth/forgot-password">
+                Lupa kata sandi?
+              </Link>
+            </Button>
+          </div>
+           <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Masuk
+            </Button>
+        </form>
+      </Form>
+       <div className="mt-6 text-center text-sm text-muted-foreground">
+          Belum punya akun?{" "}
+          <Link
+              href="/auth/register"
+              className="font-semibold text-primary hover:text-primary/80 no-underline"
+          >
+              Daftar di sini
+          </Link>
+      </div>
+
       <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
         <DialogContent className="sm:max-w-md text-center">
             <DialogHeader className="items-center">

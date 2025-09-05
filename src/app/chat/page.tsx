@@ -5,15 +5,16 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
 import { collection, query, where, onSnapshot, orderBy, Timestamp, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import Link from 'next/link';
-import { MessagesSquare } from 'lucide-react';
-import { UserNav } from '@/components/dashboard/user-nav';
+import { Home, UserCircle, MessageSquare, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 interface Conversation {
   id: string;
@@ -28,12 +29,20 @@ interface Conversation {
   unreadCount?: number;
 }
 
+const navItems = [
+    { href: "/", icon: Home, label: "Beranda" },
+    { href: "/profile", icon: UserCircle, label: "Profil" },
+    { href: "/chat", icon: MessageSquare, label: "Pesan" },
+    { href: "/settings", icon: Settings, label: "Pengaturan" },
+];
+
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const auth = getAuth();
   const currentUser = auth.currentUser;
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!currentUser) {
@@ -50,7 +59,6 @@ export default function ConversationsPage() {
       const convosPromises = snapshot.docs.map(async (doc) => {
         const convoData = { id: doc.id, ...doc.data() } as Conversation;
         
-        // Get unread count
         const unreadQuery = query(
           collection(db, 'chats', doc.id, 'messages'),
           where('isRead', '==', false),
@@ -87,76 +95,81 @@ export default function ConversationsPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/40">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <Link href="/" className="font-bold text-primary">Baronda</Link>
-             <UserNav user={currentUser} userInfo={null} />
+    <div className="flex h-screen flex-col bg-background">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+            <h1 className="text-xl font-bold">Pesan</h1>
         </header>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-            <div className="container mx-auto max-w-2xl">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Pesan Pribadi</CardTitle>
-                        <CardDescription>Semua percakapan Anda dengan warga lain.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {loading ? (
-                                Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} className="flex items-center space-x-4 p-2">
-                                        <Skeleton className="h-12 w-12 rounded-full" />
-                                        <div className="space-y-2">
-                                            <Skeleton className="h-4 w-[250px]" />
-                                            <Skeleton className="h-4 w-[200px]" />
+
+        <main className="flex-1 overflow-y-auto p-4 animate-fade-in-up">
+            <div className="space-y-4">
+                {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4 p-2">
+                            <Skeleton className="h-12 w-12 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-[250px]" />
+                                <Skeleton className="h-4 w-[200px]" />
+                            </div>
+                        </div>
+                    ))
+                ) : conversations.length > 0 ? (
+                    conversations.map(convo => {
+                        const otherUser = getOtherUserInfo(convo);
+                        return (
+                            <Link key={convo.id} href={`/chat/${convo.id}`} className="block">
+                                <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
+                                    <Avatar className="h-12 w-12">
+                                        <AvatarImage src={otherUser.photo} />
+                                        <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="flex justify-between">
+                                            <p className="font-semibold truncate">{otherUser.name}</p>
+                                            {convo.lastMessage && convo.lastMessage.timestamp && (
+                                                 <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                                    {formatDistanceToNow(convo.lastMessage.timestamp.toDate(), { addSuffix: true, locale: id })}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-sm text-muted-foreground truncate">
+                                                {convo.lastMessage ? `${convo.lastMessage.senderId === currentUser?.uid ? 'Anda: ' : ''}${convo.lastMessage.text}` : 'Belum ada pesan.'}
+                                            </p>
+                                            {convo.unreadCount && convo.unreadCount > 0 && (
+                                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                                                    {convo.unreadCount}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                ))
-                            ) : conversations.length > 0 ? (
-                                conversations.map(convo => {
-                                    const otherUser = getOtherUserInfo(convo);
-                                    return (
-                                        <Link key={convo.id} href={`/chat/${convo.id}`} className="block">
-                                            <div className="flex items-center space-x-4 rounded-lg p-3 transition-colors hover:bg-muted">
-                                                <Avatar className="h-12 w-12">
-                                                    <AvatarImage src={otherUser.photo} />
-                                                    <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 overflow-hidden">
-                                                    <div className="flex justify-between">
-                                                        <p className="font-semibold truncate">{otherUser.name}</p>
-                                                        {convo.lastMessage && convo.lastMessage.timestamp && (
-                                                             <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                                                {formatDistanceToNow(convo.lastMessage.timestamp.toDate(), { addSuffix: true, locale: id })}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <p className="text-sm text-muted-foreground truncate">
-                                                            {convo.lastMessage ? `${convo.lastMessage.senderId === currentUser?.uid ? 'Anda: ' : ''}${convo.lastMessage.text}` : 'Belum ada pesan.'}
-                                                        </p>
-                                                        {convo.unreadCount && convo.unreadCount > 0 && (
-                                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                                                                {convo.unreadCount}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    );
-                                })
-                            ) : (
-                                <div className="py-12 text-center text-muted-foreground">
-                                    <MessagesSquare className="mx-auto h-12 w-12" />
-                                    <p className="mt-4">Anda belum memiliki percakapan.</p>
-                                    <p className="text-xs">Mulai mengobrol dengan mencari warga lain.</p>
                                 </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                            </Link>
+                        );
+                    })
+                ) : (
+                    <div className="pt-24 text-center text-muted-foreground">
+                        <MessageSquare className="mx-auto h-12 w-12" />
+                        <p className="mt-4">Anda belum memiliki percakapan.</p>
+                    </div>
+                )}
             </div>
         </main>
+        
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
+            <div className="grid h-16 grid-cols-4 items-center justify-center gap-2 px-2">
+                {navItems.map(item => (
+                    <Link key={item.href} href={item.href} passHref>
+                        <Button variant="ghost" className={cn(
+                            "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                            pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
+                            )}>
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.label}</span>
+                        </Button>
+                    </Link>
+                ))}
+            </div>
+        </nav>
     </div>
   );
 }

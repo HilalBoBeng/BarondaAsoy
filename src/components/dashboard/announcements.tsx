@@ -2,37 +2,26 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, runTransaction } from 'firebase/firestore';
-import { Megaphone, Calendar, ThumbsUp, ThumbsDown, ChevronRight, MessageCircle, X } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Megaphone, Calendar, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase/client';
-import type { Announcement, AppUser } from '@/lib/types';
-import { Skeleton } from '../ui/skeleton';
+import type { Announcement } from '@/lib/types';
 import { Button } from '../ui/button';
-import { getAuth } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from '../ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '../ui/drawer';
 
-export default function Announcements({ userInfo }: { userInfo: AppUser | null }) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-
-  const auth = getAuth();
-  const user = auth.currentUser;
-  const { toast } = useToast();
-  const router = useRouter();
+export default function Announcements() {
+  const [latestAnnouncement, setLatestAnnouncement] = useState<Announcement | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'announcements'), orderBy('date', 'desc'));
+    const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(1));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const announcementsData: Announcement[] = [];
-      querySnapshot.forEach((doc) => {
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
         const data = doc.data();
-        announcementsData.push({
+        const announcementData = {
           id: doc.id,
           title: data.title,
           content: data.content,
@@ -41,104 +30,51 @@ export default function Announcements({ userInfo }: { userInfo: AppUser | null }
             month: 'long',
             day: 'numeric',
           }) : data.date,
-        });
-      });
-      setAnnouncements(announcementsData);
-      setLoading(false);
+        } as Announcement;
+
+        // Automatically open drawer for new announcement, but only once per session
+        const hasBeenShown = sessionStorage.getItem(`announcement_${doc.id}`);
+        if (!hasBeenShown) {
+          setLatestAnnouncement(announcementData);
+          setIsDrawerOpen(true);
+          sessionStorage.setItem(`announcement_${doc.id}`, 'true');
+        }
+      }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const handleReadMore = (announcement: Announcement) => {
-    if (userInfo?.isBlocked) {
-        toast({
-            variant: "destructive",
-            title: "Akses Ditolak",
-            description: "Akun Anda diblokir dan tidak dapat melihat detail pengumuman.",
-        });
-        return;
-    }
-    setSelectedAnnouncement(announcement);
+  if (!latestAnnouncement) {
+    return null;
   }
-  
- const renderAnnouncements = () => {
-    if (loading) {
-      return (
-        <div className="flex space-x-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="min-w-[280px] w-[280px]">
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-5/6" />
-              </CardContent>
-              <CardFooter>
-                 <Skeleton className="h-8 w-full" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      );
-    }
-
-    if (announcements.length === 0) {
-      return (
-        <div className="text-center text-muted-foreground py-10 col-span-full flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
-            <MessageCircle className="h-8 w-8 mb-2" />
-            <p>Belum ada pengumuman.</p>
-        </div>
-      );
-    }
-
-    return (
-       <div className="flex space-x-4 overflow-x-auto pb-4 -mx-1 px-1">
-        {announcements.map((announcement) => (
-            <Card key={announcement.id} className="min-w-[280px] w-[280px] flex flex-col hover:shadow-lg transition-shadow">
-                <CardHeader>
-                    <CardTitle className="text-base line-clamp-2">{announcement.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground line-clamp-3">{announcement.content}</p>
-                </CardContent>
-                <CardFooter className="flex-col items-start gap-3">
-                     <p className="text-xs text-muted-foreground flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>{announcement.date as string}</span>
-                    </p>
-                    <Button variant="secondary" size="sm" className="w-full" onClick={() => handleReadMore(announcement)}>
-                        Baca Selengkapnya
-                    </Button>
-                </CardFooter>
-            </Card>
-        ))}
-       </div>
-    );
-  };
-
 
   return (
-    <div>
-        {renderAnnouncements()}
-        <Dialog open={!!selectedAnnouncement} onOpenChange={(isOpen) => !isOpen && setSelectedAnnouncement(null)}>
-            <DialogContent>
-                {selectedAnnouncement && (
-                    <>
-                        <DialogHeader>
-                          <DialogTitle className="text-left text-lg pr-8">{selectedAnnouncement.title}</DialogTitle>
-                        </DialogHeader>
-                        <DialogBody>
-                            <p className="text-foreground whitespace-pre-wrap break-words">{selectedAnnouncement.content}</p>
-                        </DialogBody>
-                        <DialogFooter>
-                             <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" onClick={() => setSelectedAnnouncement(null)}>Ok</Button>
-                        </DialogFooter>
-                    </>
-                )}
-            </DialogContent>
-        </Dialog>
-    </div>
+    <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-sm">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-primary" />
+                <span>{latestAnnouncement.title}</span>
+            </DrawerTitle>
+            <DrawerDescription className="flex items-center gap-2 text-xs pt-1">
+               <Calendar className="h-4 w-4" />
+               <span>{latestAnnouncement.date as string}</span>
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="p-4 pt-0">
+            <p className="text-sm text-muted-foreground line-clamp-4">
+              {latestAnnouncement.content}
+            </p>
+          </div>
+          <DrawerFooter>
+            <DrawerClose asChild>
+              <Button>Saya Mengerti</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
