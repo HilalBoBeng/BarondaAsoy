@@ -12,11 +12,17 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Bell, Loader2, Search, MessageSquareWarning } from 'lucide-react';
+import { Bell, Loader2, Search, MessageSquareWarning, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
 
 const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -25,6 +31,12 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 const USERS_PER_PAGE = 20;
+
+const recordDuesSchema = z.object({
+  userId: z.string().min(1, "Warga harus dipilih."),
+  amount: z.coerce.number().min(1, "Jumlah iuran tidak boleh kosong."),
+});
+type RecordDuesFormValues = z.infer<typeof recordDuesSchema>;
 
 export default function BendaharaDuesPage() {
   const [payments, setPayments] = useState<DuesPayment[]>([]);
@@ -37,10 +49,16 @@ export default function BendaharaDuesPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
-
+  const [isRecordDuesOpen, setIsRecordDuesOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { toast } = useToast();
   
+  const recordDuesForm = useForm<RecordDuesFormValues>({
+      resolver: zodResolver(recordDuesSchema),
+      defaultValues: { userId: '', amount: 20000 }
+  });
+
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info) {
@@ -92,6 +110,10 @@ export default function BendaharaDuesPage() {
         };
       });
   }, [users, payments, selectedMonth, selectedYear]);
+  
+  const unpaidUsers = useMemo(() => {
+    return usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
+  }, [usersWithPaymentStatus]);
 
   const filteredUsers = useMemo(() => {
       let filtered = usersWithPaymentStatus;
@@ -113,11 +135,6 @@ export default function BendaharaDuesPage() {
   }, [filteredUsers, currentPage]);
 
   const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
-
-
-  const unpaidUsers = useMemo(() => {
-    return usersWithPaymentStatus.filter(u => u.paymentStatus === 'Belum Bayar');
-  }, [usersWithPaymentStatus]);
 
   const handleBroadcastReminders = async () => {
     setIsBroadcasting(true);
@@ -154,12 +171,67 @@ export default function BendaharaDuesPage() {
     }
   };
   
+    const onRecordDuesSubmit = async (values: RecordDuesFormValues) => {
+        if (!staffInfo) return;
+        setIsSubmitting(true);
+        const selectedUser = users.find(u => u.uid === values.userId);
+        if (!selectedUser) {
+            toast({ variant: "destructive", title: "Warga tidak ditemukan." });
+            setIsSubmitting(false);
+            return;
+        }
+
+        try {
+            const batch = writeBatch(db);
+
+            const duesRef = doc(collection(db, "dues"));
+            batch.set(duesRef, {
+                userId: selectedUser.uid,
+                userName: selectedUser.displayName,
+                amount: values.amount,
+                month: selectedMonth,
+                year: selectedYear,
+                paymentDate: serverTimestamp(),
+                recordedBy: staffInfo.name,
+                recordedById: staffInfo.id,
+            });
+            
+            const financeRef = doc(collection(db, 'financial_transactions'));
+            batch.set(financeRef, {
+                type: 'income',
+                description: `Iuran Warga - ${selectedUser.displayName} (${selectedMonth} ${selectedYear})`,
+                amount: values.amount,
+                category: 'Iuran Warga',
+                date: serverTimestamp(),
+                recordedBy: staffInfo.name,
+                relatedId: duesRef.id,
+            });
+            
+            await batch.commit();
+
+            toast({ title: "Berhasil", description: "Pembayaran iuran berhasil dicatat." });
+            setIsRecordDuesOpen(false);
+            recordDuesForm.reset({ userId: '', amount: 20000 });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Gagal", description: "Gagal mencatat pembayaran iuran." });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
   const canBroadcast = useMemo(() => {
     return filterStatus === 'unpaid' && unpaidUsers.length > 0;
   }, [filterStatus, unpaidUsers]);
+  
+  const formatNumberInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    if (!numericValue) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(numericValue, 10));
+  };
 
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Status Iuran Warga</CardTitle>
@@ -208,26 +280,29 @@ export default function BendaharaDuesPage() {
               </SelectContent>
           </Select>
           
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="outline" disabled={isBroadcasting || !canBroadcast}>
-                        {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
-                        Broadcast Pengingat
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Anda akan mengirimkan notifikasi pengingat ke ${unpaidUsers.length} warga yang belum membayar untuk periode ${selectedMonth} ${selectedYear}. Lanjutkan?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleBroadcastReminders}>Ya, Kirim</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+           <div className="flex gap-2">
+                <Button onClick={() => setIsRecordDuesOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Catat Pembayaran</Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" disabled={isBroadcasting || !canBroadcast}>
+                            {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
+                            Broadcast Pengingat
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Anda akan mengirimkan notifikasi pengingat ke {unpaidUsers.length} warga yang belum membayar untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleBroadcastReminders}>Ya, Kirim</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+           </div>
         </div>
 
 
@@ -298,5 +373,73 @@ export default function BendaharaDuesPage() {
         </div>
       </CardFooter>
     </Card>
+
+    <Dialog open={isRecordDuesOpen} onOpenChange={setIsRecordDuesOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Catat Pembayaran Iuran</DialogTitle>
+                <DialogDescription>Periode: {selectedMonth} {selectedYear}</DialogDescription>
+            </DialogHeader>
+            <Form {...recordDuesForm}>
+                <form onSubmit={recordDuesForm.handleSubmit(onRecordDuesSubmit)}>
+                    <DialogBody className="space-y-4">
+                        <FormField
+                            control={recordDuesForm.control}
+                            name="userId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Pilih Warga (Belum Bayar)</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih nama warga..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {unpaidUsers.length > 0 ? unpaidUsers.map(u => (
+                                                <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>
+                                            )) : <SelectItem value="-" disabled>Tidak ada warga yang belum bayar</SelectItem>}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={recordDuesForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Jumlah (Rp)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={field.value ? formatNumberInput(field.value.toString()) : ''}
+                                            onChange={(e) => {
+                                                const formattedValue = formatNumberInput(e.target.value);
+                                                const numericValue = parseInt(formattedValue.replace(/\D/g, ''), 10) || 0;
+                                                field.onChange(numericValue);
+                                            }}
+                                            placeholder="20.000"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </DialogBody>
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Simpan Pembayaran
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
