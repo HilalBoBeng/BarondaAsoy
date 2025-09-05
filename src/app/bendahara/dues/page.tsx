@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Bell, Loader2, Search, MessageSquareWarning, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogBody, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
