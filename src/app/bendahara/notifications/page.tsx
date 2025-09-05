@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase/client';
 import { collection, doc, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, deleteDoc, limit, startAfter, type QueryDocumentSnapshot, type DocumentData, endBefore, limitToLast } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogBody } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose, DrawerBody } from '@/components/ui/drawer';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -393,15 +393,14 @@ export default function BendaharaNotificationsPage() {
       </CardFooter>
     </Card>
 
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Kirim Pemberitahuan</DialogTitle>
-                <CardDescription>Kirim pesan ke warga atau staf tertentu.</CardDescription>
-            </DialogHeader>
+    <Drawer open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DrawerContent>
+            <DrawerHeader>
+                <DrawerTitle>Kirim Pemberitahuan</DrawerTitle>
+            </DrawerHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <DialogBody className="space-y-6">
+                <DrawerBody className="space-y-6 px-4">
                  <FormField
                   control={form.control}
                   name="recipientIds"
@@ -459,33 +458,33 @@ export default function BendaharaNotificationsPage() {
                     </FormItem>
                   )}
                 />
-                </DialogBody>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                </DrawerBody>
+                <DrawerFooter>
+                    <DrawerClose asChild><Button type="button" variant="secondary">Batal</Button></DrawerClose>
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Kirim
                     </Button>
-                </DialogFooter>
+                </DrawerFooter>
               </form>
             </Form>
-        </DialogContent>
-    </Dialog>
+        </DrawerContent>
+    </Drawer>
 
-    <Dialog open={isViewMessageOpen} onOpenChange={setIsViewMessageOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Isi Pesan</DialogTitle>
-            </DialogHeader>
-            <DialogBody>
+    <Drawer open={isViewMessageOpen} onOpenChange={setIsViewMessageOpen}>
+        <DrawerContent>
+            <DrawerHeader>
+                <DrawerTitle>Isi Pesan</DrawerTitle>
+            </DrawerHeader>
+            <DrawerBody className="px-4">
                <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedMessage.replace(/\n/g, '<br />') }}>
                </div>
-            </DialogBody>
-            <DialogFooter>
+            </DrawerBody>
+            <DrawerFooter>
                 <Button onClick={() => setIsViewMessageOpen(false)}>Tutup</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+            </DrawerFooter>
+        </DrawerContent>
+    </Drawer>
     </>
   );
 }
