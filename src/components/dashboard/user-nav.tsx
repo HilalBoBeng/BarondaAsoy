@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogIn, LogOut, UserPlus, Settings, User as UserIcon, Search, MessageSquare, Bell, X } from "lucide-react";
+import { LogIn, LogOut, UserPlus, Settings, User as UserIcon, Search, MessageSquare, Bell, X, UserSearch } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
@@ -19,7 +19,7 @@ import { getAuth, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { AppUser, Notification } from "@/lib/types";
 import { Input } from "../ui/input";
 import { cn } from "@/lib/utils";
@@ -28,10 +28,10 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
   DrawerClose,
+  DrawerFooter,
 } from "@/components/ui/drawer";
+import { Card } from "../ui/card";
 
 
 export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUser | null }) {
@@ -54,11 +54,16 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         const notifsQuery = query(
             collection(db, "notifications"),
             where("userId", "==", user.uid),
-            orderBy("createdAt", "desc"),
             limit(20)
         );
         const unsub = onSnapshot(notifsQuery, (snapshot) => {
             const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
+            // Sort client-side to avoid composite index
+            notifsData.sort((a, b) => {
+              const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
+              const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
+              return timeB - timeA;
+            });
             setNotifications(notifsData);
             setUnreadCount(notifsData.filter(n => !n.read).length);
         });
@@ -182,68 +187,75 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         </DropdownMenu>
       </div>
 
-       <div className={cn("absolute top-0 left-0 w-full h-16 bg-background border-b z-40 flex items-center px-4 transition-transform duration-300",
-            isSearchOpen ? 'translate-y-0' : '-translate-y-full'
-        )}>
-           <Input 
-             ref={searchInputRef}
-             value={searchQuery}
-             onChange={(e) => handleSearch(e.target.value)}
-             placeholder="Cari warga lain..."
-             className="h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-base"
-            />
-            {isSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-3" />}
-            <Button variant="ghost" size="icon" onClick={() => { setIsSearchOpen(false); setSearchResults([]); setSearchQuery(''); }}>
-                <X className="h-5 w-5" />
-            </Button>
-       </div>
-       {isSearchOpen && searchResults.length > 0 && (
-         <Card className="absolute top-16 left-0 sm:left-auto sm:right-4 w-full sm:max-w-sm sm:w-80 z-40 shadow-lg rounded-t-none sm:rounded-t-lg">
-             <div className="p-2 max-h-[60vh] overflow-y-auto">
-                 {searchResults.map(foundUser => (
-                     <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
-                         <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
-                             <Avatar>
-                                 <AvatarImage src={foundUser.photoURL || ''}/>
-                                 <AvatarFallback>{foundUser.displayName?.charAt(0)}</AvatarFallback>
-                             </Avatar>
-                             <p className="font-medium">{foundUser.displayName}</p>
-                         </div>
-                     </Link>
-                 ))}
-             </div>
-         </Card>
-       )}
-       
-        <Drawer open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-          <DrawerContent>
-            <div className="mx-auto w-full max-w-md">
-              <DrawerHeader>
-                <DrawerTitle>Notifikasi</DrawerTitle>
-              </DrawerHeader>
-              <div className="p-4 pb-0 max-h-[70vh] overflow-y-auto">
-                {notifications.length > 0 ? (
-                  notifications.map(notif => (
-                    <div key={notif.id} onClick={() => handleNotificationClick(notif)}
-                         className={cn("p-3 mb-2 border-l-4 rounded-r-md cursor-pointer hover:bg-muted/50",
-                         notif.read ? 'border-transparent' : 'border-primary bg-muted/80'
-                         )}>
-                        <p className="font-semibold text-sm">{notif.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
-                    </div>
-                  ))
+      <div className={cn("absolute top-0 left-0 w-full h-16 bg-background border-b z-40 flex items-center px-4 transition-transform duration-300",
+          isSearchOpen ? 'translate-y-0' : '-translate-y-full'
+      )}>
+         <Input 
+           ref={searchInputRef}
+           value={searchQuery}
+           onChange={(e) => handleSearch(e.target.value)}
+           placeholder="Cari warga lain..."
+           className="h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-base"
+          />
+          {isSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-3" />}
+          <Button variant="ghost" size="icon" onClick={() => { setIsSearchOpen(false); setSearchResults([]); setSearchQuery(''); }}>
+              <X className="h-5 w-5" />
+          </Button>
+     </div>
+
+     {isSearchOpen && searchQuery && !isSearching && (
+        <Card className="absolute top-16 left-0 sm:left-auto sm:right-4 w-full sm:max-w-sm sm:w-80 z-40 shadow-lg rounded-t-none sm:rounded-t-lg">
+            <div className="p-2 max-h-[60vh] overflow-y-auto">
+                {searchResults.length > 0 ? (
+                    searchResults.map(foundUser => (
+                        <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
+                            <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
+                                <Avatar>
+                                    <AvatarImage src={foundUser.photoURL || ''}/>
+                                    <AvatarFallback>{foundUser.displayName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <p className="font-medium">{foundUser.displayName}</p>
+                            </div>
+                        </Link>
+                    ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">Tidak ada notifikasi.</p>
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <p>Pengguna tidak ditemukan.</p>
+                  </div>
                 )}
-              </div>
-              <DrawerFooter>
-                <DrawerClose asChild>
-                  <Button variant="outline">Tutup</Button>
-                </DrawerClose>
-              </DrawerFooter>
             </div>
-          </DrawerContent>
-        </Drawer>
+        </Card>
+      )}
+       
+      <Drawer open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-md">
+            <DrawerHeader>
+              <DrawerTitle>Notifikasi</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 pb-0 max-h-[70vh] overflow-y-auto">
+              {notifications.length > 0 ? (
+                notifications.map(notif => (
+                  <div key={notif.id} onClick={() => handleNotificationClick(notif)}
+                       className={cn("p-3 mb-2 border-l-4 rounded-r-md cursor-pointer hover:bg-muted/50",
+                       notif.read ? 'border-transparent' : 'border-primary bg-muted/80'
+                       )}>
+                      <p className="font-semibold text-sm">{notif.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-8">Tidak ada notifikasi.</p>
+              )}
+            </div>
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant="outline">Tutup</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

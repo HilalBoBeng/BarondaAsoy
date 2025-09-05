@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, getDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, limit, orderBy, setDoc } from 'firebase/firestore';
 import { notFound, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -24,6 +24,7 @@ const statusDisplay: Record<string, { text: string; className: string }> = {
 };
 
 export default function UserProfilePage({ params }: { params: { userId: string } }) {
+  const { userId } = params;
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,13 +35,13 @@ export default function UserProfilePage({ params }: { params: { userId: string }
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const userDoc = await getDoc(doc(db, 'users', params.userId));
+        const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
           setProfile({ uid: userDoc.id, ...userDoc.data() } as AppUser);
 
           const reportsQuery = query(
             collection(db, 'reports'),
-            where('userId', '==', params.userId),
+            where('userId', '==', userId),
             where('visibility', '==', 'public'),
             orderBy('createdAt', 'desc'),
             limit(10)
@@ -66,7 +67,7 @@ export default function UserProfilePage({ params }: { params: { userId: string }
       }
     };
     fetchProfile();
-  }, [params.userId]);
+  }, [userId]);
   
   const handleSendMessage = async () => {
     if (!currentUser || !profile) return;
@@ -99,17 +100,21 @@ export default function UserProfilePage({ params }: { params: { userId: string }
 
   if (loading) {
     return (
-      <div className="container mx-auto max-w-2xl space-y-6 p-4">
-        <Skeleton className="h-12 w-32" />
-        <Card>
-          <CardHeader className="text-center">
-            <Skeleton className="mx-auto h-24 w-24 rounded-full" />
-            <Skeleton className="mx-auto mt-4 h-8 w-48" />
-            <Skeleton className="mx-auto mt-2 h-4 w-64" />
-          </CardHeader>
-          <CardContent><Skeleton className="h-10 w-full" /></CardContent>
-        </Card>
-        <Card><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
+      <div className="flex min-h-screen flex-col bg-muted/40">
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-background/95 px-4"><Skeleton className="h-9 w-24" /></header>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="container mx-auto max-w-2xl space-y-6">
+            <Card>
+              <CardHeader className="items-center text-center p-6 bg-muted/50">
+                <Skeleton className="mx-auto h-24 w-24 rounded-full" />
+                <Skeleton className="mx-auto mt-4 h-8 w-48" />
+                <Skeleton className="mx-auto mt-2 h-4 w-64" />
+              </CardHeader>
+              <CardContent className="p-6"><Skeleton className="h-10 w-full" /></CardContent>
+            </Card>
+            <Card><CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
+          </div>
+        </main>
       </div>
     );
   }
@@ -178,4 +183,3 @@ export default function UserProfilePage({ params }: { params: { userId: string }
     </div>
   );
 }
-

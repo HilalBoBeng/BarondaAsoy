@@ -187,7 +187,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                                                     <X className="h-4 w-4" />
                                                 </Button>
                                             </AlertDialogTrigger>
-                                            <AlertDialogContent className="rounded-lg">
+                                            <AlertDialogContent>
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
                                                     <AlertDialogDescription>
@@ -229,7 +229,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                     >
                         Sebelumnya
                     </Button>
-                    <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+                     <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
                     <Button
                         variant="outline"
                         size="sm"
