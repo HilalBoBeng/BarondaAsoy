@@ -157,7 +157,9 @@ function LoginForm() {
   return (
      <>
       <div className="flex flex-col items-center justify-center text-center">
-        <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto mb-4" />
+        <Link href="/auth/staff-login">
+          <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto mb-4" />
+        </Link>
         <h1 className="text-2xl font-bold">Selamat Datang Kembali</h1>
         <p className="text-sm text-muted-foreground">Masuk untuk melanjutkan ke Baronda.</p>
       </div>
