@@ -15,17 +15,6 @@ import { id } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { getAuth, type User } from 'firebase/auth';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 
 
 const REPORTS_PER_PAGE = 5;
@@ -131,6 +120,7 @@ export default function ReportHistory() {
 
 
     const handleDelete = async (reportId: string) => {
+      if (window.confirm("Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.")) {
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
@@ -139,6 +129,7 @@ export default function ReportHistory() {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
         }
+      }
     };
 
     if (loading) {
@@ -185,25 +176,14 @@ export default function ReportHistory() {
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
                                     {report.userId === user?.uid && (
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(report.id)}>Hapus</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleDelete(report.id)}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
                                     )}
                                 </div>
                             </div>
