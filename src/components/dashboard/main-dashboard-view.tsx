@@ -35,8 +35,6 @@ export default function MainDashboardView() {
   const [userInfo, setUserInfo] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState("Selamat Datang");
-  const [patrolLogs, setPatrolLogs] = useState<PatrolLog[]>([]);
-  const [loadingPatrolLogs, setLoadingPatrolLogs] = useState(true);
   
   const pathname = usePathname();
   const auth = getAuth(app);
@@ -51,18 +49,6 @@ export default function MainDashboardView() {
     };
 
     setGreeting(getGreeting());
-
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const logsQuery = query(
-      collection(db, 'patrol_logs'), 
-      where('createdAt', '>=', twentyFourHoursAgo), 
-      orderBy('createdAt', 'desc')
-    );
-    const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-      const logs = snapshot.docs.map(d => ({id: d.id, ...d.data()}) as PatrolLog);
-      setPatrolLogs(logs);
-      setLoadingPatrolLogs(false);
-    });
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -84,7 +70,6 @@ export default function MainDashboardView() {
     });
 
     return () => {
-      unsubLogs();
       unsubscribeAuth();
     };
   }, [auth]);
