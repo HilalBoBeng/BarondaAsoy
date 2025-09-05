@@ -70,7 +70,12 @@ export default function SettingsPage() {
       generateCaptcha();
     }
   }, [isDeleteAlertOpen, generateCaptcha]);
-
+  
+  const handleLogout = () => {
+    signOut(auth).then(() => {
+      router.push('/auth/login');
+    });
+  };
 
   const onPasswordSubmit = async (data: PasswordFormValues) => {
     if (!user || !user.email) return;
@@ -80,8 +85,9 @@ export default function SettingsPage() {
       const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, data.newPassword);
-      toast({ title: "Berhasil", description: "Kata sandi Anda telah berhasil diubah." });
+      toast({ title: "Berhasil", description: "Kata sandi diubah. Silakan masuk kembali." });
       passwordForm.reset();
+      setTimeout(handleLogout, 2000);
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Kata sandi saat ini salah atau terjadi kesalahan lain." });
     } finally {

@@ -67,11 +67,19 @@ export default function AdminProfilePage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const form = useForm<ProfileEditFormValues>({ resolver: zodResolver(profileEditSchema) });
+    const form = useForm<ProfileEditFormValues>({ 
+        resolver: zodResolver(profileEditSchema),
+        defaultValues: {
+            displayName: '',
+            phone: '',
+            addressDetail: '',
+            photoURL: ''
+        }
+    });
     const accessCodeForm = useForm<AccessCodeFormValues>({ resolver: zodResolver(accessCodeSchema) });
     
     const canEditField = useCallback((field: FieldName | 'accessCode') => {
-        if (!adminInfo || adminInfo.id === 'admin_utama') return false;
+        if (!adminInfo) return false;
         
         let lastUpdateTimestamp: Timestamp | undefined | null = null;
         if (field === 'accessCode') {
@@ -90,19 +98,7 @@ export default function AdminProfilePage() {
 
     useEffect(() => {
         const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-        if (info.email === 'admin@baronda.or.id' && info.name === 'Admin Utama') {
-            const mainAdminInfo = {
-                id: 'admin_utama',
-                name: 'Admin Utama',
-                email: 'admin@baronda.or.id',
-                status: 'active',
-                phone: 'N/A',
-                addressDetail: 'Kantor Pusat Baronda',
-                accessCode: 'Admin123',
-                role: 'super_admin'
-            } as Staff;
-             setAdminInfo(mainAdminInfo);
-        } else if (info.id) {
+        if (info.id) {
             const unsub = onSnapshot(doc(db, "staff", info.id), (docSnap) => {
                 if (docSnap.exists()) {
                     const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
@@ -222,6 +218,12 @@ export default function AdminProfilePage() {
         }
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('staffInfo');
+        router.push('/auth/staff-login');
+    }
+
     const onAccessCodeSubmit = async (data: AccessCodeFormValues) => {
         if (!adminInfo?.id || !data.newAccessCode) return;
         setIsAccessCodeSubmitting(true);
@@ -234,8 +236,9 @@ export default function AdminProfilePage() {
             });
 
             if (result.success) {
-                toast({ title: 'Berhasil', description: result.message });
+                toast({ title: 'Berhasil', description: "Kode akses diubah. Silakan masuk kembali." });
                 accessCodeForm.reset({ currentAccessCode: '', newAccessCode: '', confirmNewAccessCode: '' });
+                setTimeout(handleLogout, 2000);
             } else {
                 throw new Error(result.message);
             }
@@ -305,7 +308,6 @@ export default function AdminProfilePage() {
     };
     
     const roleDisplayMap: Record<string, string> = {
-      super_admin: 'Super Admin',
       admin: 'Administrator',
       bendahara: 'Bendahara',
       petugas: 'Petugas'
@@ -345,9 +347,8 @@ export default function AdminProfilePage() {
                             <CardDescription className="text-primary-foreground/80 truncate">{adminInfo.email}</CardDescription>
                             <Badge variant="secondary" className={cn(
                                 "mt-2 w-fit", 
-                                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : 
-                                adminInfo.role === 'bendahara' ? "bg-indigo-500 text-white hover:bg-indigo-600" :
-                                "bg-primary/80 text-primary-foreground hover:bg-primary/90"
+                                adminInfo.role === 'admin' ? "bg-primary/80 text-primary-foreground hover:bg-primary/90" : 
+                                "bg-indigo-500 text-white hover:bg-indigo-600"
                                 )}>
                               {roleDisplayMap[adminInfo.role || 'petugas'] || 'Staf'}
                             </Badge>
