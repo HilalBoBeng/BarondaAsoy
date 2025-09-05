@@ -112,7 +112,7 @@ export default function ProfilePage() {
                     email: currentUser.email,
                     createdAt: serverTimestamp(),
                     photoURL: null,
-                    bio: '',
+                    bio: '👋 Halo! Saya warga baru.',
                     lastUpdated_displayName: null,
                     lastUpdated_phone: null,
                     lastUpdated_addressDetail: null,

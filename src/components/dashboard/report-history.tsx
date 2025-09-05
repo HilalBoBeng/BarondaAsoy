@@ -112,13 +112,42 @@ export default function ReportHistory() {
         }
     };
 
+
+    const handleDelete = async (reportId: string) => {
+      if (window.confirm("Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.")) {
+        try {
+            await deleteDoc(doc(db, "reports", reportId));
+            toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
+            fetchReports();
+        } catch (error) {
+            console.error("Error deleting report:", error);
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
+        }
+      }
+    };
+
+    const ReportSkeleton = () => (
+        <Card>
+            <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-2 gap-2">
+                    <div className="flex-grow space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     if (loading) {
         return (
             <Card>
                 <CardHeader><CardTitle className="text-lg">Riwayat Laporan Publik</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <Skeleton key={i} className="h-24 w-full" />
+                        <ReportSkeleton key={i} />
                     ))}
                 </CardContent>
             </Card>
@@ -153,8 +182,8 @@ export default function ReportHistory() {
                                         {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
                                     </p>
                                 </div>
-                                <div className="flex-shrink-0">
-                                    <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
+                                <div className="flex items-center gap-2">
+                                     <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
                                 </div>
@@ -178,7 +207,7 @@ export default function ReportHistory() {
                     >
                         Sebelumnya
                     </Button>
-                    <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
+                     <span className="text-sm text-muted-foreground">Halaman {currentPage}</span>
                     <Button
                         variant="outline"
                         size="sm"

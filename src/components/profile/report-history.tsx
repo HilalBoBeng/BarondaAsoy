@@ -132,13 +132,31 @@ export default function ReportHistory() {
       }
     };
 
+    const ReportSkeleton = () => (
+        <Card>
+            <CardContent className="p-4">
+                <div className="relative flex justify-between items-start mb-2 gap-2">
+                    <div className="flex-grow space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-4/5" />
+                        <Skeleton className="h-3 w-1/3" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                        <Skeleton className="h-6 w-6 rounded-md" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     if (loading) {
         return (
             <Card>
                 <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <Skeleton key={i} className="h-24 w-full" />
+                        <ReportSkeleton key={i} />
                     ))}
                 </CardContent>
             </Card>
@@ -148,6 +166,7 @@ export default function ReportHistory() {
     if (!loading && paginatedReports.length === 0) {
         return (
              <Card>
+                 <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
                 <CardContent className="p-6 text-center text-muted-foreground">
                     Belum ada laporan yang Anda buat.
                 </CardContent>
@@ -157,8 +176,8 @@ export default function ReportHistory() {
 
     return (
         <Card>
-            <CardContent className="p-6">
-                <div className="space-y-4">
+            <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
                 {paginatedReports.map((report) => (
                     <Card key={report.id} className="overflow-hidden">
                         <CardContent className="p-4">
@@ -222,7 +241,6 @@ export default function ReportHistory() {
                     >
                         Berikutnya
                     </Button>
-                </div>
                 </div>
             </CardContent>
         </Card>
