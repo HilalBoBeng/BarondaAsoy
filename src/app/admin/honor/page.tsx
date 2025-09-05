@@ -36,7 +36,7 @@ const paymentSchema = z.object({
 });
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
-const statusConfig: Record<Honorarium['status'], { className: string }> = {
+const statusConfig: Record<string, { className: string }> = {
     'Dibayarkan': { className: 'bg-green-100 text-green-800' },
     'Belum Dibayar': { className: 'bg-yellow-100 text-yellow-800' },
 };
@@ -99,8 +99,6 @@ export default function HonorariumAdminPage() {
     }
     return filtered.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [staffWithHonorStatus, filterStatus, searchTerm]);
-
-  const formatCurrency = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
 
   const formatNumberInput = (value: string) => {
     const numericValue = value.replace(/\D/g, '');
@@ -176,7 +174,7 @@ export default function HonorariumAdminPage() {
     }
   }
   
-  const canPerformActions = adminInfo?.role === 'admin' || adminInfo?.role === 'bendahara';
+  const canPerformActions = adminInfo?.role === 'bendahara';
 
   return (
     <>

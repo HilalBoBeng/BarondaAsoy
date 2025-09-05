@@ -30,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { createAdmin } from '@/ai/flows/create-admin';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createLog } from '@/lib/utils';
 
 
 const shortLinkSchema = z.object({
@@ -184,7 +185,7 @@ export default function ToolsAdminPage() {
         
         Promise.all([loadMenuConfig('petugas'), loadMenuConfig('bendahara')]).then(() => setLoadingMenuConfig(false));
         
-        const adminsQuery = query(collection(db, 'staff'), where('role', 'in', ['admin', 'bendahara', 'petugas']));
+        const adminsQuery = query(collection(db, 'staff'));
         const unsubAdmins = onSnapshot(adminsQuery, (snapshot) => {
             const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
             setAllAdmins(adminsData);
@@ -207,10 +208,12 @@ export default function ToolsAdminPage() {
   }, [isAddAdminOpen, addAdminForm]);
 
   const handleMaintenanceToggle = async (checked: boolean) => {
+    if (!currentAdmin) return;
     setLoadingMaintenance(true);
     try {
         const settingsRef = doc(db, 'app_settings', 'config');
         await setDoc(settingsRef, { maintenanceMode: checked }, { merge: true });
+        await createLog(currentAdmin, `Mengubah Mode Pemeliharaan menjadi ${checked ? 'Aktif' : 'Tidak Aktif'}`);
         toast({ title: 'Berhasil', description: `Mode pemeliharaan telah di${checked ? 'aktifkan' : 'nonaktifkan'}.` });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal mengubah status mode pemeliharaan.' });
@@ -221,6 +224,7 @@ export default function ToolsAdminPage() {
   }
   
   const handleAddAdmin = async (values: AddAdminFormValues) => {
+    if (!currentAdmin) return;
     setIsSubmitting(true);
     try {
         const emailQuery = query(collection(db, 'staff'), where('email', '==', values.email));
@@ -250,6 +254,7 @@ export default function ToolsAdminPage() {
         
         if (!result.success) throw new Error(result.message);
         
+        await createLog(currentAdmin, `Menambahkan anggota tim baru: ${toTitleCase(values.name)} sebagai ${values.role}`);
         toast({ title: "Berhasil", description: result.message });
         setIsAddAdminOpen(false);
 
@@ -271,8 +276,10 @@ export default function ToolsAdminPage() {
         setConfig(newConfig);
 
         try {
+            if (!currentAdmin) return;
             const menuConfigRef = doc(db, 'app_settings', `${role}_menu`);
             await setDoc(menuConfigRef, { config: newConfig });
+            await createLog(currentAdmin, `Mengubah konfigurasi menu untuk peran ${role}`);
             toast({ title: 'Berhasil', description: `Konfigurasi menu ${role} diperbarui.` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menyimpan konfigurasi menu.' });
@@ -303,6 +310,7 @@ export default function ToolsAdminPage() {
         createdAt: serverTimestamp(),
       });
 
+      if (currentAdmin) await createLog(currentAdmin, `Membuat tautan pendek: /go/${shortCode}`);
       const fullShortUrl = `${window.location.origin}/go/${shortCode}`;
       setGeneratedLink(fullShortUrl);
       toast({ title: 'Berhasil!', description: 'Tautan pendek berhasil dibuat.' });
@@ -321,9 +329,10 @@ export default function ToolsAdminPage() {
     });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, slug: string) => {
       try {
           await deleteDoc(doc(db, 'shortlinks', id));
+          if(currentAdmin) await createLog(currentAdmin, `Menghapus tautan pendek: /go/${slug}`);
           toast({ title: 'Berhasil', description: 'Tautan berhasil dihapus.' });
       } catch (error) {
           toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus tautan.' });
@@ -534,7 +543,7 @@ export default function ToolsAdminPage() {
                                                                     <Trash className="h-4 w-4" />
                                                                 </Button>
                                                             </AlertDialogTrigger>
-                                                            <AlertDialogContent>
+                                                            <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
                                                                 <AlertDialogHeader>
                                                                     <AlertDialogTitle>Hapus Akun Ini?</AlertDialogTitle>
                                                                     <AlertDialogDescription>Tindakan ini akan menghapus akun secara permanen. Anda yakin?</AlertDialogDescription>
@@ -646,14 +655,14 @@ export default function ToolsAdminPage() {
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="destructive" size="icon"><Trash className="h-4 w-4"/></Button>
                                                 </AlertDialogTrigger>
-                                                <AlertDialogContent>
+                                                <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
                                                     <AlertDialogHeader>
                                                         <DialogTitle>Hapus Tautan Ini?</DialogTitle>
                                                         <DialogDescription>Tindakan ini tidak dapat dibatalkan.</DialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(link.id)}>Hapus</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleDelete(link.id, link.slug)}>Hapus</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
@@ -673,7 +682,7 @@ export default function ToolsAdminPage() {
     </Dialog>
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(isSubmitting) e.preventDefault()}}>
+        <DialogContent onPointerDownOutside={(e) => {if(isSubmitting) e.preventDefault()}}>
             <DialogHeader>
                 <DialogTitle>Tambah Akun Baru</DialogTitle>
                 <DialogDescription>

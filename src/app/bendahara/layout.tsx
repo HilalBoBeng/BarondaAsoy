@@ -31,6 +31,7 @@ const navItemsList = [
     { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
     { href: "/bendahara/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues' },
     { href: "/bendahara/honor", icon: Banknote, label: 'Honorarium', id: 'honor' },
+    { href: "/bendahara/honor-saya", icon: Wallet, label: 'Honor Saya', id: 'honor-saya' },
     { href: "/bendahara/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
     { href: "/bendahara/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications' },
 ];
