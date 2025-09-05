@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, PlusCircle, Trash, User, Eye, Bell, ImageIcon } from 'lucide-react';
+import { Loader2, Send, PlusCircle, Trash, User, Eye, Bell, ImageIcon, Image as ImageIconLucide } from 'lucide-react';
 import type { AppUser, Notification, Staff } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,13 +24,14 @@ import { id } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import Image from 'next/image';
 
 
 const notificationSchema = z.object({
   recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   message: z.string().min(1, "Pesan tidak boleh kosong.").max(1200, "Pesan tidak boleh lebih dari 1200 karakter."),
-  imageUrl: z.string().url("URL gambar tidak valid.").optional().or(z.literal('')),
+  imageUrl: z.string().optional(),
 });
 
 type NotificationFormValues = z.infer<typeof notificationSchema>;
@@ -47,6 +48,7 @@ export default function NotificationsAdminPage() {
   const [isViewMessageOpen, setIsViewMessageOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState('');
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
@@ -146,6 +148,22 @@ export default function NotificationsAdminPage() {
     setCurrentPage(newPage);
     fetchNotifications(newPage, 'prev');
   };
+  
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
+                return;
+            }
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                form.setValue('imageUrl', reader.result as string);
+            };
+        }
+    };
+
 
   const onSubmit = async (values: NotificationFormValues) => {
     setIsSubmitting(true);
@@ -464,16 +482,27 @@ export default function NotificationsAdminPage() {
                     control={form.control}
                     name="imageUrl"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">URL Gambar <span className="text-xs text-muted-foreground">(Opsional)</span></FormLabel>
-                        <FormControl>
-                           <div className="relative">
-                            <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="https://contoh.com/gambar.jpg" {...field} className="pl-9" />
-                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2">Gambar <span className="text-xs text-muted-foreground">(Opsional)</span></FormLabel>
+                            <FormControl>
+                                <Input 
+                                    type="file" 
+                                    className="hidden" 
+                                    ref={fileInputRef} 
+                                    onChange={handleFileChange} 
+                                    accept="image/*" 
+                                />
+                            </FormControl>
+                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                <ImageIconLucide className="mr-2 h-4 w-4" /> Pilih Gambar
+                            </Button>
+                            {field.value && (
+                                <div className="mt-2 relative w-32 h-32">
+                                    <Image src={field.value} alt="Preview" layout="fill" objectFit="cover" className="rounded-md" />
+                                </div>
+                            )}
+                            <FormMessage />
+                        </FormItem>
                     )}
                   />
                 </DrawerBody>

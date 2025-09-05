@@ -385,7 +385,7 @@ export default function BendaharaProfilePage() {
                     </DrawerHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onProfileEditSubmit)}>
-                             <DrawerBody className="space-y-4 px-4">
+                             <DrawerBody className="px-4">
                                 {editingField && editingField !== 'photoURL' && (
                                 <FormField
                                     control={form.control}
@@ -424,9 +424,9 @@ export default function BendaharaProfilePage() {
                                     />
                                 )}
                             </DrawerBody>
-                            <DrawerFooter className="flex-col sm:flex-row sm:justify-between pt-4">
-                                <div></div>
-                                <div className="flex gap-2 justify-end">
+                            <DrawerFooter className="flex-row sm:justify-between pt-4">
+                               <div></div>
+                               <div className="flex gap-2 justify-end">
                                     <DrawerClose asChild>
                                         <Button type="button" variant="secondary">Batal</Button>
                                     </DrawerClose>

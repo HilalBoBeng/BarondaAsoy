@@ -9,6 +9,7 @@ import {
   User as UserIcon,
   Wrench,
   ArrowLeft,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
-    { href: "/admin/users", icon: Users, label: 'Pengguna', id: 'users', roles: ['admin'] },
+    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan', id: 'reports', roles: ['admin'] },
     { href: "/admin/schedule", icon: Calendar, label: 'Jadwal', id: 'schedule', roles: ['admin'], badgeKey: 'newReports' },
     { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin', 'bendahara'] },
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
@@ -113,7 +114,7 @@ export default function AdminLayout({
                             (pathname.startsWith(item.href) && item.href !== '/admin') || (pathname === '/admin' && item.href === '/admin') 
                             ? "text-primary bg-primary/10" 
                             : "text-muted-foreground",
-                             (pathname.startsWith('/admin/reports') && item.href === '/admin/schedule') && 'text-primary bg-primary/10' // Highlight 'Jadwal' for 'Laporan'
+                             (pathname.startsWith('/admin/reports') && item.id === 'reports') && 'text-primary bg-primary/10' 
                             )}>
                             <div className="relative">
                                 <item.icon className="h-5 w-5" />
