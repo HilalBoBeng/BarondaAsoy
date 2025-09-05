@@ -108,9 +108,6 @@ export default function AdminLayout({
                   <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
               </div>
             </div>
-             <h1 className="text-xl sm:text-2xl font-normal tracking-tight">
-                <span className="font-bold">{adminInfo?.name || 'Admin'}</span>
-            </h1>
         </header>
         <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
             {children}
