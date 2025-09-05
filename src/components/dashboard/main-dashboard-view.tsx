@@ -2,7 +2,7 @@
 "use client";
 
 import ReportActivity from '@/components/dashboard/report-activity';
-import ReportHistory from "@/components/dashboard/report-history";
+import ReportHistory from "@/components/profile/report-history";
 import Schedule from '@/components/dashboard/schedule';
 import Announcements from '@/components/dashboard/announcements';
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
@@ -112,7 +112,7 @@ export default function MainDashboardView() {
             <UserNav user={user} userInfo={userInfo} />
         </header>
 
-        <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-20">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
             <div className="mx-auto w-full max-w-screen-2xl space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>

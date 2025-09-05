@@ -281,14 +281,14 @@ export default function PetugasLayout({
   
   if (isScanPage) {
     return (
-        <main className="flex flex-1 flex-col bg-gray-100/40 dark:bg-muted/40 overflow-auto animate-fade-in">
+        <main className="flex flex-1 flex-col bg-gray-100/40 dark:bg-muted/40 overflow-auto animate-fade-in-up">
           {children}
         </main>
     )
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
@@ -331,7 +331,7 @@ export default function PetugasLayout({
             </Link>
         </div>
       </header>
-      <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-100/40 dark:bg-muted/40 pb-20 animate-fade-in">
+      <main className="flex-1 overflow-y-auto p-4 lg:p-6 pb-20 animate-fade-in-up">
          <div className="mx-auto w-full max-w-screen-2xl">
           {children}
         </div>

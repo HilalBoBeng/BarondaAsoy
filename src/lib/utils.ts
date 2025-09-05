@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
@@ -9,11 +10,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function truncateName(name: string): string {
+export function truncateName(name?: string | null): string {
   if (!name) return "";
   const words = name.split(' ');
   if (words.length > 2) {
-    return `${words[0]} ${words[1]} ${words[2].charAt(0)}.`;
+    return `${words[0]} ${words[1].charAt(0)}.`;
   }
   return name;
 }

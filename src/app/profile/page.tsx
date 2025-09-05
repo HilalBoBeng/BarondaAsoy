@@ -285,7 +285,7 @@ export default function ProfilePage() {
                 <Skeleton className="h-9 w-24" />
                 <Skeleton className="h-10 w-40" />
            </header>
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20">
                 <div className="container mx-auto max-w-4xl space-y-8">
                      <Card className="overflow-hidden">
                         <CardHeader className="bg-muted p-6">
@@ -390,7 +390,7 @@ export default function ProfilePage() {
             </div>
        </header>
 
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20 animate-fade-in-up">
             <div className="container mx-auto max-w-4xl space-y-8">
                <Card className="overflow-hidden">
                     <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">

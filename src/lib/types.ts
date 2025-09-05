@@ -24,8 +24,8 @@ export interface ScheduleEntry {
   qrTokenStartExpires?: Timestamp;
   qrTokenEnd?: string;
   qrTokenEndExpires?: Timestamp;
-  patrolStartTime?: Timestamp;
-  patrolEndTime?: Timestamp;
+  patrolStartTime?: Date | Timestamp;
+  patrolEndTime?: Date | Timestamp;
 }
 
 export interface EmergencyContact {
