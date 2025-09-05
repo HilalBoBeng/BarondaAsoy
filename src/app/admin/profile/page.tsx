@@ -99,6 +99,7 @@ export default function AdminProfilePage() {
                 phone: 'N/A',
                 addressDetail: 'Kantor Pusat Baronda',
                 accessCode: 'Admin123',
+                role: 'super_admin'
             } as Staff;
              setAdminInfo(mainAdminInfo);
         } else if (info.id) {
@@ -302,6 +303,13 @@ export default function AdminProfilePage() {
             setIsZoomModalOpen(true);
         }
     };
+    
+    const roleDisplayMap: Record<string, string> = {
+      super_admin: 'Super Admin',
+      admin: 'Administrator',
+      bendahara: 'Bendahara',
+      petugas: 'Petugas'
+    };
 
     const dataRows = [
         { field: 'phone' as FieldName, value: adminInfo.phone },
@@ -337,9 +345,11 @@ export default function AdminProfilePage() {
                             <CardDescription className="text-primary-foreground/80 truncate">{adminInfo.email}</CardDescription>
                             <Badge variant="secondary" className={cn(
                                 "mt-2 w-fit", 
-                                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-primary/80 text-primary-foreground hover:bg-primary/90"
+                                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : 
+                                adminInfo.role === 'bendahara' ? "bg-indigo-500 text-white hover:bg-indigo-600" :
+                                "bg-primary/80 text-primary-foreground hover:bg-primary/90"
                                 )}>
-                              {adminInfo.role === 'super_admin' ? 'Super Admin' : 'Administrator'}
+                              {roleDisplayMap[adminInfo.role || 'petugas'] || 'Staf'}
                             </Badge>
                         </div>
                     </div>
