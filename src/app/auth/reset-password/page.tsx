@@ -8,14 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -120,16 +112,15 @@ export default function ResetPasswordPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Atur Ulang Kata Sandi</CardTitle>
-          <CardDescription>
-            Masukkan kata sandi baru Anda untuk email {email}.
-          </CardDescription>
-        </CardHeader>
+      <div className="space-y-4">
+        <div className="text-center space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight">Atur Ulang Kata Sandi</h2>
+            <p className="text-sm text-muted-foreground">
+                Masukkan kata sandi baru Anda untuk email {email}.
+            </p>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="newPassword"
@@ -156,16 +147,13 @@ export default function ResetPasswordPage() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-            <CardFooter>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan Kata Sandi Baru
               </Button>
-            </CardFooter>
           </form>
         </Form>
-      </Card>
+      </div>
     </>
   );
 }

@@ -7,14 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -203,75 +195,56 @@ export default function VerifyOtpPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Verifikasi Email Anda</CardTitle>
-          <CardDescription>
-            Kami telah mengirimkan kode 6 digit ke email <strong>{contextData?.email}</strong>. Masukkan kode tersebut di bawah ini.
-          </CardDescription>
-        </CardHeader>
+      <div className="space-y-4">
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Verifikasi Email Anda</h2>
+          <p className="text-sm text-muted-foreground">
+            Kami telah mengirimkan kode 6 digit ke <strong>{contextData?.email}</strong>.
+          </p>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6 flex flex-col items-center">
-              <FormField
-                control={form.control}
-                name="otp"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="sr-only">Kode OTP</FormLabel>
-                    <FormControl>
-                        <InputOTP maxLength={6} {...field}>
-                            <InputOTPGroup>
-                                <InputOTPSlot index={0} />
-                                <InputOTPSlot index={1} />
-                                <InputOTPSlot index={2} />
-                                <InputOTPSlot index={3} />
-                                <InputOTPSlot index={4} />
-                                <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                        </InputOTP>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-                <Button 
-                    type="button" 
-                    variant="link" 
-                    className="p-0 h-auto text-primary hover:text-primary/80"
-                    onClick={handleResendOtp}
-                    disabled={isResending || cooldown > 0}
-                >
-                    {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Kirim ulang OTP"}
-                </Button>
-
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                 {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Verifikasi
-              </Button>
-               {(contextData?.flow === 'userRegistration' || contextData?.flow === 'userPasswordReset') && (
-                  <div className="text-center text-sm">
-                    <Link href={contextData.flow === 'userRegistration' ? "/auth/register" : "/auth/forgot-password"} className="text-primary hover:text-primary/80">
-                      Kembali untuk mengubah email
-                    </Link>
-                  </div>
-               )}
-                {(contextData?.flow === 'staffResetPassword' || contextData?.flow === 'staffRegistration') && (
-                    <div className="text-center text-sm">
-                        <Link href={contextData.flow === 'staffRegistration' ? "/auth/staff-register" : "/auth/staff-forgot-password"} className="text-primary hover:text-primary/80">
-                        Kembali untuk mengubah email
-                        </Link>
-                    </div>
-                )}
-            </CardFooter>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="otp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">Kode OTP</FormLabel>
+                  <FormControl>
+                      <InputOTP maxLength={6} {...field}>
+                          <InputOTPGroup>
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                      </InputOTP>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Verifikasi
+            </Button>
           </form>
         </Form>
-      </Card>
+        <div className="text-center text-sm">
+            <Button 
+                type="button" 
+                variant="link" 
+                className="p-0 h-auto text-primary hover:text-primary/80"
+                onClick={handleResendOtp}
+                disabled={isResending || cooldown > 0}
+            >
+                {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {cooldown > 0 ? `Kirim ulang dalam ${cooldown} detik` : "Kirim ulang OTP"}
+            </Button>
+        </div>
+      </div>
     </>
   );
 }

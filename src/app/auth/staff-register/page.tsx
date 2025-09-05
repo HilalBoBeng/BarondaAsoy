@@ -115,7 +115,7 @@ export default function StaffRegisterPage() {
   };
 
   return (
-    <div className="w-full max-w-md space-y-6 pt-16 sm:pt-0">
+    <>
       <div className="flex flex-col items-center justify-center mb-6 text-center">
         <Image src="https://iili.io/KJ4aGxp.png" alt="Baronda Logo" width={100} height={100} className="h-24 w-auto" />
         <h1 className="text-3xl font-bold text-primary mt-2">Daftar Petugas</h1>
@@ -231,6 +231,6 @@ export default function StaffRegisterPage() {
               </div>
           </form>
         </Form>
-    </div>
+    </>
   );
 }

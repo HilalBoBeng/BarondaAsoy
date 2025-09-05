@@ -7,14 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -117,22 +109,21 @@ function ForgotPasswordForm() {
               </AlertDescription>
           </Alert>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lupa Kata Sandi</CardTitle>
-          <CardDescription>
-            Masukkan email Anda untuk menerima kode OTP untuk mengatur ulang kata sandi Anda.
-          </CardDescription>
-        </CardHeader>
+      <div className="space-y-4">
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Lupa Kata Sandi</h2>
+          <p className="text-sm text-muted-foreground">
+            Masukkan email Anda untuk menerima kode OTP.
+          </p>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="sr-only">Email</FormLabel>
                     <FormControl>
                       <Input placeholder="email@anda.com" {...field} />
                     </FormControl>
@@ -140,21 +131,18 @@ function ForgotPasswordForm() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Kirim Kode OTP
               </Button>
-              <div className="text-center text-sm">
-                <Link href="/auth/login" className="text-primary hover:text-primary/80">
-                  Kembali ke Halaman Masuk
-                </Link>
-              </div>
-            </CardFooter>
           </form>
         </Form>
-      </Card>
+        <div className="text-center text-sm">
+            <Link href="/auth/login" className="text-primary hover:text-primary/80">
+              Kembali ke Halaman Masuk
+            </Link>
+          </div>
+      </div>
     </>
   );
 }

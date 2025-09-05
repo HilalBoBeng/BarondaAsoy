@@ -66,8 +66,7 @@ export default function MyReportHistory() {
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('userId', '==', user.uid),
-                orderBy('createdAt', 'desc')
+                where('userId', '==', user.uid)
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -84,6 +83,9 @@ export default function MyReportHistory() {
                  } as Report;
             });
             
+            // Sort client-side to avoid composite index
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+
             setAllReports(reportsData);
 
         } catch (error) {
@@ -245,3 +247,4 @@ export default function MyReportHistory() {
         </Card>
     );
 }
+

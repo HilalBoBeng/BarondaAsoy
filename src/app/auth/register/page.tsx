@@ -7,14 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -135,16 +127,15 @@ export default function RegisterPage() {
         <h1 className="text-3xl font-bold text-primary mt-2">Baronda</h1>
         <p className="text-sm text-muted-foreground">Kelurahan Kilongan</p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Akun Baru</CardTitle>
-          <CardDescription>
-            Buat akun untuk mulai menggunakan aplikasi. Kami akan mengirimkan kode verifikasi ke email Anda.
-          </CardDescription>
-        </CardHeader>
+      <div className="space-y-4">
+        <div className="text-center space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight">Daftar Akun Baru</h2>
+            <p className="text-sm text-muted-foreground">
+                Buat akun untuk mulai menggunakan aplikasi.
+            </p>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -245,27 +236,24 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Daftar
+                Daftar & Kirim OTP
               </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                  Sudah punya akun?{" "}
-                  <Link
-                      href="/auth/login"
-                      className="text-primary hover:text-primary/80 no-underline"
-                  >
-                      Masuk di sini
-                  </Link>
-              </div>
-            </CardFooter>
           </form>
         </Form>
-      </Card>
+        <div className="text-center text-sm text-muted-foreground">
+            Sudah punya akun?{" "}
+            <Link
+                href="/auth/login"
+                className="text-primary hover:text-primary/80 no-underline"
+            >
+                Masuk di sini
+            </Link>
+        </div>
+      </div>
     </>
   );
 }
