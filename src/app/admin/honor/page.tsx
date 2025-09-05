@@ -125,11 +125,9 @@ export default function HonorariumAdminPage() {
     try {
         const batch = writeBatch(db);
 
-        // Delete the honorarium record
         const honorRef = doc(db, 'honorariums', honorRecordId);
         batch.delete(honorRef);
         
-        // Find and delete the corresponding financial transaction
         const financeQuery = query(collection(db, 'financial_transactions'), where('relatedId', '==', honorRecordId));
         const financeDocs = await getDocs(financeQuery);
         financeDocs.forEach(doc => {
@@ -152,7 +150,6 @@ export default function HonorariumAdminPage() {
         const batch = writeBatch(db);
         const period = `${selectedMonth} ${selectedYear}`;
         
-        // Create new honorarium record
         const honorRef = doc(collection(db, 'honorariums'));
         batch.set(honorRef, {
             staffId: selectedStaffForPayment.id,
@@ -163,7 +160,6 @@ export default function HonorariumAdminPage() {
             issueDate: serverTimestamp(),
         });
         
-        // Create corresponding financial transaction
         const financeRef = doc(collection(db, 'financial_transactions'));
         batch.set(financeRef, {
             type: 'expense',
@@ -185,6 +181,8 @@ export default function HonorariumAdminPage() {
         setIsSubmitting(false);
     }
   }
+  
+  const canPerformActions = adminInfo?.role === 'bendahara' || adminInfo?.role === 'super_admin';
 
   return (
     <>
@@ -267,32 +265,36 @@ export default function HonorariumAdminPage() {
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {s.honorStatus === 'Belum Dibayar' && (
-                            <Button size="sm" onClick={() => handleOpenPayDialog(s)}>
-                                <Banknote className="mr-2 h-4 w-4"/> Bayar
-                            </Button>
+                          {canPerformActions && (
+                             <>
+                               {s.honorStatus === 'Belum Dibayar' && (
+                                 <Button size="sm" onClick={() => handleOpenPayDialog(s)}>
+                                     <Banknote className="mr-2 h-4 w-4"/> Bayar
+                                 </Button>
+                               )}
+                                {s.honorStatus === 'Dibayarkan' && (
+                                  <AlertDialog>
+                                     <AlertDialogTrigger asChild>
+                                         <Button variant="outline" size="sm">
+                                             <RefreshCw className="mr-2 h-4 w-4"/> Batalkan
+                                         </Button>
+                                     </AlertDialogTrigger>
+                                     <AlertDialogContent>
+                                         <AlertDialogHeader>
+                                             <AlertDialogTitle>Batalkan Pembayaran?</AlertDialogTitle>
+                                             <AlertDialogDescription>
+                                                 Tindakan ini akan mengembalikan status pembayaran menjadi "Belum Dibayar". Yakin?
+                                             </AlertDialogDescription>
+                                         </AlertDialogHeader>
+                                         <AlertDialogFooter>
+                                             <AlertDialogCancel>Tidak</AlertDialogCancel>
+                                             <AlertDialogAction onClick={() => handleCancelPayment(s.honorRecordId)}>Ya, Batalkan</AlertDialogAction>
+                                         </AlertDialogFooter>
+                                     </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                             </>
                           )}
-                           {s.honorStatus === 'Dibayarkan' && (
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                        <RefreshCw className="mr-2 h-4 w-4"/> Batalkan
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Batalkan Pembayaran?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Tindakan ini akan mengembalikan status pembayaran menjadi "Belum Dibayar". Yakin?
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Tidak</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleCancelPayment(s.honorRecordId)}>Ya, Batalkan</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                             </AlertDialog>
-                           )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -351,3 +353,5 @@ export default function HonorariumAdminPage() {
     </>
   );
 }
+
+    

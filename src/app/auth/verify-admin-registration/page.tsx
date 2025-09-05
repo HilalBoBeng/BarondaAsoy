@@ -85,7 +85,8 @@ function VerificationContent() {
                 <p className="text-muted-foreground">{message}</p>
              </CardContent>
              {status !== 'verifying' && (
-                <CardFooter>
+                <CardFooter className="flex-col gap-4">
+                    <p className="text-xs text-muted-foreground">Silakan tutup halaman ini dan kembali ke halaman login.</p>
                     <Button className="w-full" onClick={() => router.push('/auth/staff-login')}>
                         Ke Halaman Login
                     </Button>
@@ -104,3 +105,5 @@ export default function VerifyAdminRegistrationPage() {
         </Suspense>
     )
 }
+
+    

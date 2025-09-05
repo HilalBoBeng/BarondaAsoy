@@ -130,11 +130,13 @@ export default function DuesAdminPage() {
         return;
     }
     try {
+        const batch = writeBatch(db);
         for (const user of usersToRemind) {
             const recipientName = user.displayName || 'Warga';
             const formattedMessage = `<strong>Yth, ${recipientName.toUpperCase()}</strong>\n\nDengan hormat, kami ingin mengingatkan mengenai pembayaran iuran keamanan untuk bulan ${selectedMonth} ${selectedYear}. Mohon untuk segera melakukan pembayaran.\n\nTerima kasih atas perhatian dan kerja sama Anda.\n\nHormat kami,\nAdmin, Tim Baronda`;
 
-            await addDoc(collection(db, 'notifications'), {
+            const newNotifRef = doc(collection(db, 'notifications'));
+            batch.set(newNotifRef, {
                 userId: user.uid,
                 title: `Pengingat Iuran ${selectedMonth} ${selectedYear}`,
                 message: formattedMessage,
@@ -143,6 +145,7 @@ export default function DuesAdminPage() {
                 link: '/profile',
             });
         }
+        await batch.commit();
         toast({ title: "Berhasil", description: `Pengingat iuran berhasil dikirim ke ${usersToRemind.length} warga.` });
     } catch (error) {
         toast({ variant: 'destructive', title: "Gagal", description: "Gagal mengirim pengingat massal." });
@@ -301,3 +304,5 @@ export default function DuesAdminPage() {
     </Card>
   );
 }
+
+    
