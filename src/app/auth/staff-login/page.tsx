@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -66,8 +67,10 @@ export default function StaffLoginPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
-    if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'bendahara') {
+    if (userRole === 'admin' || userRole === 'super_admin') {
       router.replace('/admin');
+    } else if (userRole === 'bendahara') {
+      router.replace('/bendahara');
     } else if (userRole === 'petugas') {
       router.replace('/petugas');
     }
@@ -144,8 +147,10 @@ export default function StaffLoginPage() {
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email, role: role }));
 
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
-        if (role === 'admin' || role === 'super_admin' || role === 'bendahara') {
+        if (role === 'admin' || role === 'super_admin') {
             router.push("/admin");
+        } else if (role === 'bendahara') {
+            router.push("/bendahara");
         } else {
             router.push("/petugas");
         }

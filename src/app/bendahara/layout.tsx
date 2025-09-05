@@ -5,26 +5,13 @@ import Link from "next/link";
 import {
   Bell,
   Home,
-  Users,
-  FileText,
-  Calendar,
   LogOut,
-  ShieldAlert,
-  Phone,
   Menu,
-  MessageSquare,
-  Settings,
   Landmark,
   ArrowLeft,
-  QrCode,
   Banknote,
-  ClipboardList,
   User as UserIcon,
-  Wrench,
-  History,
-  Edit,
   Wallet,
-  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,24 +27,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Staff } from "@/lib/types";
 
 const navItemsList = [
-    { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'super_admin'] },
-    { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'super_admin'] },
-    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan Masuk', id: 'reports', badgeKey: 'newReports', roles: ['admin', 'super_admin'] },
-    { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin', 'super_admin'] },
-    { href: "/admin/users", icon: Users, label: 'Manajemen Pengguna', id: 'users', roles: ['admin', 'super_admin'] },
-    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal Patroli', id: 'schedule', roles: ['admin', 'super_admin'] },
-    { href: "/admin/attendance", icon: ClipboardList, label: 'Daftar Hadir', id: 'attendance', roles: ['admin', 'super_admin'] },
-    { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['admin', 'super_admin'] },
-    { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'super_admin'] },
-    { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'super_admin'] },
-    { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin', 'super_admin'] },
-    { href: "/admin/tools", icon: Wrench, label: 'Lainnya', id: 'tools', roles: ['admin', 'super_admin'] },
-    { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin', 'super_admin'] },
-    { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin', 'super_admin'] },
+    { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
+    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
+    { href: "/bendahara/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues' },
+    { href: "/bendahara/honor", icon: Banknote, label: 'Honorarium', id: 'honor' },
+    { href: "/bendahara/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
+    { href: "/bendahara/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications' },
 ];
 
 
-export default function AdminLayout({
+export default function BendaharaLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -66,58 +45,34 @@ export default function AdminLayout({
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState({
-    newReports: 0,
-  });
+  const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [pageTitle, setPageTitle] = useState("Dasbor Admin");
+  const [pageTitle, setPageTitle] = useState("Dasbor Bendahara");
   const [isDetailPage, setIsDetailPage] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-
-    const getBadgeCount = (badgeKey?: string) => {
-        if (!badgeKey) return 0;
-        return badgeCounts[badgeKey as keyof typeof badgeCounts] || 0;
-    };
     
-    const navItems = navItemsList
-      .filter(item => adminInfo?.role && item.roles.includes(adminInfo.role))
-      .map(item => ({
-        ...item,
-        badge: getBadgeCount(item.badgeKey)
-      }));
-
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    const validRoles = ['admin', 'super_admin'];
-    if (!validRoles.includes(localStorage.getItem('userRole') || '')) {
+    if (localStorage.getItem('userRole') !== 'bendahara') {
       router.replace('/auth/staff-login');
       return;
     }
     
-    if (storedStaffInfo.email === 'admin@baronda.or.id') {
-        const superAdminData = {
-            id: 'super_admin',
-            name: 'Admin Utama',
-            email: 'admin@baronda.or.id',
-            role: 'super_admin',
-        } as Staff;
-        setAdminInfo(superAdminData);
-    } else if (storedStaffInfo.id) {
+    if (storedStaffInfo.id) {
         const staffDocRef = doc(db, "staff", storedStaffInfo.id);
         const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-                if (!validRoles.includes(staffData.role || '')) {
+                if (staffData.role !== 'bendahara') {
                     handleLogout(true);
                     return;
                 }
-                setAdminInfo(staffData);
+                setStaffInfo(staffData);
                 localStorage.setItem('staffInfo', JSON.stringify(staffData));
             } else {
-                toast({ variant: "destructive", title: "Akses Ditolak", description: "Data admin tidak ditemukan." });
+                toast({ variant: "destructive", title: "Akses Ditolak", description: "Data bendahara tidak ditemukan." });
                 handleLogout(true);
             }
         });
@@ -126,39 +81,26 @@ export default function AdminLayout({
         router.replace('/auth/staff-login');
         return;
     }
-
-    const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
-    
-    const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
-    
-    return () => {
-      unsubReports();
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
   
   useEffect(() => {
-    const duesDetailRegex = /^\/admin\/dues\/(.+)$/;
-    const scheduleDetailRegex = /^\/admin\/schedule\/(.+)$/;
-    const honorDetailRegex = /^\/admin\/honor\/(.+)$/;
+    const duesDetailRegex = /^\/bendahara\/dues\/(.+)$/;
+    const honorDetailRegex = /^\/bendahara\/honor\/(.+)$/;
     const duesDetailMatch = pathname.match(duesDetailRegex);
-    const scheduleDetailMatch = pathname.match(scheduleDetailRegex);
     const honorDetailMatch = pathname.match(honorDetailRegex);
 
-    let newPageTitle = "Dasbor Admin";
+    let newPageTitle = "Dasbor Bendahara";
     let detailPage = false;
     
     if (duesDetailMatch) {
       detailPage = true;
       newPageTitle = 'Riwayat Iuran';
-    } else if (scheduleDetailMatch) {
-      detailPage = true;
-      newPageTitle = 'Detail Jadwal & QR Code';
     } else if (honorDetailMatch) {
         detailPage = true;
         newPageTitle = 'Detail Honorarium';
     } else {
-      const activeItem = navItemsList.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin'));
+      const activeItem = navItemsList.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/bendahara'));
       if(activeItem) newPageTitle = activeItem.label;
     }
     
@@ -186,7 +128,7 @@ export default function AdminLayout({
       }
   }
   
-  if (!isClient || isLoggingOut || !adminInfo) {
+  if (!isClient || isLoggingOut || !staffInfo) {
       return (
         <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background transition-opacity duration-500", isLoggingOut ? "animate-fade-out" : "")}>
             <Image 
@@ -205,17 +147,14 @@ export default function AdminLayout({
   const NavHeader = () => (
     <div className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-14 w-14">
-            <AvatarImage src={adminInfo?.photoURL || undefined} />
-            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{adminInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={staffInfo?.photoURL || undefined} />
+            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col min-w-0">
-            <p className="font-bold text-base truncate">{truncateName(adminInfo.name)}</p>
-            <p className="text-sm text-muted-foreground truncate">{adminInfo.email}</p>
-            <Badge variant="secondary" className={cn(
-                "mt-2 w-fit", 
-                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-primary/80 text-primary-foreground hover:bg-primary/90"
-                )}>
-              {getRoleDisplayName(adminInfo.role)}
+            <p className="font-bold text-base truncate">{truncateName(staffInfo.name)}</p>
+            <p className="text-sm text-muted-foreground truncate">{staffInfo.email}</p>
+            <Badge variant="secondary" className="mt-2 w-fit bg-indigo-500 text-white hover:bg-indigo-600">
+              {getRoleDisplayName(staffInfo.role)}
             </Badge>
         </div>
     </div>
@@ -224,21 +163,20 @@ export default function AdminLayout({
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="flex flex-col h-full">
       <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-        {navItems.map((item) => (
+        {navItemsList.map((item) => (
           <Link
-            key={item.href + item.label}
+            key={item.href}
             href={item.href}
             onClick={onLinkClick}
             className={cn(
               "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin')) && "bg-muted text-primary"
+              (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/bendahara')) && "bg-muted text-primary"
             )}
           >
             <div className="flex items-center gap-3">
               <item.icon className="h-4 w-4" />
               {item.label}
             </div>
-            {item.badge > 0 && <Badge className="h-5">{item.badge}</Badge>}
           </Link>
         ))}
       </nav>
