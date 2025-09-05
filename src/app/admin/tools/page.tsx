@@ -517,9 +517,8 @@ export default function ToolsAdminPage() {
                                                         <AvatarImage src={admin.photoURL || undefined}/>
                                                         <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
                                                     </Avatar>
-                                                    <div className="flex flex-col items-start">
+                                                    <div>
                                                         <p>{admin.name}</p>
-                                                        <Badge variant="outline" className="mt-1">{admin.role === 'admin' ? 'Admin' : 'Bendahara'}</Badge>
                                                     </div>
                                                 </div>
                                             </TableCell>

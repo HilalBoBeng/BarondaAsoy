@@ -68,7 +68,11 @@ export default function UsersAdminPage() {
   useEffect(() => {
     setLoading(true);
     const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    const staffQuery = query(collection(db, "staff"), orderBy("createdAt", "desc"));
+    const staffQuery = query(
+        collection(db, "staff"), 
+        where('role', 'in', ['petugas', 'bendahara']),
+        orderBy("createdAt", "desc")
+    );
     
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info) {
@@ -89,16 +93,13 @@ export default function UsersAdminPage() {
     }, (error) => console.error("Error fetching users:", error));
     
     const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
-        const allStaff = snapshot.docs.map(doc => ({ 
+        const staffData = snapshot.docs.map(doc => ({ 
             id: doc.id, 
             ...doc.data(),
             createdAt: doc.data().createdAt?.toDate() || new Date()
         })) as Staff[];
         
-        const activeStaff = allStaff.filter(s => s.status === 'active' || s.status === 'suspended');
-        const regularStaff = activeStaff.filter(s => s.role !== 'super_admin');
-        
-        setStaff(regularStaff);
+        setStaff(staffData);
         setLoading(false);
     }, (error) => {
         console.error("Error fetching staff:", error)
@@ -344,7 +345,6 @@ export default function UsersAdminPage() {
                             <Avatar><AvatarImage src={s.photoURL || undefined} /><AvatarFallback>{s.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
                             <div>
                                 <p className="font-medium">{s.name}</p>
-                                <Badge variant="outline" className="mt-1">{getStaffStatus(s).text}</Badge>
                             </div>
                           </div>
                         </TableCell>

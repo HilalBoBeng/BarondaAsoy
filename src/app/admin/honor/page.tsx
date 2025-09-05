@@ -255,7 +255,7 @@ export default function HonorariumAdminPage() {
                             </Avatar>
                             <div className="flex flex-col items-start">
                                 <p className="font-medium">{s.name}</p>
-                                {s.role && (s.role === 'admin' || s.role === 'bendahara') && (
+                                {s.role && (s.role === 'admin' || s.role === 'bendahara' || s.role === 'petugas') && (
                                     <Badge variant="outline" className="mt-1">{roleDisplay[s.role] || s.role}</Badge>
                                 )}
                             </div>
@@ -355,5 +355,3 @@ export default function HonorariumAdminPage() {
     </>
   );
 }
-
-    

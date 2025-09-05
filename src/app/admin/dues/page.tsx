@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc, Timestamp, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp, doc, Timestamp, deleteDoc, updateDoc, orderBy, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -304,5 +304,3 @@ export default function DuesAdminPage() {
     </Card>
   );
 }
-
-    
