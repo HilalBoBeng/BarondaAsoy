@@ -184,7 +184,7 @@ export default function ToolsAdminPage() {
         
         Promise.all([loadMenuConfig('petugas'), loadMenuConfig('bendahara')]).then(() => setLoadingMenuConfig(false));
         
-        const adminsQuery = query(collection(db, 'staff'), where('role', 'in', ['admin', 'bendahara']));
+        const adminsQuery = query(collection(db, 'staff'), where('role', 'in', ['admin', 'bendahara', 'petugas']));
         const unsubAdmins = onSnapshot(adminsQuery, (snapshot) => {
             const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Staff));
             setAllAdmins(adminsData);
@@ -334,10 +334,10 @@ export default function ToolsAdminPage() {
       if (currentAdmin?.role !== 'admin') return;
       try {
           await deleteDoc(doc(db, 'staff', adminId));
-          toast({ title: 'Berhasil', description: 'Admin telah dihapus.' });
+          toast({ title: 'Berhasil', description: 'Akun telah dihapus.' });
           setIsUserDetailOpen(false);
       } catch (error) {
-          toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus admin.' });
+          toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus akun.' });
       }
   }
 
@@ -530,7 +530,7 @@ export default function ToolsAdminPage() {
                                                      {isAdmin && currentAdmin?.id !== admin.id && (
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={admin.role === 'admin'}>
                                                                     <Trash className="h-4 w-4" />
                                                                 </Button>
                                                             </AlertDialogTrigger>
@@ -552,7 +552,7 @@ export default function ToolsAdminPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={2} className="text-center h-16">Belum ada admin.</TableCell>
+                                            <TableCell colSpan={2} className="text-center h-16">Belum ada akun.</TableCell>
                                         </TableRow>
                                     )}
                                     </TableBody>
