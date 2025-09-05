@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -87,7 +87,6 @@ export default function ChatPage() {
       senderId: currentUser.uid,
       timestamp: serverTimestamp()
     });
-    setNewMessage('');
     
     // Update last message in chat document
     const chatDocRef = doc(db, 'chats', chatId as string);
@@ -98,6 +97,8 @@ export default function ChatPage() {
         timestamp: serverTimestamp()
       }
     });
+
+    setNewMessage('');
   };
 
   const otherUser = chatInfo && currentUser ? chatInfo.users.find(uid => uid !== currentUser.uid) : null;

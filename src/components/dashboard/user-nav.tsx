@@ -55,8 +55,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     if (user) {
         const notifsQuery = query(
             collection(db, "notifications"),
-            where("userId", "==", user.uid),
-            limit(20)
+            where("userId", "==", user.uid)
         );
         const unsub = onSnapshot(notifsQuery, (snapshot) => {
             const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
@@ -105,15 +104,14 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     setIsSearching(true);
     try {
       const usersRef = collection(db, "users");
-      const q = query(
-        usersRef,
-        where('displayName', '>=', queryText),
-        where('displayName', '<=', queryText + '\uf8ff'),
-        limit(10)
+      const querySnapshot = await getDocs(usersRef);
+      const allUsers = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
+      
+      const lowerCaseQuery = queryText.toLowerCase();
+      const results = allUsers.filter(u => 
+          u.displayName?.toLowerCase().includes(lowerCaseQuery) && u.uid !== user?.uid
       );
-      const querySnapshot = await getDocs(q);
-      const results = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
-      setSearchResults(results.filter(u => u.uid !== user?.uid)); // Exclude self
+      setSearchResults(results.slice(0, 10)); // Limit results
     } catch (error) {
       toast({ variant: 'destructive', title: 'Pencarian Gagal' });
     } finally {
