@@ -20,8 +20,7 @@ import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import type { Staff } from "@/lib/types";
 import { cn, useInactivityTimeout } from "@/lib/utils";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { getAuth, signOut } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
@@ -41,7 +40,6 @@ export default function AdminLayout({
   const auth = getAuth();
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, unreadNotifications: 0 });
-  const [loginRequest, setLoginRequest] = useState<any>(null);
 
   useInactivityTimeout();
 
@@ -71,21 +69,11 @@ export default function AdminLayout({
     const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-            const localSessionId = localStorage.getItem('activeSessionId');
-
-            if (staffData.role !== 'admin' || (staffData.activeSessionId && staffData.activeSessionId !== localSessionId)) {
-                signOut(auth).then(() => {
-                    localStorage.clear();
-                    router.replace('/auth/staff-login');
-                });
+            if (staffData.role !== 'admin') {
+                router.replace('/auth/staff-login');
                 return;
             }
             setAdminInfo(staffData);
-            if (staffData.loginRequest) {
-                setLoginRequest(staffData.loginRequest);
-            } else {
-                setLoginRequest(null);
-            }
         } else {
             router.replace('/auth/staff-login');
         }
@@ -104,23 +92,6 @@ export default function AdminLayout({
     }
   }, [router, auth]);
   
-  const handleLoginRequest = async (allow: boolean) => {
-    if (!adminInfo || !loginRequest) return;
-    const staffDocRef = doc(db, 'staff', adminInfo.id);
-    if (allow) {
-      await updateDoc(staffDocRef, {
-        activeSessionId: loginRequest.sessionId,
-        loginRequest: null,
-      });
-      // This device will be logged out by the listener
-    } else {
-      await updateDoc(staffDocRef, {
-        loginRequest: null, // Just deny
-      });
-    }
-    setLoginRequest(null);
-  };
-
   return (
     <div className="flex h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
@@ -167,22 +138,6 @@ export default function AdminLayout({
                 ))}
             </div>
         </nav>
-        <AlertDialog open={!!loginRequest}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Permintaan Masuk Terdeteksi</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Seseorang mencoba masuk ke akun Anda dari perangkat lain. Apakah Anda mengizinkan?
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => handleLoginRequest(false)}>Tolak</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleLoginRequest(true)}>
-                    Izinkan & Keluar dari Sini
-                </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </div>
   );
 }

@@ -20,8 +20,7 @@ import { onSnapshot, doc, query, collection, where, updateDoc } from "firebase/f
 import { db } from "@/lib/firebase/client";
 import type { Staff } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { getAuth, signOut } from "firebase/auth";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { getAuth } from "firebase/auth";
 
 const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
@@ -57,7 +56,6 @@ export default function BendaharaLayout({
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [loginRequest, setLoginRequest] = useState<any>(null);
 
   useInactivityTimeout();
 
@@ -74,21 +72,11 @@ export default function BendaharaLayout({
     const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-            const localSessionId = localStorage.getItem('activeSessionId');
-            
-            if (staffData.role !== 'bendahara' || (staffData.activeSessionId && staffData.activeSessionId !== localSessionId)) {
-                 signOut(auth).then(() => {
-                    localStorage.clear();
-                    router.replace('/auth/staff-login');
-                });
+            if (staffData.role !== 'bendahara') {
+                router.replace('/auth/staff-login');
                 return;
             }
             setStaffInfo(staffData);
-             if (staffData.loginRequest) {
-                setLoginRequest(staffData.loginRequest);
-            } else {
-                setLoginRequest(null);
-            }
         } else {
             router.replace('/auth/staff-login');
         }
@@ -107,22 +95,6 @@ export default function BendaharaLayout({
   if (!isClient || !staffInfo) {
       return <LoadingSkeleton />;
   }
-  
-  const handleLoginRequest = async (allow: boolean) => {
-    if (!staffInfo || !loginRequest) return;
-    const staffDocRef = doc(db, 'staff', staffInfo.id);
-    if (allow) {
-      await updateDoc(staffDocRef, {
-        activeSessionId: loginRequest.sessionId,
-        loginRequest: null,
-      });
-    } else {
-      await updateDoc(staffDocRef, {
-        loginRequest: null,
-      });
-    }
-    setLoginRequest(null);
-  };
   
   const getBadgeCount = (badgeKey?: string) => {
     if (badgeKey === 'unreadNotifications') return unreadNotifications;
@@ -178,22 +150,6 @@ export default function BendaharaLayout({
                 ))}
             </div>
         </nav>
-        <AlertDialog open={!!loginRequest}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Permintaan Masuk Terdeteksi</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Seseorang mencoba masuk ke akun Anda dari perangkat lain. Apakah Anda mengizinkan?
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => handleLoginRequest(false)}>Tolak</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleLoginRequest(true)}>
-                    Izinkan & Keluar dari Sini
-                </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </div>
   );
 }

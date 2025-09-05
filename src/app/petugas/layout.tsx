@@ -20,9 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import NotPermittedPage from "@/app/not-permitted/page";
 import type { Staff } from "@/lib/types";
-import { getAuth, signOut } from "firebase/auth";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
+import { getAuth } from "firebase/auth";
 
 interface MenuConfig {
   id: string;
@@ -69,7 +67,6 @@ export default function PetugasLayout({
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
   const [isScanPage, setIsScanPage] = useState(false);
-  const [loginRequest, setLoginRequest] = useState<any>(null);
 
   useInactivityTimeout();
 
@@ -101,21 +98,11 @@ export default function PetugasLayout({
         const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-                const localSessionId = localStorage.getItem('activeSessionId');
-                
-                if (staffData.role !== 'petugas' || (staffData.activeSessionId && staffData.activeSessionId !== localSessionId)) {
-                    signOut(auth).then(() => {
-                        localStorage.clear();
-                        router.replace('/auth/staff-login');
-                    });
+                if (staffData.role !== 'petugas') {
+                    router.replace('/auth/staff-login');
                     return;
                 }
                 setStaffInfo(staffData);
-                if (staffData.loginRequest) {
-                    setLoginRequest(staffData.loginRequest);
-                } else {
-                    setLoginRequest(null);
-                }
             } else {
                 router.replace('/auth/staff-login');
             }
@@ -197,23 +184,6 @@ export default function PetugasLayout({
         </main>
     )
   }
-  
-   const handleLoginRequest = async (allow: boolean) => {
-    if (!staffInfo || !loginRequest) return;
-    const staffDocRef = doc(db, 'staff', staffInfo.id);
-    if (allow) {
-      await updateDoc(staffDocRef, {
-        activeSessionId: loginRequest.sessionId,
-        loginRequest: null,
-      });
-    } else {
-      await updateDoc(staffDocRef, {
-        loginRequest: null,
-      });
-    }
-    setLoginRequest(null);
-  };
-
 
   return (
     <div className="flex h-screen flex-col bg-muted/40">
@@ -259,22 +229,6 @@ export default function PetugasLayout({
                 ))}
             </div>
         </nav>
-        <AlertDialog open={!!loginRequest}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Permintaan Masuk Terdeteksi</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Seseorang mencoba masuk ke akun Anda dari perangkat lain. Apakah Anda mengizinkan?
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => handleLoginRequest(false)}>Tolak</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleLoginRequest(true)}>
-                    Izinkan & Keluar dari Sini
-                </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </div>
   );
 }

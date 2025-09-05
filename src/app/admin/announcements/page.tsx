@@ -304,34 +304,36 @@ export default function AnnouncementsAdminPage() {
             </DrawerHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <DrawerBody className="space-y-4 px-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Judul</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            maxLength={50} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="content"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Isi Pengumuman</FormLabel>
-                        <FormControl><Textarea {...field} rows={5} maxLength={1200} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <DrawerBody>
+                    <div className="space-y-4 px-4">
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Judul</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                maxLength={50} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="content"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Isi Pengumuman</FormLabel>
+                            <FormControl><Textarea {...field} rows={5} maxLength={1200} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                 </DrawerBody>
                 <DrawerFooter>
                     <DrawerClose asChild>

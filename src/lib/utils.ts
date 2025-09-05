@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { doc, updateDoc } from 'firebase/firestore';
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -45,15 +47,9 @@ export function useInactivityTimeout() {
     const { toast } = useToast();
 
     const logout = useCallback(() => {
-        const staffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-        if (staffInfo && staffInfo.id) {
-             const staffDocRef = doc(db, 'staff', staffInfo.id);
-             updateDoc(staffDocRef, { activeSessionId: null, loginRequest: null });
-        }
         signOut(auth).then(() => {
             localStorage.removeItem('userRole');
             localStorage.removeItem('staffInfo');
-            localStorage.removeItem('activeSessionId');
             toast({
                 title: 'Sesi Berakhir',
                 description: 'Anda telah dikeluarkan karena tidak aktif.',

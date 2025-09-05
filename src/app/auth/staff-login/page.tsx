@@ -19,14 +19,12 @@ import { useState, useEffect } from "react";
 import { Loader2, ShieldAlert, User, Mail, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { collection, query, where, getDocs, Timestamp, doc, updateDoc, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs, Timestamp, doc, updateDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Staff } from "@/lib/types";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
 
 const staffLoginSchema = z.object({
   accessCode: z.string().min(1, "Kode akses tidak boleh kosong."),
@@ -56,9 +54,6 @@ export default function StaffLoginPage() {
   const [suspensionInfo, setSuspensionInfo] = useState<SuspensionInfo | null>(null);
   const [countdown, setCountdown] = useState('');
   const router = useRouter();
-  const [loginAwaitingConfirmation, setLoginAwaitingConfirmation] = useState(false);
-  const [staffDocForConfirmation, setStaffDocForConfirmation] = useState<any>(null);
-  let unsub: any = null;
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
@@ -85,32 +80,6 @@ export default function StaffLoginPage() {
     return () => clearInterval(timer);
   }, [suspensionInfo]);
   
-   useEffect(() => {
-    if (staffDocForConfirmation) {
-      unsub = onSnapshot(doc(db, 'staff', staffDocForConfirmation.id), (docSnap) => {
-        const staffData = docSnap.data() as Staff;
-        const localSessionId = localStorage.getItem('pendingSessionId');
-
-        if (staffData.activeSessionId === localSessionId) {
-          // Login approved
-          handleSuccessfulLogin(staffData);
-          setLoginAwaitingConfirmation(false);
-          if (unsub) unsub();
-        } else if (!staffData.loginRequest) {
-          // Login denied or timed out
-          toast({ variant: "destructive", title: "Gagal Masuk", description: "Permintaan masuk Anda ditolak atau telah kedaluwarsa." });
-          setLoginAwaitingConfirmation(false);
-          if (unsub) unsub();
-        }
-      });
-    }
-    return () => {
-      if (unsub) unsub();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffDocForConfirmation]);
-
-
   const form = useForm<StaffLoginFormValues>({
     resolver: zodResolver(staffLoginSchema),
     defaultValues: { accessCode: "" },
@@ -120,8 +89,6 @@ export default function StaffLoginPage() {
     const role = staffData.role || 'petugas';
     localStorage.setItem('userRole', role);
     localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffData.id, email: staffData.email, role: role }));
-    localStorage.setItem('activeSessionId', staffData.activeSessionId!);
-    localStorage.removeItem('pendingSessionId');
 
     toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
     if (role === 'admin' || role === 'bendahara') {
@@ -157,27 +124,7 @@ export default function StaffLoginPage() {
             return;
         }
 
-        const newSessionId = Math.random().toString(36).substring(2, 15);
-
-        if (staffData.activeSessionId) {
-            // Another device is logged in, request permission
-            localStorage.setItem('pendingSessionId', newSessionId);
-            setStaffDocForConfirmation({ id: staffDoc.id });
-            await updateDoc(staffDoc.ref, {
-              loginRequest: {
-                sessionId: newSessionId,
-                timestamp: serverTimestamp()
-              }
-            });
-            setLoginAwaitingConfirmation(true);
-        } else {
-            // No other device is logged in, proceed
-            await updateDoc(staffDoc.ref, {
-              activeSessionId: newSessionId,
-              loginRequest: null
-            });
-            handleSuccessfulLogin({ ...staffData, activeSessionId: newSessionId });
-        }
+        handleSuccessfulLogin(staffData);
 
     } catch (error) {
         localStorage.removeItem('userRole');
@@ -198,17 +145,6 @@ export default function StaffLoginPage() {
         <h1 className="text-2xl font-bold">Akses Staf & Admin</h1>
         <p className="text-sm text-muted-foreground">Masuk dengan kode akses unik Anda.</p>
       </div>
-
-       {loginAwaitingConfirmation && (
-         <Alert className="mt-4">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Menunggu Persetujuan</AlertTitle>
-            <AlertDescription>
-                Akun ini sedang digunakan di perangkat lain. Silakan tunggu persetujuan dari perangkat tersebut untuk masuk.
-            </AlertDescription>
-        </Alert>
-       )}
-
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
             <FormField control={form.control} name="accessCode" render={({ field }) => (
@@ -224,9 +160,9 @@ export default function StaffLoginPage() {
                     <Link href="/auth/staff-forgot-password">Lupa kode akses?</Link>
                 </Button>
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting || loginAwaitingConfirmation}>
-                {isSubmitting || loginAwaitingConfirmation ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {loginAwaitingConfirmation ? 'Menunggu...' : 'Masuk'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Masuk
             </Button>
         </form>
       </Form>

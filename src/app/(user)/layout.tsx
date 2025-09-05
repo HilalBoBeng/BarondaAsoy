@@ -1,19 +1,20 @@
 
 "use client";
 
-import ReportActivity from '@/components/dashboard/report-activity';
-import ReportHistory from '@/components/profile/report-history';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import { Home, UserCircle, Settings, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { app, db } from "@/lib/firebase/client";
 import type { AppUser } from '@/lib/types';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { Skeleton } from "@/components/ui/skeleton";
+import { UserNav } from "@/components/dashboard/user-nav";
+import WelcomeAnnouncement from "@/components/dashboard/welcome-announcement";
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
@@ -22,16 +23,34 @@ const navItems = [
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 
-export default function ReportPage() {
+function LoadingScreen() {
+    return (
+        <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
+            <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Loading Logo" 
+                width={120} 
+                height={120} 
+                className="animate-logo-pulse"
+                priority
+            />
+        </div>
+    );
+}
+
+export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const [user, setUser] = useState<User | null>(null);
-    const [userInfo, setUserInfo] = useState<AppUser | null>(null);
+    const router = useRouter();
     const auth = getAuth(app);
 
-     useEffect(() => {
+    const [user, setUser] = useState<User | null>(null);
+    const [userInfo, setUserInfo] = useState<AppUser | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
             if (currentUser) {
+                setUser(currentUser);
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
                     if (userDocSnap.exists()) {
@@ -39,41 +58,46 @@ export default function ReportPage() {
                     } else {
                         setUserInfo(null);
                     }
+                    setLoading(false);
                 });
                 return () => unsubscribeUser();
             } else {
-                setUserInfo(null);
+                router.push('/auth/login');
+                setLoading(false);
             }
         });
+        return () => unsubscribeAuth();
+    }, [auth, router]);
 
-        return () => {
-            unsubscribeAuth();
-        };
-    }, [auth]);
+    if (loading) {
+        return <LoadingScreen />;
+    }
 
     return (
         <div className="flex min-h-screen flex-col bg-muted/40">
+            <WelcomeAnnouncement />
             <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-                <h1 className="text-lg font-semibold">Laporan</h1>
-                <div className="flex items-center gap-2 text-right">
+                <div className="flex items-center gap-2 text-left">
+                    <Image 
+                        src="https://iili.io/KJ4aGxp.png" 
+                        alt="Logo" 
+                        width={32} 
+                        height={32}
+                        className="h-8 w-8 rounded-full object-cover"
+                    />
                     <div className="flex flex-col">
                         <span className="text-base font-bold text-primary leading-tight">Baronda</span>
                         <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
                     </div>
-                    <Image
-                        src="https://iili.io/KJ4aGxp.png"
-                        alt="Logo"
-                        width={32}
-                        height={32}
-                        className="h-8 w-8 rounded-full object-cover"
-                    />
+                </div>
+                <div className="flex items-center gap-1">
+                    <UserNav user={user} userInfo={userInfo} />
                 </div>
             </header>
 
             <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20 animate-fade-in-up">
-                <div className="mx-auto w-full max-w-screen-2xl space-y-6">
-                    <ReportActivity user={user} userInfo={userInfo} />
-                    <ReportHistory />
+                <div className="mx-auto w-full max-w-screen-2xl">
+                    {children}
                 </div>
             </main>
 
@@ -93,5 +117,5 @@ export default function ReportPage() {
                 </div>
             </nav>
         </div>
-    )
+    );
 }
