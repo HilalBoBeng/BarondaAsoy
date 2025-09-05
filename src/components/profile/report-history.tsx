@@ -66,8 +66,7 @@ export default function ReportHistory() {
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('userId', '==', user.uid),
-                orderBy('createdAt', 'desc')
+                where('userId', '==', user.uid)
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -83,6 +82,9 @@ export default function ReportHistory() {
                      replies: repliesArray
                  } as Report;
             });
+            
+            // Sort on the client-side
+            reportsData.sort((a,b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
             setAllReports(reportsData);
 
@@ -132,6 +134,7 @@ export default function ReportHistory() {
     if (loading) {
         return (
             <Card>
+                <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
                 <CardContent className="p-6">
                     <div className="space-y-4">
                         {Array.from({ length: 3 }).map((_, i) => (

@@ -59,13 +59,13 @@ export default function ConversationsPage() {
       const convosPromises = snapshot.docs.map(async (doc) => {
         const convoData = { id: doc.id, ...doc.data() } as Conversation;
         
-        const unreadQuery = query(
-          collection(db, 'chats', doc.id, 'messages'),
-          where('isRead', '==', false),
-          where('senderId', '!=', currentUser.uid)
-        );
-        const unreadSnapshot = await getDocs(unreadQuery);
-        convoData.unreadCount = unreadSnapshot.size;
+        // Fetch all messages and count unread on client
+        const messagesSnapshot = await getDocs(collection(db, 'chats', doc.id, 'messages'));
+        const unreadCount = messagesSnapshot.docs.filter(d => 
+          !d.data().isRead && d.data().senderId !== currentUser.uid
+        ).length;
+        
+        convoData.unreadCount = unreadCount;
 
         return convoData;
       });
