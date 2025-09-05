@@ -104,18 +104,10 @@ export default {
                 opacity: '1',
             },
         },
-        'fade-out': {
-            '0%': {
-                opacity: '1',
-            },
-            '100%': {
-                opacity: '0',
-            },
-        },
         'fade-in-up': {
             '0%': {
                 opacity: '0',
-                transform: 'translateY(10px)'
+                transform: 'translateY(20px)'
             },
             '100%': {
                 opacity: '1',

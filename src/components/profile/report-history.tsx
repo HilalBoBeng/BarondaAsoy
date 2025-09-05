@@ -6,17 +6,15 @@ import { collection, query, where, Timestamp, limit, getDocs, orderBy, deleteDoc
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
-import { Card, CardContent, CardFooter } from '../ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { MessageSquare, Trash, Info, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import type { User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getAuth, type User } from 'firebase/auth';
 
 
 const REPORTS_PER_PAGE = 5;
@@ -41,15 +39,23 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     </Card>
 );
 
-export default function ReportHistory({ user }: { user?: User | null }) {
+export default function ReportHistory() {
     const [allReports, setAllReports] = useState<Report[]>([]);
     const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
+    const [user, setUser] = useState<User | null>(null);
+    const auth = getAuth();
     const { toast } = useToast();
     
     const [currentPage, setCurrentPage] = useState(1);
     
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(currentUser => {
+            setUser(currentUser);
+        });
+        return () => unsubscribe();
+    }, [auth]);
+
     const fetchReports = useCallback(async () => {
         if (!user) {
             setLoading(false);
@@ -58,25 +64,15 @@ export default function ReportHistory({ user }: { user?: User | null }) {
 
         setLoading(true);
         try {
-            let reportsData: Report[] = [];
-            let reportsQuery;
-            
-            if (filterStatus === 'all') {
-                reportsQuery = query(
-                    collection(db, 'reports'), 
-                    where('userId', '==', user.uid)
-                );
-            } else {
-                 reportsQuery = query(
-                    collection(db, 'reports'), 
-                    where('userId', '==', user.uid),
-                    where('status', '==', filterStatus)
-                );
-            }
+            const reportsQuery = query(
+                collection(db, 'reports'), 
+                where('userId', '==', user.uid),
+                orderBy('createdAt', 'desc')
+            );
             
             const snapshot = await getDocs(reportsQuery);
             
-            reportsData = snapshot.docs.map(doc => {
+            let reportsData = snapshot.docs.map(doc => {
                  const data = doc.data();
                  const repliesObject = data.replies || {};
                  const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
@@ -87,8 +83,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                      replies: repliesArray
                  } as Report;
             });
-            
-            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
+
             setAllReports(reportsData);
 
         } catch (error) {
@@ -97,7 +92,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         } finally {
             setLoading(false);
         }
-    }, [user, filterStatus, toast]);
+    }, [user, toast]);
     
     useEffect(() => {
         fetchReports();
@@ -134,41 +129,39 @@ export default function ReportHistory({ user }: { user?: User | null }) {
         }
     };
 
+    if (loading) {
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <div className="space-y-4">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton key={i} className="h-24 w-full" />
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+    
+    if (!loading && paginatedReports.length === 0) {
+        return (
+             <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                    Belum ada laporan yang Anda buat.
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
-        <div className="space-y-4">
-            <div className="flex gap-2">
-                <Button size="sm" variant={filterStatus === 'all' ? 'default' : 'outline'} onClick={() => setFilterStatus('all')}>Semua</Button>
-                <Button size="sm" variant={filterStatus === 'new' ? 'default' : 'outline'} onClick={() => setFilterStatus('new')}>Baru</Button>
-                <Button size="sm" variant={filterStatus === 'in_progress' ? 'default' : 'outline'} onClick={() => setFilterStatus('in_progress')}>Ditangani</Button>
-                <Button size="sm" variant={filterStatus === 'resolved' ? 'default' : 'outline'} onClick={() => setFilterStatus('resolved')}>Selesai</Button>
-            </div>
-             {loading ? (
+        <Card>
+            <CardContent className="p-6">
                 <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                     <Card key={i}>
-                        <CardContent className="p-4">
-                           <div className="flex justify-between items-start mb-2 gap-2">
-                                <div className="flex-grow space-y-2">
-                                    <Skeleton className="h-4 w-1/4" />
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-3 w-1/2" />
-                                </div>
-                                <div className="flex-shrink-0">
-                                   <Skeleton className="h-6 w-20 rounded-full" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-                </div>
-            ) : paginatedReports.length > 0 ? (
-                <>
                 {paginatedReports.map((report) => (
                     <Card key={report.id} className="overflow-hidden">
                         <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2 gap-2">
                                 <div className="flex-grow">
-                                    <p className="text-xs font-bold">{report.reporterName}</p>
                                     <p className="text-sm text-foreground/90 break-words pr-4">
                                         {report.reportText}
                                     </p>
@@ -239,14 +232,8 @@ export default function ReportHistory({ user }: { user?: User | null }) {
                         Berikutnya
                     </Button>
                 </div>
-                </>
-            ) : (
-                <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
-                        Tidak ada laporan dengan status yang dipilih.
-                    </CardContent>
-                </Card>
-            )}
-        </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

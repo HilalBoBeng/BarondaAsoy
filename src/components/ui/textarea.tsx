@@ -11,8 +11,8 @@ const Textarea = React.forwardRef<
 
   const handleInput = (event: React.FormEvent<HTMLTextAreaElement>) => {
     const textarea = event.currentTarget;
-    textarea.style.height = "auto";
-    const newHeight = Math.min(textarea.scrollHeight, 120); // 120px is max-h-30
+    textarea.style.height = "auto"; // Reset height to recalculate
+    const newHeight = Math.min(textarea.scrollHeight, 128); // 128px is max-h-32
     textarea.style.height = `${newHeight}px`;
   };
 
@@ -26,7 +26,7 @@ const Textarea = React.forwardRef<
     <textarea
       className={cn(
         "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 overflow-y-auto",
-        "min-h-[40px]", // A shorter default height for chat-like inputs
+        "min-h-[40px] resize-none",
         className
       )}
       ref={internalRef}

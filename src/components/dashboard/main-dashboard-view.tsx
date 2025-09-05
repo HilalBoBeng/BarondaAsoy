@@ -19,7 +19,6 @@ import type { AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import FloatingChatButton from "./floating-chat-button";
 import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings } from 'lucide-react';
 import { usePathname } from "next/navigation";
 
@@ -130,7 +129,7 @@ export default function MainDashboardView() {
                     <Announcements userInfo={userInfo} />
                     <Schedule />
                     <ReportActivity user={user} userInfo={userInfo} />
-                    <ReportHistory user={user} />
+                    <ReportHistory />
                     <EmergencyContacts />
                 </div>
             </div>
@@ -151,8 +150,6 @@ export default function MainDashboardView() {
                 ))}
             </div>
         </nav>
-
-        {user && <FloatingChatButton />}
     </div>
   );
 }

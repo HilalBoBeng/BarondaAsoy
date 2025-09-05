@@ -26,7 +26,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { db } from "@/lib/firebase/client"
 import { doc, deleteDoc } from "firebase/firestore"
 import { cn } from "@/lib/utils"
-import FloatingChatButton from "@/components/dashboard/floating-chat-button"
 
 // Schemas
 const passwordSchema = z.object({
@@ -157,7 +156,7 @@ export default function SettingsPage() {
               />
           </div>
        </header>
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
              <div className="mx-auto max-w-2xl space-y-8">
                 <Card>
                     <CardHeader>
@@ -299,7 +298,6 @@ export default function SettingsPage() {
                 ))}
             </div>
         </nav>
-        {user && <FloatingChatButton />}
     </div>
   )
 }

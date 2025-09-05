@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import FloatingChatButton from '@/components/dashboard/floating-chat-button';
 
 
 const profileSchema = z.object({
@@ -475,7 +474,7 @@ export default function ProfilePage() {
                     <CardDescription>Semua laporan keamanan yang pernah Anda kirim.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ReportHistory user={auth.currentUser} />
+                        <ReportHistory />
                     </CardContent>
                 </Card>
             </div>
@@ -495,8 +494,6 @@ export default function ProfilePage() {
                 ))}
             </div>
         </nav>
-
-        {auth.currentUser && <FloatingChatButton />}
         
         <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingField(null); setIsEditDialogOpen(isOpen); }}>
             <DialogContent className="rounded-lg">

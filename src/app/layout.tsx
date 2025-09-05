@@ -77,8 +77,9 @@ export default function RootLayout({
            <head>
               <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
               <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
+              <meta name="theme-color" content="#2C3E50" />
            </head>
-           <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
+           <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden no-scrollbar`}>
                 <LoadingSkeleton />
            </body>
         </html>
@@ -93,8 +94,9 @@ export default function RootLayout({
               <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
               <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
               <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
+              <meta name="theme-color" content="#2C3E50" />
            </head>
-            <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
+            <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden no-scrollbar`}>
                 <DesktopBlocker />
            </body>
         </html>
@@ -109,8 +111,9 @@ export default function RootLayout({
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
+          <meta name="theme-color" content="#2C3E50" />
          </head>
-        <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
+        <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden no-scrollbar`}>
           <MaintenancePage />
         </body>
       </html>
@@ -124,8 +127,9 @@ export default function RootLayout({
           <meta name="description" content="Aplikasi siskamling untuk keamanan lingkungan Anda." />
            <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
+          <meta name="theme-color" content="#2C3E50" />
       </head>
-      <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden`}>
+      <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden no-scrollbar`}>
         {children}
         <Toaster />
       </body>
