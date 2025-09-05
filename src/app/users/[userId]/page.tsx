@@ -76,34 +76,6 @@ export default function UserProfilePage() {
     fetchProfile();
   }, [userId]);
   
-  const handleSendMessage = async () => {
-    if (!currentUser || !profile) return;
-    
-    // Create a unique chat ID
-    const chatId = [currentUser.uid, profile.uid].sort().join('_');
-    const chatDocRef = doc(db, 'chats', chatId);
-    
-    try {
-      const chatDoc = await getDoc(chatDocRef);
-      if (!chatDoc.exists()) {
-        await setDoc(chatDocRef, {
-          users: [currentUser.uid, profile.uid],
-          userNames: {
-            [currentUser.uid]: currentUser.displayName || 'Warga',
-            [profile.uid]: profile.displayName || 'Warga'
-          },
-          userPhotos: {
-            [currentUser.uid]: currentUser.photoURL || '',
-            [profile.uid]: profile.photoURL || ''
-          },
-          lastMessage: null,
-        });
-      }
-      router.push(`/chat/${chatId}`);
-    } catch (error) {
-      console.error("Error creating or getting chat:", error);
-    }
-  };
 
   if (loading) {
     return (
@@ -155,11 +127,6 @@ export default function UserProfilePage() {
                                 <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format((profile.createdAt as Timestamp).toDate(), "d MMMM yyyy", { locale: id })}</span></div>
                             )}
                         </div>
-                        {currentUser && currentUser.uid !== profile.uid && (
-                             <Button className="w-full" onClick={handleSendMessage}>
-                                <MessageSquare className="mr-2 h-4 w-4"/> Kirim Pesan
-                            </Button>
-                        )}
                     </CardContent>
                 </Card>
 

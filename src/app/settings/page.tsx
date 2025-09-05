@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2, UserCircle, MessageSquare, Settings } from "lucide-react"
+import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2, UserCircle, MessageSquare, Settings, ScrollText } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -48,7 +48,7 @@ type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/chat", icon: MessageSquare, label: "Pesan" },
+    { href: "/profile#laporan", icon: ScrollText, label: "Laporan" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 
@@ -92,9 +92,8 @@ export default function SettingsPage() {
       const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, data.newPassword);
-      toast({ title: "Berhasil", description: "Kata sandi diubah. Silakan masuk kembali." });
+      toast({ title: "Berhasil", description: "Kata sandi Anda berhasil diubah." });
       passwordForm.reset();
-      setTimeout(handleLogout, 2000);
     } catch (error) {
       toast({ variant: 'destructive', title: "Gagal", description: "Kata sandi saat ini salah atau terjadi kesalahan lain." });
     } finally {

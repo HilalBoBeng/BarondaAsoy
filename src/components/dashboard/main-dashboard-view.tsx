@@ -20,13 +20,11 @@ import { cn } from "@/lib/utils";
 import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone } from 'lucide-react';
 import { usePathname } from "next/navigation";
 import { UserNav } from './user-nav';
-import Announcements from './announcements';
-
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/chat", icon: MessageSquare, label: "Pesan" },
+    { href: "/profile#laporan", icon: ScrollText, label: "Laporan" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 
