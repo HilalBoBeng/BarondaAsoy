@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -50,8 +51,8 @@ const getNavItemsList = () => [
     { id: 'honor', href: "/petugas/honor", icon: Banknote, label: "Honor Saya", badgeKey: 'newHonors' },
     { id: 'announcements', href: "/petugas/announcements", icon: Megaphone, label: "Pengumuman" },
     { id: 'notifications', href: "/petugas/notifications", icon: Bell, label: "Notifikasi" },
-    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
     { id: 'emergencyContacts', href: "/petugas/emergency-contacts", icon: Phone, label: "Kontak Darurat" },
+    { id: 'tools', href: "/petugas/tools", icon: Wrench, label: "Lainnya" },
 ];
 
 

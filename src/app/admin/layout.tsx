@@ -153,7 +153,7 @@ export default function AdminLayout({
       newPageTitle = 'Riwayat Iuran';
     } else if (scheduleDetailMatch) {
       detailPage = true;
-      newPageTitle = 'Detail Jadwal &amp; QR Code';
+      newPageTitle = 'Detail Jadwal & QR Code';
     } else if (honorDetailMatch) {
         detailPage = true;
         newPageTitle = 'Detail Honorarium';
