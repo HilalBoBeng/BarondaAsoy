@@ -11,18 +11,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogIn, LogOut, UserPlus, Settings, User as UserIcon, Search, MessageSquare } from "lucide-react";
+import { LogIn, LogOut, UserPlus, Settings, User as UserIcon, Search, MessageSquare, Bell, X } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getAuth, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogBody } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { collection, query, where, getDocs, limit } from "firebase/firestore";
-import type { AppUser } from "@/lib/types";
+import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from "firebase/firestore";
+import type { AppUser, Notification } from "@/lib/types";
+import { Input } from "../ui/input";
+import { cn } from "@/lib/utils";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
+
 
 export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUser | null }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -30,10 +40,37 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<AppUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const auth = getAuth(app);
   const { toast } = useToast();
   const router = useRouter();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+        const notifsQuery = query(
+            collection(db, "notifications"),
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc"),
+            limit(20)
+        );
+        const unsub = onSnapshot(notifsQuery, (snapshot) => {
+            const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
+            setNotifications(notifsData);
+            setUnreadCount(notifsData.filter(n => !n.read).length);
+        });
+        return () => unsub();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -50,36 +87,59 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
       setIsLoggingOut(false);
     }
   };
-  
-  const handleSearch = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!searchQuery.trim()) return;
-      setIsSearching(true);
-      try {
-          const usersRef = collection(db, "users");
-          const q = query(
-              usersRef,
-              where('displayName', '>=', searchQuery),
-              where('displayName', '<=', searchQuery + '\uf8ff'),
-              limit(10)
-          );
-          const querySnapshot = await getDocs(q);
-          const results = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
-          setSearchResults(results);
-      } catch (error) {
-          toast({ variant: 'destructive', title: 'Pencarian Gagal' });
-      } finally {
-          setIsSearching(false);
-      }
+
+  const handleSearch = async (queryText: string) => {
+    setSearchQuery(queryText);
+    if (!queryText.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(
+        usersRef,
+        where('displayName', '>=', queryText),
+        where('displayName', '<=', queryText + '\uf8ff'),
+        limit(10)
+      );
+      const querySnapshot = await getDocs(q);
+      const results = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
+      setSearchResults(results.filter(u => u.uid !== user?.uid)); // Exclude self
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Pencarian Gagal' });
+    } finally {
+      setIsSearching(false);
+    }
   };
+
+  const handleNotificationClick = (notification: Notification) => {
+     setIsNotificationsOpen(false);
+     if (notification.link) {
+         router.push(notification.link);
+     }
+  }
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
          {user && (
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
-            <Search className="h-5 w-5" />
-          </Button>
+          <>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
+              <Search className="h-5 w-5" />
+            </Button>
+             <div className="relative">
+                <Button variant="ghost" size="icon" onClick={() => setIsNotificationsOpen(true)}>
+                    <Bell className="h-5 w-5" />
+                </Button>
+                {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 text-xs items-center justify-center bg-primary text-primary-foreground">{unreadCount}</span>
+                    </span>
+                )}
+             </div>
+          </>
          )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -122,41 +182,68 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         </DropdownMenu>
       </div>
 
-       <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Cari Warga</DialogTitle>
-                  <DialogDescription>Cari warga lain untuk melihat profil atau memulai percakapan.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSearch}>
-                  <div className="flex gap-2">
-                      <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Masukkan nama..."/>
-                      <Button type="submit" disabled={isSearching}>
-                          {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                      </Button>
-                  </div>
-              </form>
-              <DialogBody className="mt-4 max-h-[50vh] overflow-y-auto">
-                 <div className="space-y-2">
-                    {searchResults.length > 0 ? searchResults.map(foundUser => (
-                         <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
-                             <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
-                                 <Avatar>
-                                     <AvatarImage src={foundUser.photoURL || ''}/>
-                                     <AvatarFallback>{foundUser.displayName?.charAt(0)}</AvatarFallback>
-                                 </Avatar>
-                                 <p className="font-medium">{foundUser.displayName}</p>
-                             </div>
-                         </Link>
-                    )) : (
-                        <p className="text-center text-sm text-muted-foreground py-8">
-                            {isSearching ? 'Mencari...' : 'Tidak ada hasil ditemukan.'}
-                        </p>
-                    )}
-                 </div>
-              </DialogBody>
-          </DialogContent>
-      </Dialog>
+       <div className={cn("absolute top-0 left-0 w-full h-16 bg-background border-b z-40 flex items-center px-4 transition-transform duration-300",
+            isSearchOpen ? 'translate-y-0' : '-translate-y-full'
+        )}>
+           <Input 
+             ref={searchInputRef}
+             value={searchQuery}
+             onChange={(e) => handleSearch(e.target.value)}
+             placeholder="Cari warga lain..."
+             className="h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-base"
+            />
+            {isSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-3" />}
+            <Button variant="ghost" size="icon" onClick={() => { setIsSearchOpen(false); setSearchResults([]); setSearchQuery(''); }}>
+                <X className="h-5 w-5" />
+            </Button>
+       </div>
+       {isSearchOpen && searchResults.length > 0 && (
+         <Card className="absolute top-16 left-0 sm:left-auto sm:right-4 w-full sm:max-w-sm sm:w-80 z-40 shadow-lg rounded-t-none sm:rounded-t-lg">
+             <div className="p-2 max-h-[60vh] overflow-y-auto">
+                 {searchResults.map(foundUser => (
+                     <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
+                         <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
+                             <Avatar>
+                                 <AvatarImage src={foundUser.photoURL || ''}/>
+                                 <AvatarFallback>{foundUser.displayName?.charAt(0)}</AvatarFallback>
+                             </Avatar>
+                             <p className="font-medium">{foundUser.displayName}</p>
+                         </div>
+                     </Link>
+                 ))}
+             </div>
+         </Card>
+       )}
+       
+        <Drawer open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+          <DrawerContent>
+            <div className="mx-auto w-full max-w-md">
+              <DrawerHeader>
+                <DrawerTitle>Notifikasi</DrawerTitle>
+              </DrawerHeader>
+              <div className="p-4 pb-0 max-h-[70vh] overflow-y-auto">
+                {notifications.length > 0 ? (
+                  notifications.map(notif => (
+                    <div key={notif.id} onClick={() => handleNotificationClick(notif)}
+                         className={cn("p-3 mb-2 border-l-4 rounded-r-md cursor-pointer hover:bg-muted/50",
+                         notif.read ? 'border-transparent' : 'border-primary bg-muted/80'
+                         )}>
+                        <p className="font-semibold text-sm">{notif.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">Tidak ada notifikasi.</p>
+                )}
+              </div>
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button variant="outline">Tutup</Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </div>
+          </DrawerContent>
+        </Drawer>
     </>
   );
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, query, where, Timestamp, limit, getDocs, QueryDocumentSnapshot, DocumentData, endBefore, limitToLast, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, limit, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import type { Report, Reply } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
@@ -20,7 +20,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const REPORTS_PER_PAGE = 5;
-const TWENTY_FOUR_HOURS_IN_MS = 24 * 60 * 60 * 1000;
 
 const statusDisplay: Record<string, { text: string; className: string }> = {
   new: { text: 'Baru', className: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400' },
@@ -59,7 +58,9 @@ export default function ReportHistory({ user }: { user?: User | null }) {
 
         setLoading(true);
         try {
+            let reportsData: Report[] = [];
             let reportsQuery;
+            
             if (filterStatus === 'all') {
                 reportsQuery = query(
                     collection(db, 'reports'), 
@@ -75,7 +76,7 @@ export default function ReportHistory({ user }: { user?: User | null }) {
             
             const snapshot = await getDocs(reportsQuery);
             
-            const reportsData = snapshot.docs.map(doc => {
+            reportsData = snapshot.docs.map(doc => {
                  const data = doc.data();
                  const repliesObject = data.replies || {};
                  const repliesArray = Object.values(repliesObject).sort((a: any, b: any) => b.timestamp.toMillis() - a.timestamp.toMillis());
