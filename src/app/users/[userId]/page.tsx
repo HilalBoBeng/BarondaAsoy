@@ -3,16 +3,16 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, getDoc, collection, query, where, getDocs, limit, orderBy, setDoc } from 'firebase/firestore';
-import { notFound, useRouter } from 'next/navigation';
+import { doc, getDoc, collection, query, where, getDocs, limit, orderBy, setDoc, Timestamp } from 'firebase/firestore';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mail, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Mail, MessageSquare, ArrowLeft, MapPin, AlignLeft, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AppUser, Report, Reply } from '@/lib/types';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { getAuth } from 'firebase/auth';
@@ -23,8 +23,9 @@ const statusDisplay: Record<string, { text: string; className: string }> = {
   resolved: { text: 'Selesai', className: 'bg-green-100 text-green-800' },
 };
 
-export default function UserProfilePage({ params }: { params: { userId: string } }) {
-  const { userId } = params;
+export default function UserProfilePage() {
+  const params = useParams();
+  const userId = params.userId as string;
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,29 +34,35 @@ export default function UserProfilePage({ params }: { params: { userId: string }
   const currentUser = auth.currentUser;
 
   useEffect(() => {
+    if (!userId) {
+        notFound();
+        return;
+    }
     const fetchProfile = async () => {
       try {
         const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
           setProfile({ uid: userDoc.id, ...userDoc.data() } as AppUser);
 
+          // Fetch all reports for the user, then filter and sort on the client
           const reportsQuery = query(
             collection(db, 'reports'),
             where('userId', '==', userId),
-            where('visibility', '==', 'public'),
-            orderBy('createdAt', 'desc'),
-            limit(10)
           );
           const reportsSnapshot = await getDocs(reportsQuery);
           const reportsData = reportsSnapshot.docs.map(d => {
               const data = d.data();
               return {
                   id: d.id, ...data,
-                  createdAt: data.createdAt.toDate(),
+                  createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
                   replies: Object.values(data.replies || {})
               } as Report
-          });
+          }).filter(report => report.visibility === 'public') // Filter for public reports
+            .sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime()) // Sort by date
+            .slice(0, 10); // Limit to 10
+
           setReports(reportsData);
+
         } else {
           notFound();
         }
@@ -137,9 +144,17 @@ export default function UserProfilePage({ params }: { params: { userId: string }
                             <AvatarFallback className="text-3xl">{profile.displayName?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <CardTitle className="mt-4 text-2xl">{profile.displayName}</CardTitle>
-                        <CardDescription>{profile.bio || 'Warga Kelurahan Kilongan'}</CardDescription>
                     </CardHeader>
-                     <CardContent className="p-6">
+                     <CardContent className="p-6 space-y-4">
+                        <div className="space-y-3 text-sm text-foreground">
+                            {profile.bio && (
+                                <div className="flex items-start gap-3"><AlignLeft className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/><span>{profile.bio}</span></div>
+                            )}
+                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>{profile.addressType === 'kilongan' ? 'Kilongan' : profile.addressDetail}</span></div>
+                            {profile.createdAt && (
+                                <div className="flex items-start gap-3"><Calendar className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/> <span>Bergabung sejak {format((profile.createdAt as Timestamp).toDate(), "d MMMM yyyy", { locale: id })}</span></div>
+                            )}
+                        </div>
                         {currentUser && currentUser.uid !== profile.uid && (
                              <Button className="w-full" onClick={handleSendMessage}>
                                 <MessageSquare className="mr-2 h-4 w-4"/> Kirim Pesan
