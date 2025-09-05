@@ -26,7 +26,6 @@ import Image from 'next/image';
 const announcementSchema = z.object({
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   content: z.string().min(1, "Isi pengumuman tidak boleh kosong.").max(1200, "Isi pengumuman tidak boleh lebih dari 1200 karakter."),
-  imageUrl: z.string().optional(),
 });
 
 type AnnouncementFormValues = z.infer<typeof announcementSchema>;
@@ -38,11 +37,10 @@ export default function AnnouncementsAdminPage() {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema),
-    defaultValues: { title: '', content: '', imageUrl: '' },
+    defaultValues: { title: '', content: '' },
   });
 
   const { formState: { isSubmitting, isValid } } = form;
@@ -77,26 +75,11 @@ export default function AnnouncementsAdminPage() {
   useEffect(() => {
     if (isDialogOpen) {
       form.reset(currentAnnouncement ? 
-        { title: currentAnnouncement.title, content: currentAnnouncement.content, imageUrl: currentAnnouncement.imageUrl || '' } : 
-        { title: '', content: '', imageUrl: '' }
+        { title: currentAnnouncement.title, content: currentAnnouncement.content } : 
+        { title: '', content: '' }
       );
     }
   }, [isDialogOpen, currentAnnouncement, form]);
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            toast({ variant: "destructive", title: "Ukuran File Terlalu Besar", description: "Ukuran foto maksimal 2 MB." });
-            return;
-        }
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            form.setValue('imageUrl', reader.result as string);
-        };
-    }
-  };
 
   const handleDialogOpen = (announcement: Announcement | null = null) => {
     setCurrentAnnouncement(announcement);
@@ -229,11 +212,6 @@ export default function AnnouncementsAdminPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-3">{ann.content}</p>
-                   {ann.imageUrl && (
-                     <div className="mt-4 relative w-full h-40">
-                        <Image src={ann.imageUrl} alt="Gambar pengumuman" layout="fill" objectFit="cover" className="rounded-md" />
-                     </div>
-                   )}
                 </CardContent>
               </Card>
             ))
@@ -278,33 +256,6 @@ export default function AnnouncementsAdminPage() {
                         <FormControl><Textarea {...field} rows={5} maxLength={1200} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-2">Gambar <span className="text-xs text-muted-foreground">(Opsional)</span></FormLabel>
-                            <FormControl>
-                                <Input 
-                                    type="file" 
-                                    className="hidden" 
-                                    ref={fileInputRef} 
-                                    onChange={handleFileChange} 
-                                    accept="image/*" 
-                                />
-                            </FormControl>
-                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                <ImageIconLucide className="mr-2 h-4 w-4" /> Pilih Gambar
-                            </Button>
-                            {field.value && (
-                                <div className="mt-2 relative w-32 h-32">
-                                    <Image src={field.value} alt="Preview" layout="fill" objectFit="cover" className="rounded-md" />
-                                </div>
-                            )}
-                            <FormMessage />
-                        </FormItem>
                     )}
                   />
                 </DrawerBody>

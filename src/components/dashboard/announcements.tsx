@@ -1,41 +1,41 @@
 
+
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
-import { Megaphone, Calendar, ChevronRight } from 'lucide-react';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { Megaphone, Calendar, ChevronRight, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase/client';
 import type { Announcement } from '@/lib/types';
 import { Button } from '../ui/button';
-import { useRouter } from 'next/navigation';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '../ui/drawer';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../ui/dialog';
+import Image from 'next/image';
 
-export default function Announcements() {
-  const [latestAnnouncement, setLatestAnnouncement] = useState<Announcement | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+interface PopupAnnouncement {
+    title: string;
+    content: string;
+    imageUrl?: string;
+    updatedAt: Timestamp;
+    id: string;
+}
+
+export default function WelcomeAnnouncement() {
+  const [popupAnnouncement, setPopupAnnouncement] = useState<PopupAnnouncement | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(1));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        const data = doc.data();
-        const announcementData = {
-          id: doc.id,
-          title: data.title,
-          content: data.content,
-          date: data.date.toDate ? data.date.toDate() : data.date,
-        } as Announcement;
+    const settingsRef = doc(db, 'app_settings', 'popup_announcement');
+    const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as Omit<PopupAnnouncement, 'id'>;
+        const announcementData = { ...data, id: docSnap.id };
 
-        // Automatically open drawer for new announcement, but only once per session
-        const hasBeenShown = sessionStorage.getItem(`announcement_${doc.id}`);
+        const hasBeenShown = sessionStorage.getItem(`popup_${announcementData.updatedAt.seconds}`);
         if (!hasBeenShown) {
-          setLatestAnnouncement(announcementData);
-          setIsDrawerOpen(true);
-          sessionStorage.setItem(`announcement_${doc.id}`, 'true');
+          setPopupAnnouncement(announcementData);
+          setIsDialogOpen(true);
+          sessionStorage.setItem(`popup_${announcementData.updatedAt.seconds}`, 'true');
         }
       }
     });
@@ -43,36 +43,32 @@ export default function Announcements() {
     return () => unsubscribe();
   }, []);
 
-  if (!latestAnnouncement) {
+  if (!popupAnnouncement) {
     return null;
   }
 
   return (
-    <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-      <DrawerContent>
-        <div className="mx-auto w-full max-w-sm">
-          <DrawerHeader className="text-left">
-            <DrawerTitle className="flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-primary" />
-                <span>{latestAnnouncement.title}</span>
-            </DrawerTitle>
-            <DrawerDescription className="flex items-center gap-2 text-xs pt-1">
-               <Calendar className="h-4 w-4" />
-               <span>{latestAnnouncement.date instanceof Date ? format(latestAnnouncement.date, 'PPP', { locale: id }) : 'N/A'}</span>
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="p-4 pt-0">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {latestAnnouncement.content}
-            </p>
-          </div>
-          <DrawerFooter>
-            <DrawerClose asChild>
-              <Button>Saya Mengerti</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </div>
-      </DrawerContent>
-    </Drawer>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-auto">
+        {popupAnnouncement.imageUrl && (
+            <div className="relative w-full h-full">
+               <Image
+                   src={popupAnnouncement.imageUrl}
+                   alt={popupAnnouncement.title}
+                   layout="responsive"
+                   width={16}
+                   height={9}
+                   objectFit="contain"
+                   className="rounded-lg"
+               />
+                <DialogClose asChild>
+                    <Button size="icon" variant="secondary" className="absolute top-2 right-2 rounded-full h-8 w-8 z-10">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </DialogClose>
+            </div>
+         )}
+      </DialogContent>
+    </Dialog>
   );
 }

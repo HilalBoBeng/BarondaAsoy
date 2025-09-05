@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import ReportActivity from '@/components/dashboard/report-activity';
-import ReportHistory from "@/components/profile/report-history";
+import WelcomeAnnouncement from "@/components/dashboard/announcements";
 import Schedule from '@/components/dashboard/schedule';
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,7 @@ export default function MainDashboardView() {
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
+        <WelcomeAnnouncement />
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <h1 className="text-xl font-bold text-primary">Baronda</h1>
              <div className="flex items-center gap-1">
@@ -113,7 +115,6 @@ export default function MainDashboardView() {
                 <div className="space-y-6">
                     <Schedule />
                     <ReportActivity user={user} userInfo={userInfo} />
-                    <ReportHistory />
                     <EmergencyContacts />
                 </div>
             </div>
