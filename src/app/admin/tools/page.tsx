@@ -7,7 +7,7 @@ import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/fire
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MonitorOff, Settings, Users as UsersIcon, Phone, FileText, Landmark, Banknote, Wallet, History, Bell, Speaker, MenuSquare, ChevronRight } from 'lucide-react';
+import { Loader2, MonitorOff, Settings, Users as UsersIcon, Phone, FileText, Landmark, Banknote, Wallet, History, Bell, Speaker, MenuSquare, ChevronRight, UserPlus } from 'lucide-react';
 import type { Staff } from '@/lib/types';
 import Link from 'next/link';
 import { createLog } from '@/lib/utils';
@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 
 const toolPageItems = [
     { href: "/admin/users", icon: UsersIcon, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
+    { href: "/admin/staff", icon: UserPlus, label: 'Manajemen Staf', id: 'staff', roles: ['admin'] },
     { href: "/admin/announcements", icon: Speaker, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
     { href: "/admin/attendance", icon: Landmark, label: 'Kehadiran', id: 'attendance', roles: ['admin'] },
     { href: "/admin/dues", icon: Landmark, label: 'Iuran', id: 'dues', roles: ['admin', 'bendahara'] },
@@ -34,8 +35,6 @@ export default function ToolsAdminPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingMaintenance, setLoadingMaintenance] = useState(true);
   const [currentAdmin, setCurrentAdmin] = useState<Staff | null>(null);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const { toast } = useToast();
 
   useEffect(() => {
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
@@ -47,15 +46,6 @@ export default function ToolsAdminPage() {
         setLoadingMaintenance(false);
     });
     
-    if (info?.id) {
-        const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', info.id), where('read', '==', false));
-        const unsubNotifs = onSnapshot(notifsQuery, (snap) => setUnreadNotifications(snap.size));
-        return () => {
-            unsubSettings();
-            unsubNotifs();
-        };
-    }
-
     return () => {
         unsubSettings();
     };
@@ -77,6 +67,7 @@ export default function ToolsAdminPage() {
     }
   }
   
+  const { toast } = useToast();
   const isAdmin = currentAdmin?.role === 'admin';
 
   return (
@@ -100,9 +91,6 @@ export default function ToolsAdminPage() {
                                 <p className="font-medium">{item.label}</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {item.id === 'notifications' && unreadNotifications > 0 && (
-                                    <Badge>{unreadNotifications}</Badge>
-                                )}
                                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
                             </div>
                         </div>
