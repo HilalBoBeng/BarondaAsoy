@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, Megaphone, UserCircle } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, Megaphone, UserCircle, ScrollText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -396,7 +396,7 @@ export default function ProfilePage() {
                 height={32}
                 className="h-8 w-8 rounded-full object-cover"
               />
-            </div>
+          </div>
        </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20 animate-fade-in-up">
@@ -594,7 +594,7 @@ export default function ProfilePage() {
         
         <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
             <DrawerContent>
-                <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
+                 <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
             </DrawerContent>
         </Drawer>
 

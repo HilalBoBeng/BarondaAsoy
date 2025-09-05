@@ -58,11 +58,10 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     if (user) {
         const notifsQuery = query(
             collection(db, "notifications"),
-            where("userId", "==", user.uid),
-            orderBy("createdAt", "desc")
+            where("userId", "==", user.uid)
         );
         const unsub = onSnapshot(notifsQuery, (snapshot) => {
-            const notifsData: Notification[] = [];
+            let notifsData: Notification[] = [];
             let unread = 0;
             let latestUnreadImageNotif: Notification | null = null;
 
@@ -78,7 +77,9 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                     }
                 }
             });
-
+            
+            notifsData.sort((a,b) => (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis());
+            
             setNotifications(notifsData);
             setUnreadCount(unread);
 
@@ -251,6 +252,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         
         <Dialog open={!!imagePopupNotification} onOpenChange={() => setImagePopupNotification(null)}>
             <DialogContent className="p-0 border-0 bg-black/50 max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-[9/16]">
+                 <DialogTitle className="sr-only">{imagePopupNotification?.title}</DialogTitle>
                  {imagePopupNotification?.imageUrl && (
                     <div className="relative w-full h-full">
                        <Image

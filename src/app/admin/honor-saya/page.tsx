@@ -38,8 +38,7 @@ export default function AdminMyHonorPage() {
 
     const honorQuery = query(
       collection(db, 'honorariums'),
-      where('staffId', '==', staffId),
-      orderBy('issueDate', 'desc')
+      where('staffId', '==', staffId)
     );
 
     const unsubscribe = onSnapshot(honorQuery, (snapshot) => {
@@ -48,6 +47,8 @@ export default function AdminMyHonorPage() {
         ...doc.data(),
         issueDate: (doc.data().issueDate as Timestamp)?.toDate(),
       } as Honorarium));
+      
+      honorData.sort((a, b) => (b.issueDate as Date).getTime() - (a.issueDate as Date).getTime());
       
       setHonorariums(honorData);
       setLoading(false);

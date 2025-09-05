@@ -6,7 +6,7 @@ import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { X } from 'lucide-react';
 import { db } from '@/lib/firebase/client';
 import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogClose } from '../ui/dialog';
+import { Dialog, DialogContent, DialogClose, DialogTitle } from '../ui/dialog';
 import Image from 'next/image';
 
 interface PopupAnnouncement {
@@ -44,6 +44,7 @@ export default function WelcomeAnnouncement() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-auto">
+        <DialogTitle className="sr-only">Pengumuman</DialogTitle>
         {popupAnnouncement.imageUrl && (
             <div className="relative w-full h-full">
                <Image
