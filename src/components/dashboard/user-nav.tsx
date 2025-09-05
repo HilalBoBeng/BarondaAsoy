@@ -32,6 +32,7 @@ import {
   DrawerFooter,
 } from "@/components/ui/drawer";
 import { Card } from "../ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from "../ui/dialog";
 
 
 export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUser | null }) {
@@ -43,6 +44,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const auth = getAuth(app);
   const { toast } = useToast();
@@ -59,7 +61,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         const unsub = onSnapshot(notifsQuery, (snapshot) => {
             const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
             
-            // Sort client-side to avoid composite index
             notifsData.sort((a, b) => {
               const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
               const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
@@ -121,14 +122,19 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-     setIsNotificationsOpen(false);
-     if (!notification.read) {
-        const notifRef = doc(db, 'notifications', notification.id);
-        await updateDoc(notifRef, { read: true });
-     }
-     if (notification.link) {
-         router.push(notification.link);
-     }
+    setSelectedNotification(notification);
+    setIsNotificationsOpen(false);
+    if (!notification.read) {
+       const notifRef = doc(db, 'notifications', notification.id);
+       await updateDoc(notifRef, { read: true });
+    }
+  }
+  
+  const handleDialogClose = () => {
+      if (selectedNotification?.link) {
+          router.push(selectedNotification.link);
+      }
+      setSelectedNotification(null);
   }
 
   return (
@@ -263,6 +269,24 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
           </div>
         </DrawerContent>
       </Drawer>
+
+       <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && handleDialogClose()}>
+          <DialogContent>
+            {selectedNotification && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{selectedNotification.title}</DialogTitle>
+                </DialogHeader>
+                <DialogBody>
+                  <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\n/g, '<br />') }}></div>
+                </DialogBody>
+                <DialogFooter>
+                  <Button onClick={handleDialogClose}>Tutup</Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
     </>
   );
 }

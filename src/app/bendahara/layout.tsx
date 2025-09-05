@@ -146,7 +146,7 @@ export default function BendaharaLayout({
   }
 
   const NavHeader = () => (
-    <div className="flex items-center gap-4 p-4 text-left">
+    <Link href="/bendahara" className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-14 w-14">
             <AvatarImage src={staffInfo?.photoURL || undefined} />
             <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -158,7 +158,7 @@ export default function BendaharaLayout({
               {getRoleDisplayName(staffInfo.role)}
             </Badge>
         </div>
-    </div>
+    </Link>
   );
 
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (

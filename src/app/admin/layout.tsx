@@ -194,7 +194,7 @@ export default function AdminLayout({
   }
 
   const NavHeader = () => (
-    <div className="flex items-center gap-4 p-4 text-left">
+    <Link href="/admin" className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-14 w-14">
             <AvatarImage src={adminInfo?.photoURL || undefined} />
             <AvatarFallback className="text-xl bg-primary text-primary-foreground">{adminInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -210,7 +210,7 @@ export default function AdminLayout({
               {getRoleDisplayName(adminInfo.role)}
             </Badge>
         </div>
-    </div>
+    </Link>
   );
 
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (

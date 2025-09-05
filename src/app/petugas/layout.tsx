@@ -222,7 +222,7 @@ export default function PetugasLayout({
   }
   
   const NavHeader = () => (
-    <div className="flex items-center gap-4 p-4 text-left">
+    <Link href="/petugas" className="flex items-center gap-4 p-4 text-left">
         <Avatar className="h-14 w-14">
             <AvatarImage src={staffInfo?.photoURL || undefined} />
             <AvatarFallback className="text-xl bg-primary text-primary-foreground">{staffInfo?.name?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -232,7 +232,7 @@ export default function PetugasLayout({
             <p className="text-sm text-muted-foreground truncate">{staffInfo.email}</p>
             <Badge variant="secondary" className="mt-2 w-fit">Petugas</Badge>
         </div>
-    </div>
+    </Link>
   );
 
 
