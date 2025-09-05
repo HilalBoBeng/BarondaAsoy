@@ -116,30 +116,48 @@ export default function AdminLayout({
   
   useEffect(() => {
     const segments = pathname.split('/').filter(Boolean);
-    // Detail page if more than 2 segments, e.g., /admin/users/[id]
     const detailPage = segments.length > 2;
     setIsDetailPage(detailPage);
+    
+    let newPageTitle = "Dasbor";
+    const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
+    if (activeItem) {
+        newPageTitle = activeItem.label;
+    } else if (pathname === '/admin') {
+        newPageTitle = "Dasbor Admin";
+    }
 
-    const activeItem = navItems.find(item => pathname.startsWith(item.href));
-    setPageTitle(activeItem?.label || 'Dasbor');
+    setPageTitle(newPageTitle);
   }, [pathname, navItems]);
 
-  const NavContent = () => (
-    <div className="flex h-full flex-col bg-background/95 backdrop-blur-sm">
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
-             {isDetailPage ? (
-                 <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
+
+  return (
+    <div className="flex h-screen flex-col bg-muted/40">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+             <div className="flex items-center gap-2">
+                {isDetailPage ? (
+                     <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
+                     </Button>
+                 ) : (
                     <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-                 </Button>
-             ) : (
-                <h1 className="text-lg font-semibold md:text-2xl truncate">{pageTitle}</h1>
-             )}
+                 )}
+            </div>
+             <Link href="/admin" className="flex items-center gap-2">
+                 <Image 
+                    src="https://iili.io/KJ4aGxp.png" 
+                    alt="Logo" 
+                    width={32} 
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                />
+            </Link>
         </header>
-        <main className="flex-1 overflow-auto p-4 pb-20">
+        <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in">
             {children}
         </main>
-        <nav className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-5 border-t bg-background">
+        <nav className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-5 border-t bg-background/95 backdrop-blur-sm">
             {navItems.filter(item => ['/admin', '/admin/users', '/admin/schedule', '/admin/tools', '/admin/profile'].includes(item.href)).map(item => (
                 <Link key={item.href} href={item.href} passHref>
                     <Button variant="ghost" className={cn(
@@ -159,6 +177,4 @@ export default function AdminLayout({
         </nav>
     </div>
   );
-
-  return <NavContent />;
 }

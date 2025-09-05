@@ -288,8 +288,8 @@ export default function PetugasLayout({
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+    <div className="flex h-screen flex-col bg-background">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="shrink-0">
@@ -319,25 +319,36 @@ export default function PetugasLayout({
            )}
         </div>
           <div className="flex items-center gap-2 text-right">
-            <div className="flex flex-col">
-                <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
-                <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-            </div>
-             <Image
-              src="https://iili.io/KJ4aGxp.png"
-              alt="Logo"
-              width={32}
-              height={32}
-              className="h-8 w-8 rounded-full object-cover"
-              priority
-            />
+             <Link href="/petugas" className="flex items-center gap-2">
+                 <Image
+                  src="https://iili.io/KJ4aGxp.png"
+                  alt="Logo"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full object-cover"
+                  priority
+                />
+            </Link>
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-4 lg:p-6 bg-gray-100/40 dark:bg-muted/40 pb-20">
+      <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-100/40 dark:bg-muted/40 pb-20 animate-fade-in">
          <div className="mx-auto w-full max-w-screen-2xl">
           {children}
         </div>
       </main>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 items-center justify-center gap-1 border-t bg-background/95 p-1 backdrop-blur-sm">
+          {navItemsList.slice(0, 5).map(item => (
+              <Link key={item.href} href={item.href} passHref>
+                   <Button variant="ghost" className={cn(
+                      "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                      pathname.startsWith(item.href) && item.href !== '/petugas' ? "text-primary bg-primary/10" : pathname === '/petugas' && item.href === '/petugas' ? "text-primary bg-primary/10" : "text-muted-foreground"
+                   )}>
+                      <item.icon className="h-5 w-5" />
+                      <span className="truncate">{item.label}</span>
+                  </Button>
+              </Link>
+          ))}
+      </nav>
       <Dialog open={false}>
         <DialogContent>
             <DialogHeader>

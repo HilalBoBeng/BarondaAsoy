@@ -120,8 +120,8 @@ export default function BendaharaLayout({
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+    <div className="flex h-screen flex-col bg-background">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
         <div className="w-full flex-1">
            {isDetailPage ? (
                <Button variant="ghost" size="sm" className="gap-1 pl-0.5" onClick={() => router.back()}>
@@ -133,20 +133,18 @@ export default function BendaharaLayout({
            )}
         </div>
         <div className="flex items-center gap-2 text-right">
-            <div className="flex flex-col">
-                <span className="text-sm font-bold text-primary leading-tight">Baronda</span>
-                <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-            </div>
-            <Image 
-              src="https://iili.io/KJ4aGxp.png"
-              alt="Logo" 
-              width={32} 
-              height={32}
-              className="h-8 w-8 rounded-full object-cover"
-            />
+             <Link href="/bendahara" className="flex items-center gap-2">
+                <Image 
+                src="https://iili.io/KJ4aGxp.png"
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+                />
+            </Link>
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-4 lg:p-6 bg-gray-100/40 dark:bg-muted/40 pb-20">
+      <main className="flex-1 overflow-y-auto bg-gray-100/40 dark:bg-muted/40 p-4 pb-20 animate-fade-in">
         <div className="mx-auto w-full max-w-screen-2xl">
           {children}
         </div>
