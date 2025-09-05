@@ -63,9 +63,10 @@ export default function FloatingChatButton() {
     return () => unsubscribe();
   }, [user]);
 
-  if (unreadCount === 0) {
+  if (!user || unreadCount === 0) {
     return null;
   }
+
 
   return (
     <Link href="/chat">
@@ -75,7 +76,7 @@ export default function FloatingChatButton() {
         <MessageSquare className="h-7 w-7 text-primary-foreground" />
         {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
-            {unreadCount}
+            {unreadCount > 9 ? '9+' : unreadCount}
             </span>
         )}
         </Button>
