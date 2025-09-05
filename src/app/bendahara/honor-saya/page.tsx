@@ -14,7 +14,7 @@ import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Banknote } from 'lucide-react';
 
-const statusConfig: Record<string, { className: string }> = {
+const statusConfig: Record<Honorarium['status'], { className: string }> = {
     'Dibayarkan': { className: 'bg-green-100 text-green-800' },
     'Belum Dibayar': { className: 'bg-yellow-100 text-yellow-800' },
 };

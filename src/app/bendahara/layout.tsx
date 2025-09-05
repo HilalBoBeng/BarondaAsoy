@@ -12,28 +12,24 @@ import {
   Banknote,
   User as UserIcon,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
 import { cn, truncateName } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import Image from "next/image";
-import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
+import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Staff } from "@/lib/types";
 
 const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
-    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
-    { href: "/bendahara/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues' },
-    { href: "/bendahara/honor", icon: Banknote, label: 'Honorarium', id: 'honor' },
-    { href: "/bendahara/honor-saya", icon: Wallet, label: 'Honor Saya', id: 'honor-saya' },
+    { href: "/bendahara/dues", icon: Landmark, label: 'Iuran', id: 'dues' },
     { href: "/bendahara/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
-    { href: "/bendahara/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications' },
+    { href: "/bendahara/honor", icon: Banknote, label: 'Honor', id: 'honor' },
+    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
 ];
 
 
@@ -150,7 +146,7 @@ export default function BendaharaLayout({
         </div>
       </main>
       <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 items-center justify-center gap-1 border-t bg-background/95 p-1 backdrop-blur-sm">
-          {navItemsList.slice(0, 5).map(item => (
+          {navItemsList.map(item => (
               <Link key={item.href} href={item.href} passHref>
                    <Button variant="ghost" className={cn(
                       "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",

@@ -37,21 +37,25 @@ import type { Staff } from "@/lib/types";
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
+    { href: "/admin/users", icon: Users, label: 'Pengguna', id: 'users', roles: ['admin'] },
+    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal', id: 'schedule', roles: ['admin'], badgeKey: 'newReports' },
+    { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin', 'bendahara'] },
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
+];
+
+// Items that will appear on the tools page
+const toolPageItems = [
     { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan', id: 'reports', badgeKey: 'newReports', roles: ['admin'] },
     { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
-    { href: "/admin/users", icon: Users, label: 'Pengguna', id: 'users', roles: ['admin'] },
-    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal', id: 'schedule', roles: ['admin'] },
     { href: "/admin/attendance", icon: ClipboardList, label: 'Kehadiran', id: 'attendance', roles: ['admin'] },
     { href: "/admin/dues", icon: Landmark, label: 'Iuran', id: 'dues', roles: ['admin', 'bendahara'] },
     { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara'] },
     { href: "/admin/honor-saya", icon: Wallet, label: 'Honor Saya', id: 'honor-saya', roles: ['admin', 'bendahara'] },
     { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'bendahara'] },
     { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin'] },
-    { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin'] },
     { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin'] },
     { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin'] },
-];
+]
 
 
 export default function AdminLayout({
@@ -119,8 +123,10 @@ export default function AdminLayout({
     const detailPage = segments.length > 2;
     setIsDetailPage(detailPage);
     
-    let newPageTitle = "Dasbor";
-    const activeItem = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
+    let newPageTitle = "Dasbor Admin";
+    const allNavItems = [...navItems, ...toolPageItems];
+    const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
+
     if (activeItem) {
         newPageTitle = activeItem.label;
     } else if (pathname === '/admin') {
@@ -158,11 +164,12 @@ export default function AdminLayout({
             {children}
         </main>
         <nav className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-5 border-t bg-background/95 backdrop-blur-sm">
-            {navItems.filter(item => ['/admin', '/admin/users', '/admin/schedule', '/admin/tools', '/admin/profile'].includes(item.href)).map(item => (
+            {navItems.map(item => (
                 <Link key={item.href} href={item.href} passHref>
                     <Button variant="ghost" className={cn(
                         "flex h-full w-full flex-col items-center justify-center gap-1 rounded-none p-2 text-xs",
-                        pathname.startsWith(item.href) && item.href !== '/admin' ? "text-primary bg-primary/10" : pathname === '/admin' && item.href === '/admin' ? "text-primary bg-primary/10" : "text-muted-foreground"
+                        pathname.startsWith(item.href) && item.href !== '/admin' ? "text-primary bg-primary/10" : pathname === '/admin' && item.href === '/admin' ? "text-primary bg-primary/10" : "text-muted-foreground",
+                        pathname.startsWith('/admin/reports') && item.href === '/admin/schedule' && 'text-primary bg-primary/10' // Highlight 'Jadwal' for 'Laporan'
                     )}>
                         <div className="relative">
                             <item.icon className="h-5 w-5" />
