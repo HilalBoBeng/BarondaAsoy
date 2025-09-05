@@ -179,42 +179,44 @@ export default function ChatPage() {
             </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map(msg => (
-                <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start')}>
-                     {msg.senderId !== currentUser?.uid && (
-                        <Avatar className="h-8 w-8">
-                            <AvatarImage src={otherUserPhoto} />
-                            <AvatarFallback>{otherUserName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                     )}
-                     <div className={cn(
-                        "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col",
-                        msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background shadow-sm'
-                     )}>
-                         <p>{msg.text}</p>
-                         <div className="flex items-center gap-1.5 self-end mt-1">
-                             <span className="text-xs opacity-70">
-                                {msg.timestamp ? format(msg.timestamp.toDate(), 'HH:mm') : '...'}
-                             </span>
-                             {msg.senderId === currentUser?.uid && (
-                                <>
+        <main className="flex-1 overflow-y-auto p-4 flex flex-col">
+            <div className="mt-auto space-y-4">
+              {messages.map(msg => (
+                  <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start')}>
+                      {msg.senderId !== currentUser?.uid && (
+                          <Avatar className="h-8 w-8">
+                              <AvatarImage src={otherUserPhoto} />
+                              <AvatarFallback>{otherUserName?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                      )}
+                      <div className={cn(
+                          "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col",
+                          msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background shadow-sm'
+                      )}>
+                          <p>{msg.text}</p>
+                          <div className="flex items-center gap-1.5 self-end mt-1">
+                              <span className="text-xs opacity-70">
+                                  {msg.timestamp ? format((msg.timestamp as Timestamp).toDate(), 'HH:mm') : '...'}
+                              </span>
+                              {msg.senderId === currentUser?.uid && (
+                                  <>
                                   {msg.isRead ? (
-                                    <CheckCheck className="h-4 w-4 text-primary-foreground" style={{color: 'hsl(var(--primary))'}}/>
+                                      <CheckCheck className="h-4 w-4 text-primary" style={{color: 'hsl(var(--primary))'}}/>
                                   ) : (
-                                    <Check className="h-4 w-4 text-primary-foreground/50"/>
+                                      <Check className="h-4 w-4 opacity-50"/>
                                   )}
-                                </>
-                             )}
-                         </div>
-                     </div>
-                </div>
-            ))}
+                                  </>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+              ))}
+            </div>
             <div ref={messagesEndRef} />
         </main>
         
         <footer className="sticky bottom-0 bg-background border-t p-2">
-            <form onSubmit={sendMessage} className="flex items-center gap-2">
+            <form onSubmit={sendMessage} className="flex items-center gap-2 p-2">
                  <Textarea 
                     value={newMessage} 
                     onChange={handleInputChange}
@@ -236,4 +238,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
