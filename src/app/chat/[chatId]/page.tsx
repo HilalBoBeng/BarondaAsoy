@@ -249,7 +249,7 @@ export default function ChatPage() {
                       )}
                       <div className={cn(
                           "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col relative",
-                          msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background shadow-sm'
+                          msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-card border'
                       )}>
                            {msg.senderId === currentUser?.uid && (
                                 <DropdownMenu>
