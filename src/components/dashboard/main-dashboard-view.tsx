@@ -23,8 +23,8 @@ import { UserNav } from './user-nav';
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
+    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/profile#laporan", icon: ScrollText, label: "Laporan" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 
@@ -92,9 +92,6 @@ export default function MainDashboardView() {
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <h1 className="text-xl font-bold text-primary">Baronda</h1>
              <div className="flex items-center gap-1">
-                <Link href="/announcements" className="flex items-center gap-2 text-sm font-medium text-primary">
-                    <Button variant="ghost" size="icon"><Megaphone className="h-5 w-5" /></Button>
-                </Link>
                 <UserNav user={user} userInfo={userInfo} />
              </div>
         </header>

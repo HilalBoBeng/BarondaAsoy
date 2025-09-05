@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2, UserCircle, MessageSquare, Settings, ScrollText } from "lucide-react"
+import { Mail, KeyRound, Loader2, AtSign, LogIn, Home, ArrowLeft, Trash2, UserCircle, MessageSquare, Settings, Megaphone } from "lucide-react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -47,8 +47,8 @@ type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
+    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/profile#laporan", icon: ScrollText, label: "Laporan" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 

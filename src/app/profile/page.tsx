@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, MessageSquare, UserCircle, ScrollText } from 'lucide-react';
+import { Loader2, User, ArrowLeft, Info, Lock, Calendar, CheckCircle, Pencil, Mail, Phone, MapPin, ShieldBan, Camera, LogOut, Trash, X, Key, AlignLeft, Home, Settings, Megaphone, UserCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AppUser, DuesPayment } from '@/lib/types';
@@ -41,8 +41,8 @@ const profileSchema = z.object({
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
+    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/profile#laporan", icon: ScrollText, label: "Laporan" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 

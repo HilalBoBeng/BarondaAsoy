@@ -71,7 +71,6 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                 notifsData.push(data);
                 if (!data.read) {
                     unread++;
-                    // Check for image notification to pop-up
                     if(data.imageUrl && !sessionStorage.getItem(`notif_${data.id}_shown`)) {
                         if (!latestUnreadImageNotif || (data.createdAt as Timestamp).toMillis() > (latestUnreadImageNotif.createdAt as Timestamp).toMillis()) {
                             latestUnreadImageNotif = data;
@@ -251,7 +250,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         </Dialog>
         
         <Dialog open={!!imagePopupNotification} onOpenChange={() => setImagePopupNotification(null)}>
-            <DialogContent className="p-0 border-0 bg-black/50 max-w-lg w-full max-h-[80vh] flex items-center justify-center rounded-lg">
+            <DialogContent className="p-0 border-0 bg-black/50 max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-[9/16]">
                  {imagePopupNotification?.imageUrl && (
                     <div className="relative w-full h-full">
                        <Image

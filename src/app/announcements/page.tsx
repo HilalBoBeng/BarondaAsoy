@@ -11,15 +11,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Announcement } from '@/lib/types';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowLeft, Megaphone, Calendar, Home, UserCircle, MessageSquare, Settings, ScrollText } from 'lucide-react';
+import { Megaphone, Calendar, Home, UserCircle, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
+    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/profile#laporan", icon: ScrollText, label: "Laporan" },
     { href: "/settings", icon: Settings, label: "Pengaturan" },
 ];
 
@@ -28,7 +29,6 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -55,10 +55,20 @@ export default function AnnouncementsPage() {
   return (
     <div className="flex h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
-            </Button>
             <h1 className="text-lg font-semibold">Pengumuman</h1>
+             <div className="flex items-center gap-2 text-right">
+              <div className="flex flex-col">
+                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
+                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
+              </div>
+              <Image 
+                src="https://iili.io/KJ4aGxp.png" 
+                alt="Logo" 
+                width={32} 
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            </div>
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20 animate-fade-in-up">
