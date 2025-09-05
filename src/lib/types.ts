@@ -100,6 +100,11 @@ export interface Staff {
   lastUpdated_phone?: Timestamp;
   lastUpdated_addressDetail?: Timestamp;
   lastUpdated_photoURL?: Timestamp;
+  activeSessionId?: string | null;
+  loginRequest?: {
+    sessionId: string;
+    timestamp: Timestamp;
+  } | null;
 }
 
 export interface Notification {

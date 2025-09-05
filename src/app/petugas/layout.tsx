@@ -13,13 +13,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { collection, onSnapshot, query, where, getDoc, doc } from "firebase/firestore";
+import { cn, useInactivityTimeout } from "@/lib/utils";
+import { collection, onSnapshot, query, where, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import NotPermittedPage from "@/app/not-permitted/page";
 import type { Staff } from "@/lib/types";
+import { getAuth, signOut } from "firebase/auth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 interface MenuConfig {
   id: string;
@@ -58,6 +61,7 @@ export default function PetugasLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = getAuth();
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, myReports: 0, pendingSchedules: 0, newHonors: 0 });
@@ -65,6 +69,9 @@ export default function PetugasLayout({
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
   const [isScanPage, setIsScanPage] = useState(false);
+  const [loginRequest, setLoginRequest] = useState<any>(null);
+
+  useInactivityTimeout();
 
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
@@ -94,11 +101,22 @@ export default function PetugasLayout({
         const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+                const localSessionId = localStorage.getItem('activeSessionId');
+                
+                if (staffData.role !== 'petugas' || (staffData.activeSessionId && staffData.activeSessionId !== localSessionId)) {
+                    signOut(auth).then(() => {
+                        localStorage.clear();
+                        router.replace('/auth/staff-login');
+                    });
+                    return;
+                }
                 setStaffInfo(staffData);
-                localStorage.setItem('staffInfo', JSON.stringify(staffData));
+                if (staffData.loginRequest) {
+                    setLoginRequest(staffData.loginRequest);
+                } else {
+                    setLoginRequest(null);
+                }
             } else {
-                localStorage.removeItem('userRole');
-                localStorage.removeItem('staffInfo');
                 router.replace('/auth/staff-login');
             }
         });
@@ -134,7 +152,7 @@ export default function PetugasLayout({
     } else {
       router.replace('/auth/staff-login');
     }
-  }, [router]);
+  }, [router, auth]);
   
   useEffect(() => {
     if (loadingConfig) return;
@@ -179,6 +197,23 @@ export default function PetugasLayout({
         </main>
     )
   }
+  
+   const handleLoginRequest = async (allow: boolean) => {
+    if (!staffInfo || !loginRequest) return;
+    const staffDocRef = doc(db, 'staff', staffInfo.id);
+    if (allow) {
+      await updateDoc(staffDocRef, {
+        activeSessionId: loginRequest.sessionId,
+        loginRequest: null,
+      });
+    } else {
+      await updateDoc(staffDocRef, {
+        loginRequest: null,
+      });
+    }
+    setLoginRequest(null);
+  };
+
 
   return (
     <div className="flex h-screen flex-col bg-muted/40">
@@ -221,6 +256,22 @@ export default function PetugasLayout({
                 ))}
             </div>
         </nav>
+        <AlertDialog open={!!loginRequest}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Permintaan Masuk Terdeteksi</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Seseorang mencoba masuk ke akun Anda dari perangkat lain. Apakah Anda mengizinkan?
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => handleLoginRequest(false)}>Tolak</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleLoginRequest(true)}>
+                    Izinkan & Keluar dari Sini
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

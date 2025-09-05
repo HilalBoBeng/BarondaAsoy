@@ -12,14 +12,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, useInactivityTimeout } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { onSnapshot, doc, query, collection, where } from "firebase/firestore";
+import { onSnapshot, doc, query, collection, where, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Staff } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { getAuth, signOut } from "firebase/auth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
@@ -51,56 +53,76 @@ export default function BendaharaLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = getAuth();
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [loginRequest, setLoginRequest] = useState<any>(null);
+
+  useInactivityTimeout();
 
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    if (localStorage.getItem('userRole') !== 'bendahara') {
+    if (!storedStaffInfo.id || localStorage.getItem('userRole') !== 'bendahara') {
       router.replace('/auth/staff-login');
       return;
     }
     
-    if (storedStaffInfo.id) {
-        const staffDocRef = doc(db, "staff", storedStaffInfo.id);
-        const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
-                if (staffData.role !== 'bendahara') {
-                    localStorage.removeItem('userRole');
-                    localStorage.removeItem('staffInfo');
+    const staffDocRef = doc(db, "staff", storedStaffInfo.id);
+    const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
+            const localSessionId = localStorage.getItem('activeSessionId');
+            
+            if (staffData.role !== 'bendahara' || (staffData.activeSessionId && staffData.activeSessionId !== localSessionId)) {
+                 signOut(auth).then(() => {
+                    localStorage.clear();
                     router.replace('/auth/staff-login');
-                    return;
-                }
-                setStaffInfo(staffData);
-                localStorage.setItem('staffInfo', JSON.stringify(staffData));
-            } else {
-                localStorage.removeItem('userRole');
-                localStorage.removeItem('staffInfo');
-                router.replace('/auth/staff-login');
+                });
+                return;
             }
-        });
-        
-        const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', storedStaffInfo.id), where('read', '==', false));
-        const unsubNotifs = onSnapshot(notifsQuery, (snap) => setUnreadNotifications(snap.size));
+            setStaffInfo(staffData);
+             if (staffData.loginRequest) {
+                setLoginRequest(staffData.loginRequest);
+            } else {
+                setLoginRequest(null);
+            }
+        } else {
+            router.replace('/auth/staff-login');
+        }
+    });
+    
+    const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', storedStaffInfo.id), where('read', '==', false));
+    const unsubNotifs = onSnapshot(notifsQuery, (snap) => setUnreadNotifications(snap.size));
 
-        return () => {
-            unsubStaff();
-            unsubNotifs();
-        };
-    } else {
-        router.replace('/auth/staff-login');
-        return;
-    }
-  }, [router]);
+    return () => {
+        unsubStaff();
+        unsubNotifs();
+    };
+  }, [router, auth]);
   
   
   if (!isClient || !staffInfo) {
       return <LoadingSkeleton />;
   }
+  
+  const handleLoginRequest = async (allow: boolean) => {
+    if (!staffInfo || !loginRequest) return;
+    const staffDocRef = doc(db, 'staff', staffInfo.id);
+    if (allow) {
+      await updateDoc(staffDocRef, {
+        activeSessionId: loginRequest.sessionId,
+        loginRequest: null,
+      });
+    } else {
+      await updateDoc(staffDocRef, {
+        loginRequest: null,
+      });
+    }
+    setLoginRequest(null);
+  };
   
   const getBadgeCount = (badgeKey?: string) => {
     if (badgeKey === 'unreadNotifications') return unreadNotifications;
@@ -156,6 +178,22 @@ export default function BendaharaLayout({
                 ))}
             </div>
         </nav>
+        <AlertDialog open={!!loginRequest}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Permintaan Masuk Terdeteksi</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Seseorang mencoba masuk ke akun Anda dari perangkat lain. Apakah Anda mengizinkan?
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => handleLoginRequest(false)}>Tolak</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleLoginRequest(true)}>
+                    Izinkan & Keluar dari Sini
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
