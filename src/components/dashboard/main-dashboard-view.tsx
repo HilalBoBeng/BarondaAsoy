@@ -14,13 +14,13 @@ import { app, db } from "@/lib/firebase/client";
 import { collection, onSnapshot, query, where, doc, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AppUser, PatrolLog, Announcement } from "@/lib/types";
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone, Calendar } from 'lucide-react';
 import { usePathname } from "next/navigation";
 import { UserNav } from './user-nav';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 
 const navItems = [
@@ -38,6 +38,8 @@ export default function MainDashboardView() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const announcementsPerPage = 7;
   
   const pathname = usePathname();
   const auth = getAuth(app);
@@ -72,7 +74,7 @@ export default function MainDashboardView() {
       }
     });
     
-    const q = query(collection(db, 'announcements'), orderBy('date', 'desc'), limit(5));
+    const q = query(collection(db, 'announcements'), orderBy('date', 'desc'));
     const unsubscribeAnnouncements = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => {
         const docData = doc.data();
@@ -92,6 +94,22 @@ export default function MainDashboardView() {
       unsubscribeAnnouncements();
     };
   }, [auth]);
+
+  const indexOfLastAnnouncement = currentPage * announcementsPerPage;
+  const indexOfFirstAnnouncement = indexOfLastAnnouncement - announcementsPerPage;
+  const currentAnnouncements = announcements.slice(indexOfFirstAnnouncement, indexOfLastAnnouncement);
+  const totalPages = Math.ceil(announcements.length / announcementsPerPage);
+
+  const handleNextPage = () => {
+      if (currentPage < totalPages) {
+          setCurrentPage(currentPage + 1);
+      }
+  }
+  const handlePrevPage = () => {
+      if (currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+      }
+  }
 
   if (loading) {
     return (
@@ -140,8 +158,8 @@ export default function MainDashboardView() {
                         <CardContent>
                              {loadingAnnouncements ? (
                                 Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full mb-2" />)
-                            ) : announcements.length > 0 ? (
-                                announcements.map((ann) => (
+                            ) : currentAnnouncements.length > 0 ? (
+                                currentAnnouncements.map((ann) => (
                                     <div key={ann.id} className="border-b last:border-b-0 py-3 cursor-pointer" onClick={() => setSelectedAnnouncement(ann)}>
                                         <p className="font-semibold text-sm">{ann.title}</p>
                                         <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
@@ -153,6 +171,16 @@ export default function MainDashboardView() {
                                 </div>
                             )}
                         </CardContent>
+                         {announcements.length > announcementsPerPage && (
+                            <CardFooter className="flex justify-end space-x-2">
+                                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>
+                                    Sebelumnya
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
+                                    Berikutnya
+                                </Button>
+                            </CardFooter>
+                        )}
                     </Card>
                     <Schedule />
                     <ReportHistory />

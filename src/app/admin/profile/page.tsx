@@ -21,6 +21,7 @@ import { db } from "@/lib/firebase/client";
 import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -326,7 +327,7 @@ export default function AdminProfilePage() {
                         <div className="relative">
                              <button onClick={() => handleImageZoom(adminInfo.photoURL)}>
                                 <Avatar className="h-20 w-20 border-4 border-background/50">
-                                    <AvatarImage src={adminInfo.photoURL || undefined} />
+                                    <AvatarImage src={adminInfo.photoURL || undefined} alt={adminInfo.name} />
                                     <AvatarFallback className="text-3xl bg-background text-primary">
                                         {adminInfo.name?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
@@ -470,11 +471,12 @@ export default function AdminProfilePage() {
                 </DrawerContent>
             </Drawer>
 
-            <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-                <DrawerContent>
+            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent>
+                    <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-                </DrawerContent>
-            </Drawer>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

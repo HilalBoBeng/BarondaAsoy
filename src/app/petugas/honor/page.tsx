@@ -48,7 +48,11 @@ export default function HonorariumPetugasPage() {
         issueDate: (doc.data().issueDate as Timestamp)?.toDate(),
       } as Honorarium));
       
-      honorData.sort((a, b) => (b.issueDate as Date).getTime() - (a.issueDate as Date).getTime());
+      honorData.sort((a, b) => {
+        const dateA = a.issueDate ? new Date(a.issueDate).getTime() : 0;
+        const dateB = b.issueDate ? new Date(b.issueDate).getTime() : 0;
+        return dateB - dateA;
+      });
 
       setHonorariums(honorData);
       setLoading(false);

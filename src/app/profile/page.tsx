@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Image from 'next/image';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose, DrawerBody, DrawerDescription } from '@/components/ui/drawer';
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -581,11 +582,12 @@ export default function ProfilePage() {
             </DrawerContent>
         </Drawer>
         
-        <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-            <DrawerContent>
+        <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+            <DialogContent>
+                 <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                  <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-            </DrawerContent>
-        </Drawer>
+            </DialogContent>
+        </Dialog>
 
     </div>
   );

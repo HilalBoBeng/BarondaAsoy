@@ -74,7 +74,7 @@ const DialogBody = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
     <div
-        className={cn("flex-1 overflow-y-auto px-6", className)}
+        className={cn("flex-1 overflow-y-auto", className)}
         {...props}
     />
 )
@@ -86,7 +86,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 pt-0",
       className
     )}
     {...props}

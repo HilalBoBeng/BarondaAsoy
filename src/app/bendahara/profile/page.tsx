@@ -22,6 +22,7 @@ import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -289,7 +290,7 @@ export default function BendaharaProfilePage() {
                         <div className="relative">
                             <button onClick={() => handleImageZoom(staffInfo.photoURL)}>
                                 <Avatar className="h-20 w-20 border-4 border-background/50">
-                                    <AvatarImage src={staffInfo.photoURL || undefined} />
+                                    <AvatarImage src={staffInfo.photoURL || undefined} alt={staffInfo.name} />
                                     <AvatarFallback className="text-3xl bg-background text-primary">
                                         {staffInfo.name?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
@@ -425,8 +426,8 @@ export default function BendaharaProfilePage() {
                                 )}
                             </DrawerBody>
                             <DrawerFooter className="flex-row sm:justify-between pt-4">
-                               <div></div>
-                               <div className="flex gap-2 justify-end">
+                                <div></div>
+                                <div className="flex gap-2 justify-end">
                                     <DrawerClose asChild>
                                         <Button type="button" variant="secondary">Batal</Button>
                                     </DrawerClose>
@@ -441,11 +442,12 @@ export default function BendaharaProfilePage() {
                 </DrawerContent>
             </Drawer>
 
-            <Drawer open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
-                <DrawerContent>
+            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent>
+                    <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <img src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" />
-                </DrawerContent>
-            </Drawer>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

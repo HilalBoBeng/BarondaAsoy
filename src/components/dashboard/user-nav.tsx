@@ -30,9 +30,10 @@ import {
   DrawerTitle,
   DrawerClose,
   DrawerFooter,
+  DrawerBody,
 } from "@/components/ui/drawer";
 import { Card } from "../ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "../ui/dialog";
 import Image from "next/image";
 
 
@@ -186,7 +187,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                         <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
                             <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
                                 <Avatar>
-                                    <AvatarImage src={foundUser.photoURL || ''}/>
+                                    <AvatarImage src={foundUser.photoURL || ''} alt={foundUser.displayName || 'User'}/>
                                     <AvatarFallback>{foundUser.displayName?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <p className="font-medium">{foundUser.displayName}</p>
@@ -216,7 +217,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                        notif.read ? 'border-transparent' : 'border-primary bg-primary/10'
                        )}>
                       <p className="font-semibold text-sm">{notif.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                      <p className="text-xs text-muted-foreground truncate">{notif.message.replace(/<[^>]+>/g, '')}</p>
                   </div>
                 ))
               ) : (
@@ -232,26 +233,26 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         </DrawerContent>
       </Drawer>
 
-       <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && handleDialogClose()}>
-          <DialogContent>
+       <Drawer open={!!selectedNotification} onOpenChange={(open) => !open && handleDialogClose()}>
+          <DrawerContent>
             {selectedNotification && (
               <>
-                <DialogHeader>
-                  <DialogTitle>{selectedNotification.title}</DialogTitle>
-                </DialogHeader>
-                <DialogBody>
+                <DrawerHeader>
+                  <DrawerTitle>{selectedNotification.title}</DrawerTitle>
+                </DrawerHeader>
+                <DrawerBody>
                   <div className="py-4 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotification.message.replace(/\n/g, '<br />') }}></div>
-                </DialogBody>
-                <DialogFooter>
+                </DrawerBody>
+                <DrawerFooter>
                   <Button onClick={handleDialogClose}>Tutup</Button>
-                </DialogFooter>
+                </DrawerFooter>
               </>
             )}
-          </DialogContent>
-        </Dialog>
+          </DrawerContent>
+        </Drawer>
         
         <Dialog open={!!imagePopupNotification} onOpenChange={() => setImagePopupNotification(null)}>
-            <DialogContent className="p-0 border-0 bg-black/50 max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-[9/16]">
+            <DialogContent className="p-0 border-0 bg-black/50 max-w-md w-[90%] flex items-center justify-center rounded-lg aspect-square">
                  <DialogTitle className="sr-only">{imagePopupNotification?.title}</DialogTitle>
                  {imagePopupNotification?.imageUrl && (
                     <div className="relative w-full h-full">
