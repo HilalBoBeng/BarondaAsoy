@@ -22,7 +22,7 @@ import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -424,7 +424,7 @@ export default function AdminProfilePage() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+                                <AlertDialogTitleComponent>Konfirmasi Keluar</AlertDialogTitleComponent>
                                 <AlertDialogDescription>
                                     Anda yakin ingin keluar dari akun Anda?
                                 </AlertDialogDescription>
