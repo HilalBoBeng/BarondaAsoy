@@ -291,10 +291,13 @@ export default function ProfilePage() {
      return (
         <div className="flex min-h-screen flex-col bg-muted/40">
            <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-                <Skeleton className="h-9 w-24" />
-                <Skeleton className="h-10 w-40" />
+                <Skeleton className="h-9 w-32" />
+                <div className="flex items-center gap-2 text-right">
+                  <div className="flex flex-col"><Skeleton className="h-4 w-12" /><Skeleton className="h-3 w-20 mt-1" /></div>
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
            </header>
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20">
+            <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20">
                 <div className="container mx-auto max-w-4xl space-y-8">
                      <Card className="overflow-hidden">
                         <CardHeader className="bg-muted p-6">
@@ -309,23 +312,62 @@ export default function ProfilePage() {
                         </CardHeader>
                         <CardContent className="p-0">
                              <div className="divide-y">
-                                {Array.from({length: 2}).map((_, i) => (
+                                {Array.from({length: 3}).map((_, i) => (
                                      <div key={i} className="flex items-start justify-between gap-4 p-4">
                                          <div className="flex items-center gap-4 flex-1">
-                                            <Skeleton className="h-5 w-5 rounded-full" />
+                                            <Skeleton className="h-5 w-5" />
                                             <div className="flex-1 space-y-2">
                                                 <Skeleton className="h-3 w-20" />
                                                 <Skeleton className="h-5 w-40" />
                                             </div>
                                          </div>
-                                         <Skeleton className="h-8 w-8" />
+                                         <Skeleton className="h-8 w-8 rounded-full" />
                                      </div>
                                 ))}
                              </div>
                         </CardContent>
                     </Card>
+                    <Card>
+                      <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
+                      <CardContent>
+                          <div className="rounded-lg border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {Array.from({ length: 2 }).map((_, i) => (
+                                      <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                      </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                          </div>
+                      </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader><Skeleton className="h-5 w-20" /></CardHeader>
+                        <CardContent><Skeleton className="h-10 w-full" /></CardContent>
+                    </Card>
                 </div>
             </main>
+             <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
+                <div className="grid h-16 grid-cols-4 items-center justify-center gap-2 px-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex flex-col items-center justify-center gap-1">
+                          <Skeleton className="h-5 w-5" />
+                          <Skeleton className="h-3 w-10" />
+                      </div>
+                  ))}
+                </div>
+            </nav>
         </div>
     );
   }
@@ -592,3 +634,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
