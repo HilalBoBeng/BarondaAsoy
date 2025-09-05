@@ -7,7 +7,7 @@ import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound, CheckCircle, Edit, ShieldAlert, FileText, ClipboardList, Landmark, Banknote, Wallet, History, Wrench, Bell } from 'lucide-react';
+import { Loader2, MonitorOff, Lock, Unlock, Settings, PlusCircle, User, Mail, Phone, MapPin, MoreVertical, Calendar, KeyRound, CheckCircle, Edit, ShieldAlert, FileText, ClipboardList, Landmark, Banknote, Wallet, History, Wrench, Bell, Users as UsersIcon } from 'lucide-react';
 import type { Staff } from '@/lib/types';
 import Link from 'next/link';
 import { createLog } from '@/lib/utils';
@@ -41,6 +41,7 @@ const getInitialMenuState = (role: 'petugas' | 'bendahara'): Omit<MenuConfig, 'v
 };
 
 const toolPageItems = [
+    { href: "/admin/users", icon: UsersIcon, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
     { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan Warga', id: 'reports', roles: ['admin'] },
     { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
     { href: "/admin/attendance", icon: ClipboardList, label: 'Kehadiran', id: 'attendance', roles: ['admin'] },
