@@ -3,10 +3,8 @@
 
 import Link from "next/link";
 import {
-  Bell,
   Home,
   LogOut,
-  Menu,
   Landmark,
   ArrowLeft,
   Banknote,
@@ -28,7 +26,7 @@ const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
     { href: "/bendahara/dues", icon: Landmark, label: 'Iuran', id: 'dues' },
     { href: "/bendahara/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
-    { href: "/bendahara/honor", icon: Banknote, label: 'Honor', id: 'honor' },
+    { href: "/bendahara/tools", icon: Wrench, label: 'Lainnya', id: 'tools' },
     { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
 ];
 
@@ -84,7 +82,8 @@ export default function BendaharaLayout({
     const detailPage = pathname.split('/').filter(Boolean).length > 2;
     setIsDetailPage(detailPage);
     
-    const activeItem = navItemsList.find(item => pathname.startsWith(item.href) && item.href !== '/bendahara');
+    const allNavItems = [...navItemsList, { href: "/bendahara/honor", label: 'Honorarium' }, { href: "/bendahara/notifications", label: 'Notifikasi' }];
+    const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/bendahara');
     setPageTitle(activeItem?.label || "Dasbor Bendahara");
     
   }, [pathname]);

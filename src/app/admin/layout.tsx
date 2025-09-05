@@ -109,7 +109,6 @@ export default function AdminLayout({
     setIsDetailPage(detailPage);
     
     const allNavItems = [...navItems, 
-      // Manually add tool page items for title detection
       { href: "/admin/reports", label: 'Laporan Warga' },
       { href: "/admin/announcements", label: 'Pengumuman' },
       { href: "/admin/attendance", label: 'Kehadiran' },

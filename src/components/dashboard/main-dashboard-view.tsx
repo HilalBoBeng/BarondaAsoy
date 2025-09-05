@@ -4,7 +4,6 @@
 import ReportActivity from '@/components/dashboard/report-activity';
 import ReportHistory from "@/components/profile/report-history";
 import Schedule from '@/components/dashboard/schedule';
-import Announcements from '@/components/dashboard/announcements';
 import EmergencyContacts from "@/components/dashboard/emergency-contacts";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -26,7 +25,7 @@ const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
     { href: "/chat", icon: MessageSquare, label: "Pesan" },
-    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
+    { href: "/settings", icon: Settings, label: "Pengaturan" },
 ]
 
 export default function MainDashboardView() {
@@ -107,6 +106,9 @@ export default function MainDashboardView() {
     <div className="flex min-h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <h1 className="text-xl font-bold text-primary">Baronda</h1>
+             <Link href="/announcements" className="flex items-center gap-2 text-sm font-medium text-primary">
+                <Megaphone className="h-5 w-5" />
+            </Link>
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
@@ -124,7 +126,6 @@ export default function MainDashboardView() {
                 </div>
 
                 <div className="space-y-6">
-                    <Announcements />
                     <Schedule />
                     <ReportActivity user={user} userInfo={userInfo} />
                     <ReportHistory />
