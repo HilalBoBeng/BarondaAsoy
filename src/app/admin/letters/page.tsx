@@ -72,12 +72,11 @@ export default function LettersPage() {
             setIsGenerating(false);
         },
         html2canvas: {
-            scale: 0.75, 
+            scale: 0.75, // Adjust this scale to get better resolution
         },
-        autoPaging: 'text',
-        margin: [20, 20, 20, 20],
+        margin: [40, 40, 40, 40],
         width: 595, // A4 width in points
-        windowWidth: letterRef.current.scrollWidth
+        windowWidth: 800, // Approximate browser width
     });
   };
 
@@ -140,26 +139,26 @@ export default function LettersPage() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <div className="border rounded-lg p-8 bg-white text-black min-h-[500px]">
+                    <div className="border rounded-lg p-8 bg-white text-black min-h-[792px]"> {/* A4 aspect ratio */}
                         {!selectedSchedule ? (
                             <div className="flex items-center justify-center h-full text-muted-foreground">
                                 Pilih jadwal untuk melihat pratinjau surat.
                             </div>
                         ) : (
-                             <div ref={letterRef} className="prose prose-sm max-w-none">
+                             <div ref={letterRef} className="prose max-w-none text-sm">
                                 <div style={{ textAlign: 'center', borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '20px' }}>
-                                    <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>PEMERINTAH KELURAHAN KILONGAN</h2>
-                                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>TIM KEAMANAN BARONDA</h3>
-                                    <p style={{ margin: 0, fontSize: '10px' }}>Sekretariat: Jln. Raya Kilongan, Kec. Luwuk Utara, Kab. Banggai</p>
+                                    <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>PEMERINTAH KELURAHAN KILONGAN</h2>
+                                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>TIM KEAMANAN BARONDA</h3>
+                                    <p style={{ margin: 0, fontSize: '10px' }}>Sekretariat: Komp. BTN Koperasi, Kel. Kilongan, Kec. Luwuk Utara, Kab. Banggai</p>
                                 </div>
-                                <h4 style={{ textDecoration: 'underline', textAlign: 'center', fontWeight: 'bold', fontSize: '14px', margin: '20px 0' }}>SURAT TUGAS</h4>
-                                <p style={{ textAlign: 'center', fontSize: '12px', marginTop: '-15px' }}>Nomor: 001/ST-BRD/{format(new Date(), "MM/yyyy")}</p>
-                                <div style={{ fontSize: '12px', marginTop: '30px', lineHeight: '1.6' }}>
+                                <h4 style={{ textDecoration: 'underline', textAlign: 'center', fontWeight: 'bold', fontSize: '12px', margin: '20px 0' }}>SURAT TUGAS</h4>
+                                <p style={{ textAlign: 'center', fontSize: '11px', marginTop: '-15px' }}>Nomor: &lt;No-Letter&gt;</p>
+                                <div style={{ fontSize: '11px', marginTop: '30px', lineHeight: '1.6' }}>
                                     <p>Yang bertanda tangan di bawah ini selaku Koordinator Keamanan Baronda Kelurahan Kilongan, dengan ini menugaskan kepada:</p>
                                     <table style={{ border: 'none', marginLeft: '20px' }}>
                                         <tbody>
                                             <tr><td style={{ padding: '2px 10px 2px 0' }}>Nama</td><td>: {selectedSchedule.officer}</td></tr>
-                                            <tr><td style={{ padding: '2px 10px 2px 0' }}>Jabatan</td><td>: Petugas Keamanan</td></tr>
+                                            <tr><td style={{ padding: '2px 10px 2px 0' }}>Jabatan</td><td>: &lt;Jabatan&gt;</td></tr>
                                         </tbody>
                                     </table>
                                     <p>Untuk melaksanakan tugas patroli keamanan (siskamling) di wilayah Kelurahan Kilongan, dengan jadwal sebagai berikut:</p>
@@ -172,11 +171,16 @@ export default function LettersPage() {
                                     </table>
                                     <p>Demikian surat tugas ini dibuat untuk dapat dilaksanakan dengan sebaik-baiknya dan penuh tanggung jawab.</p>
                                 </div>
-                                 <div style={{ float: 'right', marginTop: '50px', textAlign: 'center', fontSize: '12px' }}>
-                                    <p>Kilongan, {format(new Date(), "d MMMM yyyy", { locale: id })}</p>
-                                    <p>Koordinator Keamanan,</p>
-                                    <br/><br/><br/>
-                                    <p style={{ textDecoration: 'underline', fontWeight: 'bold' }}>Bambang Sugiono</p>
+                                <div style={{ position: 'relative', height: '150px' }}>
+                                    <div style={{ position: 'absolute', bottom: 0, right: 0, textAlign: 'center', fontSize: '11px' }}>
+                                        <p>Pemohon</p>
+                                        <div style={{ border: '1px solid #ccc', padding: '5px', display: 'inline-block', margin: '10px 0' }}>
+                                            <p style={{margin:0, fontSize: '8px'}}>METERAI</p>
+                                            <p style={{margin:0, fontSize: '8px'}}>TEMPEL</p>
+                                            <p style={{margin:0, fontSize: '10px'}}>6000</p>
+                                        </div>
+                                        <p style={{ textDecoration: 'underline', fontWeight: 'bold', margin: 0 }}>DMITRIEV VALENTINO DIASKARA</p>
+                                    </div>
                                 </div>
                             </div>
                         )}
