@@ -7,7 +7,7 @@ import { collection, onSnapshot, query, where, getDocs, addDoc, serverTimestamp,
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { DuesPayment, AppUser } from '@/lib/types';
+import type { DuesPayment, AppUser, Staff } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,8 +36,17 @@ export default function DuesAdminPage() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
+
 
   const { toast } = useToast();
+  
+  useEffect(() => {
+    const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    if (info) {
+        setAdminInfo(info);
+    }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -145,6 +154,8 @@ export default function DuesAdminPage() {
   const canBroadcast = useMemo(() => {
     return filterStatus === 'unpaid' && unpaidUsers.length > 0;
   }, [filterStatus, unpaidUsers]);
+  
+  const canPerformActions = adminInfo?.role === 'bendahara' || adminInfo?.role === 'super_admin';
 
 
   return (
@@ -196,26 +207,28 @@ export default function DuesAdminPage() {
               </SelectContent>
           </Select>
           
-          <AlertDialog>
-              <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={isBroadcasting || !canBroadcast}>
-                      {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
-                      Broadcast Pengingat
-                  </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                  <AlertDialogHeader>
-                      <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
-                      <AlertDialogDescription>
-                          Anda akan mengirimkan notifikasi pengingat ke {unpaidUsers.length} warga yang belum membayar untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
-                      </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                      <AlertDialogCancel>Batal</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleBroadcastReminders}>Ya, Kirim</AlertDialogAction>
-                  </AlertDialogFooter>
-              </AlertDialogContent>
-          </AlertDialog>
+          {canPerformActions && (
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" disabled={isBroadcasting || !canBroadcast}>
+                        {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquareWarning className="mr-2 h-4 w-4" />}
+                        Broadcast Pengingat
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Anda akan mengirimkan notifikasi pengingat ke {unpaidUsers.length} warga yang belum membayar untuk periode {selectedMonth} {selectedYear}. Lanjutkan?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBroadcastReminders}>Ya, Kirim</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
 

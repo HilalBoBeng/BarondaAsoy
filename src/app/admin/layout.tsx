@@ -47,7 +47,7 @@ const navItemsList = [
     { href: "/admin/users", icon: Users, label: 'Manajemen Pengguna', id: 'users', roles: ['admin', 'super_admin'] },
     { href: "/admin/schedule", icon: Calendar, label: 'Jadwal Patroli', id: 'schedule', roles: ['admin', 'super_admin'] },
     { href: "/admin/attendance", icon: ClipboardList, label: 'Daftar Hadir', id: 'attendance', roles: ['admin', 'super_admin'] },
-    { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['bendahara', 'super_admin'] },
+    { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'bendahara', 'super_admin'] },
     { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin', 'super_admin'] },

@@ -31,8 +31,7 @@ function VerificationContent() {
         const result = await verifyAdminToken({ token });
         if (result.success) {
           setStatus('success');
-          setMessage(result.message + ' Anda akan dialihkan ke halaman login dalam 5 detik...');
-          setTimeout(() => router.push('/auth/staff-login'), 5000);
+          setMessage('Akun Anda telah berhasil dibuat. Silakan periksa email Anda untuk mendapatkan kode akses rahasia untuk masuk.');
         } else {
           throw new Error(result.message);
         }
@@ -48,6 +47,7 @@ function VerificationContent() {
     };
 
     verify();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, router, toast]);
   
   const StatusIcon = () => {
