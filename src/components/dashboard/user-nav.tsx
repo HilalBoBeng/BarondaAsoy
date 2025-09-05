@@ -124,12 +124,12 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
       </div>
 
       <Drawer open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-        <DrawerContent>
+        <DrawerContent className="max-h-[40dvh]">
           <div className="mx-auto w-full max-w-md">
             <DrawerHeader>
               <DrawerTitle>Notifikasi</DrawerTitle>
             </DrawerHeader>
-            <div className="p-4 pb-0 max-h-[70vh] overflow-y-auto">
+            <DrawerBody className="p-4 pt-0 overflow-y-auto">
               {notifications.length > 0 ? (
                 notifications.map(notif => (
                   <div key={notif.id} onClick={() => handleNotificationClick(notif)}
@@ -143,8 +143,8 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
               ) : (
                 <p className="text-center text-muted-foreground py-8">Tidak ada notifikasi.</p>
               )}
-            </div>
-            <DrawerFooter>
+            </DrawerBody>
+            <DrawerFooter className="mt-auto">
               <DrawerClose asChild>
                 <Button variant="outline">Tutup</Button>
               </DrawerClose>

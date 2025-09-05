@@ -350,7 +350,7 @@ export default function BendaharaDuesPage() {
             </Table>
           </div>
         </div>
-      </CardFooter>
+      </CardContent>
       <CardFooter>
         <div className="flex items-center justify-end space-x-2 w-full">
             <Button

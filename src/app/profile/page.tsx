@@ -65,6 +65,7 @@ export default function ProfilePage() {
 
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [zoomedImageUrl, setZoomedImageUrl] = useState('');
+  const [isLogoutDrawerOpen, setIsLogoutDrawerOpen] = useState(false);
 
   const { toast } = useToast();
   const auth = getAuth(app);
@@ -390,7 +391,7 @@ export default function ProfilePage() {
     bio: AlignLeft,
   };
 
-  const renderDataRow = (field: FieldName, value: string | undefined | null) => {
+   const renderDataRow = (field: FieldName, value: string | undefined | null) => {
     const Icon = fieldIcons[field];
     const canEdit = canEditField(field);
     let lastUpdateDate: Date | null = null;
@@ -528,7 +529,7 @@ export default function ProfilePage() {
                         <CardTitle className="text-base text-destructive">Keluar</CardTitle>
                     </CardHeader>
                     <CardContent>
-                         <Button variant="destructive" className="w-full" onClick={handleLogout} disabled={isLoggingOut}>
+                         <Button variant="destructive" className="w-full" onClick={() => setIsLogoutDrawerOpen(true)} disabled={isLoggingOut}>
                             {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOut className="mr-2 h-4 w-4" />}
                             Keluar dari Akun
                         </Button>
@@ -624,6 +625,23 @@ export default function ProfilePage() {
                         </DrawerFooter>
                     </form>
                 </Form>
+            </DrawerContent>
+        </Drawer>
+        
+        <Drawer open={isLogoutDrawerOpen} onOpenChange={setIsLogoutDrawerOpen}>
+            <DrawerContent>
+                <DrawerHeader className="text-center">
+                    <DrawerTitle>Konfirmasi Keluar</DrawerTitle>
+                    <DrawerDescription>
+                        Anda yakin ingin keluar dari akun Anda?
+                    </DrawerDescription>
+                </DrawerHeader>
+                <DrawerFooter className="flex-col-reverse">
+                    <DrawerClose asChild>
+                        <Button variant="secondary">Batal</Button>
+                    </DrawerClose>
+                    <Button variant="destructive" onClick={handleLogout}>Ya, Keluar</Button>
+                </DrawerFooter>
             </DrawerContent>
         </Drawer>
         
