@@ -27,7 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Staff } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { sendAdminVerificationEmail } from '@/ai/flows/send-admin-verification-email';
+import { createAdmin } from '@/ai/flows/create-admin';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -91,8 +91,8 @@ const getInitialMenuState = (role: 'petugas' | 'bendahara'): Omit<MenuConfig, 'v
         { id: 'honor', label: 'Honor Saya', roles: ['petugas', 'bendahara'] },
         { id: 'announcements', label: 'Pengumuman', roles: ['petugas'] },
         { id: 'notifications', label: 'Notifikasi', roles: ['petugas', 'bendahara'] },
-        { id: 'tools', label: 'Lainnya', roles: ['petugas'] },
         { id: 'emergencyContacts', label: 'Kontak Darurat', roles: ['petugas'] },
+        { id: 'tools', label: 'Lainnya', roles: ['petugas'] },
         { id: 'dues', label: 'Iuran Warga', roles: ['bendahara'] },
         { id: 'finance', label: 'Keuangan', roles: ['bendahara'] },
     ];
@@ -120,8 +120,6 @@ export default function ToolsAdminPage() {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<Staff | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'waiting' | 'verified'>('idle');
-  const [countdown, setCountdown] = useState(0);
   
   const { toast } = useToast();
 
@@ -135,46 +133,6 @@ export default function ToolsAdminPage() {
     defaultValues: { name: '', email: '', confirmEmail: '', phone: '', addressType: 'kilongan', addressDetail: '', role: 'admin' }
   });
   const addressType = addAdminForm.watch('addressType');
-
-  useEffect(() => {
-    let unsubVerification: (() => void) | null = null;
-    let timer: NodeJS.Timeout | null = null;
-
-    if (submissionStatus === 'waiting') {
-        const verificationId = localStorage.getItem('verificationId');
-        if (verificationId) {
-            const verificationRef = doc(db, 'admin_verifications', verificationId);
-            unsubVerification = onSnapshot(verificationRef, (docSnap) => {
-                if (!docSnap.exists()) {
-                    setSubmissionStatus('verified');
-                    toast({ title: 'Berhasil', description: 'Akun admin telah berhasil diverifikasi.' });
-                    localStorage.removeItem('verificationId');
-                    setTimeout(() => {
-                        setIsAddAdminOpen(false);
-                        setSubmissionStatus('idle');
-                    }, 3000);
-                }
-            });
-        }
-        const expiry = localStorage.getItem('verificationExpiry');
-        if (expiry) {
-            timer = setInterval(() => {
-                const remaining = Math.round((parseInt(expiry) - Date.now()) / 1000);
-                if (remaining <= 0) {
-                    setCountdown(0);
-                    clearInterval(timer!);
-                } else {
-                    setCountdown(remaining);
-                }
-            }, 1000);
-        }
-    }
-    
-    return () => {
-        if (unsubVerification) unsubVerification();
-        if (timer) clearInterval(timer);
-    };
-}, [submissionStatus, toast]);
 
   const loadMenuConfig = useCallback(async (role: 'petugas' | 'bendahara') => {
         const docId = `${role}_menu`;
@@ -244,9 +202,6 @@ export default function ToolsAdminPage() {
     if (!isAddAdminOpen) {
       setTimeout(() => {
         addAdminForm.reset();
-        setSubmissionStatus('idle');
-         localStorage.removeItem('verificationId');
-         localStorage.removeItem('verificationExpiry');
       }, 300);
     }
   }, [isAddAdminOpen, addAdminForm]);
@@ -266,7 +221,7 @@ export default function ToolsAdminPage() {
   }
   
   const handleAddAdmin = async (values: AddAdminFormValues) => {
-    setSubmissionStatus('sending');
+    setIsSubmitting(true);
     try {
         const emailQuery = query(collection(db, 'staff'), where('email', '==', values.email));
         const phoneQuery = query(collection(db, 'staff'), where('phone', '==', values.phone));
@@ -274,7 +229,7 @@ export default function ToolsAdminPage() {
         const userPhoneQuery = query(collection(db, 'users'), where('phone', '==', values.phone));
 
         const [emailSnapshot, phoneSnapshot, userEmailSnapshot, userPhoneSnapshot] = await Promise.all([
-            getDocs(emailQuery), getDocs(phoneQuery), getDocs(userEmailQuery), getDocs(userPhoneQuery)
+            getDocs(emailQuery), getDocs(phoneQuery), getDocs(userEmailQuery), getDocs(userPhoneSnapshot)
         ]);
 
         if (!emailSnapshot.empty || !userEmailSnapshot.empty) {
@@ -284,31 +239,24 @@ export default function ToolsAdminPage() {
             addAdminForm.setError('phone', { message: 'Nomor HP ini sudah terdaftar.' }); return;
         }
         
-        const verificationId = nanoid();
-        const expiryTime = Date.now() + 5 * 60 * 1000;
-        localStorage.setItem('verificationId', verificationId);
-        localStorage.setItem('verificationExpiry', expiryTime.toString());
-
-        const result = await sendAdminVerificationEmail({
+        const result = await createAdmin({
             name: toTitleCase(values.name),
             email: values.email,
             phone: values.phone,
             addressType: values.addressType,
             addressDetail: values.addressType === 'kilongan' ? 'Kilongan' : values.addressDetail || '',
             role: values.role,
-            baseUrl: window.location.origin,
-            verificationId: verificationId,
         });
         
         if (!result.success) throw new Error(result.message);
         
-        setSubmissionStatus('waiting');
-        setCountdown(300); // 5 minutes
+        toast({ title: "Berhasil", description: result.message });
+        setIsAddAdminOpen(false);
 
     } catch (error) {
-        toast({ variant: "destructive", title: "Gagal", description: `Proses pengiriman verifikasi gagal. ${error instanceof Error ? error.message : ''}`});
-        setSubmissionStatus('idle');
+        toast({ variant: "destructive", title: "Gagal", description: `Proses penambahan gagal. ${error instanceof Error ? error.message : ''}`});
     } finally {
+        setIsSubmitting(false);
         addAdminForm.clearErrors();
     }
   };
@@ -569,7 +517,7 @@ export default function ToolsAdminPage() {
                                                         <AvatarImage src={admin.photoURL || undefined}/>
                                                         <AvatarFallback>{admin.name.charAt(0)}</AvatarFallback>
                                                     </Avatar>
-                                                    <div>
+                                                    <div className="flex flex-col items-start">
                                                         <p>{admin.name}</p>
                                                         <Badge variant="outline" className="mt-1">{admin.role === 'admin' ? 'Admin' : 'Bendahara'}</Badge>
                                                     </div>
@@ -726,14 +674,13 @@ export default function ToolsAdminPage() {
     </Dialog>
 
     <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(submissionStatus === 'sending' || submissionStatus === 'waiting') e.preventDefault()}}>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {if(isSubmitting) e.preventDefault()}}>
             <DialogHeader>
                 <DialogTitle>Tambah Akun Baru</DialogTitle>
                 <DialogDescription>
-                   {submissionStatus === 'waiting' ? 'Menunggu verifikasi dari calon anggota...' : 'Isi detail di bawah ini. Tautan verifikasi akan dikirim ke email calon anggota.'}
+                   Isi detail di bawah ini. Akun akan langsung dibuat dan kode akses akan dikirim ke email.
                 </DialogDescription>
             </DialogHeader>
-            {submissionStatus === 'idle' || submissionStatus === 'sending' ? (
                 <Form {...addAdminForm}>
                     <form onSubmit={addAdminForm.handleSubmit(handleAddAdmin)}>
                         <DialogBody className="space-y-4">
@@ -805,29 +752,14 @@ export default function ToolsAdminPage() {
                             )}
                         </DialogBody>
                         <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)} disabled={submissionStatus === 'sending'}>Batal</Button>
-                            <Button type="submit" disabled={submissionStatus === 'sending'}>
-                                {submissionStatus === 'sending' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                                Kirim Tautan Verifikasi
+                            <Button type="button" variant="secondary" onClick={() => setIsAddAdminOpen(false)} disabled={isSubmitting}>Batal</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                                Buat Akun & Kirim Kode
                             </Button>
                         </DialogFooter>
                     </form>
                 </Form>
-            ) : submissionStatus === 'waiting' ? (
-                <DialogBody className="text-center py-8">
-                    <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                        Tautan verifikasi telah dikirim. Menunggu calon anggota untuk mengonfirmasi pendaftaran.
-                    </p>
-                    <p className="font-bold text-2xl mt-2">{Math.floor(countdown/60).toString().padStart(2, '0')}:{(countdown%60).toString().padStart(2, '0')}</p>
-                </DialogBody>
-            ) : (
-                <DialogBody className="text-center py-8">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <p className="font-semibold">Verifikasi Berhasil!</p>
-                    <p className="text-muted-foreground">Akun baru telah dibuat.</p>
-                </DialogBody>
-            )}
         </DialogContent>
     </Dialog>
 
