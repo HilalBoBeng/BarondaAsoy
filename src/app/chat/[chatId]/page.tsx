@@ -8,7 +8,7 @@ import { getAuth } from 'firebase/auth';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Send, Check } from 'lucide-react';
+import { ArrowLeft, Send, Check, CheckCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -22,6 +22,7 @@ interface Chat {
   users: string[];
   userNames: { [key: string]: string };
   userPhotos: { [key: string]: string };
+  typing?: { [key: string]: boolean };
 }
 
 export default function ChatPage() {
@@ -34,6 +35,7 @@ export default function ChatPage() {
   const auth = getAuth();
   const currentUser = auth.currentUser;
   const router = useRouter();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -62,7 +64,6 @@ export default function ChatPage() {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       setMessages(msgs);
       
-      // Mark messages as read
       const unreadMessages = snapshot.docs.filter(d => !d.data().isRead && d.data().senderId !== currentUser.uid);
       for(const docSnap of unreadMessages) {
           await updateDoc(doc(db, 'chats', chatId as string, 'messages', docSnap.id), { isRead: true });
@@ -73,6 +74,9 @@ export default function ChatPage() {
     return () => {
       unsubChat();
       unsubMessages();
+       if (currentUser) {
+          updateDoc(chatDocRef, { [`typing.${currentUser.uid}`]: false });
+       }
     };
   }, [chatId, currentUser, router]);
 
@@ -80,9 +84,39 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const updateTypingStatus = (isTyping: boolean) => {
+    if (!currentUser || !chatId) return;
+    const chatDocRef = doc(db, 'chats', chatId as string);
+    updateDoc(chatDocRef, {
+      [`typing.${currentUser.uid}`]: isTyping
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    
+    if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+    } else {
+        updateTypingStatus(true);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+        updateTypingStatus(false);
+        typingTimeoutRef.current = null;
+    }, 1500);
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !currentUser || !chatId) return;
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    updateTypingStatus(false);
+
 
     const messagesColRef = collection(db, 'chats', chatId as string, 'messages');
     await addDoc(messagesColRef, {
@@ -107,6 +141,7 @@ export default function ChatPage() {
   const otherUser = chatInfo && currentUser ? chatInfo.users.find(uid => uid !== currentUser.uid) : null;
   const otherUserName = otherUser ? chatInfo?.userNames[otherUser] : 'Warga';
   const otherUserPhoto = otherUser ? chatInfo?.userPhotos[otherUser] : '';
+  const isOtherUserTyping = otherUser ? chatInfo?.typing?.[otherUser] : false;
 
 
   if (loading) {
@@ -136,7 +171,12 @@ export default function ChatPage() {
                 <AvatarImage src={otherUserPhoto} />
                 <AvatarFallback>{otherUserName?.charAt(0)}</AvatarFallback>
             </Avatar>
-            <h2 className="font-semibold">{otherUserName}</h2>
+            <div className="flex flex-col">
+                <h2 className="font-semibold">{otherUserName}</h2>
+                {isOtherUserTyping && (
+                  <p className="text-xs text-primary animate-pulse">Sedang mengetik...</p>
+                )}
+            </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -150,7 +190,7 @@ export default function ChatPage() {
                      )}
                      <div className={cn(
                         "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col",
-                        msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background'
+                        msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background shadow-sm'
                      )}>
                          <p>{msg.text}</p>
                          <div className="flex items-center gap-1.5 self-end mt-1">
@@ -158,9 +198,13 @@ export default function ChatPage() {
                                 {msg.timestamp ? format(msg.timestamp.toDate(), 'HH:mm') : '...'}
                              </span>
                              {msg.senderId === currentUser?.uid && (
-                                <div className="relative h-4 w-4">
-                                     <Check className={cn("absolute h-4 w-4", msg.isRead ? "text-primary-foreground" : "text-primary-foreground/50")} />
-                                </div>
+                                <>
+                                  {msg.isRead ? (
+                                    <CheckCheck className="h-4 w-4 text-primary-foreground" style={{color: 'hsl(var(--primary))'}}/>
+                                  ) : (
+                                    <Check className="h-4 w-4 text-primary-foreground/50"/>
+                                  )}
+                                </>
                              )}
                          </div>
                      </div>
@@ -173,7 +217,7 @@ export default function ChatPage() {
             <form onSubmit={sendMessage} className="flex items-center gap-2">
                  <Textarea 
                     value={newMessage} 
-                    onChange={(e) => setNewMessage(e.target.value)} 
+                    onChange={handleInputChange}
                     placeholder="Ketik pesan..." 
                     rows={1}
                     className="resize-none max-h-24 h-10"
@@ -192,3 +236,4 @@ export default function ChatPage() {
     </div>
   );
 }
+
