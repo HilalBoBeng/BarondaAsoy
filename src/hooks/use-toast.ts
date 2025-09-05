@@ -9,8 +9,8 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000; // Set a very long delay, dismissal is handled by component
+const TOAST_LIMIT = 3
+const TOAST_REMOVE_DELAY = 3000;
 
 type ToasterToast = ToastProps & {
   id: string
@@ -57,6 +57,25 @@ interface State {
   toasts: ToasterToast[]
 }
 
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -75,6 +94,13 @@ const reducer = (state: State, action: Action): State => {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
       return {
         ...state,
         toasts: state.toasts.map((t) =>
@@ -135,6 +161,10 @@ function toast({ ...props }: Toast) {
       },
     },
   });
+
+  setTimeout(() => {
+    dismiss();
+  }, TOAST_REMOVE_DELAY - 500);
 
   return {
     id: id,

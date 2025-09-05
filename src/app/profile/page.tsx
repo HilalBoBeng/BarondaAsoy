@@ -133,7 +133,7 @@ export default function ProfilePage() {
             
             if (userData.isBlocked || userData.isSuspended) {
                 alert(`Akun Anda sedang dalam status ditangguhkan atau diblokir.`);
-                auth.signOut();
+                signOut(auth);
                 router.push('/auth/login');
                 return;
             }
@@ -171,7 +171,7 @@ export default function ProfilePage() {
 
     return () => unsubscribeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth, router, toast]);
+  }, [auth, router]);
 
   const handleEditClick = (field: FieldName) => {
     if (field === 'displayName') return;
@@ -526,8 +526,30 @@ export default function ProfilePage() {
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                          <DrawerBody>
-                            {editingField && editingField === 'bio' && (
-                            <FormField
+                            {editingField === 'photoURL' ? (
+                                <FormField
+                                    control={form.control}
+                                    name="photoURL"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <div className="hidden"><Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} /></div>
+                                        </FormControl>
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Avatar className="h-40 w-40 mt-2">
+                                                <AvatarImage src={field.value || ''} alt="Preview" />
+                                                <AvatarFallback>
+                                                    <Loader2 className="animate-spin" />
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Ubah Foto</Button>
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            ) : editingField === 'bio' ? (
+                                <FormField
                                     control={form.control}
                                     name="bio"
                                     render={({ field }) => (
@@ -538,9 +560,8 @@ export default function ProfilePage() {
                                     </FormItem>
                                     )}
                                 />
-                            )}
-                            {editingField && editingField !== 'photoURL' && editingField !== 'bio' && (
-                            <FormField
+                            ) : editingField && (
+                                <FormField
                                     control={form.control}
                                     name={editingField}
                                     render={({ field }) => (
@@ -552,50 +573,12 @@ export default function ProfilePage() {
                                     )}
                                 />
                             )}
-                            {editingField === 'photoURL' && (
-                                <FormField
-                                    control={form.control}
-                                    name="photoURL"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <div className="hidden"><Input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} /></div>
-                                        </FormControl>
-                                        {field.value && (
-                                        <div className="flex flex-col items-center gap-4">
-                                                <Avatar className="h-40 w-40 mt-2">
-                                                    <AvatarImage src={field.value} alt="Preview" />
-                                                    <AvatarFallback>
-                                                        <Loader2 className="animate-spin" />
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                        </div>
-                                        )}
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            )}
                         </DrawerBody>
                          <DrawerFooter className="sm:justify-between gap-2 pt-4">
                            {editingField === 'photoURL' && user?.photoURL ? (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button type="button" variant="destructive">
-                                            <Trash className="h-4 w-4 mr-2" /> Hapus Foto
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
-                                            <AlertDialogDescription>Tindakan ini akan menghapus foto profil Anda secara permanen. Anda dapat mengunggah yang baru nanti.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDeletePhoto}>Ya, Hapus</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                <Button type="button" variant="destructive" onClick={handleDeletePhoto} disabled={isSubmitting}>
+                                    <Trash className="h-4 w-4 mr-2" /> Hapus Foto
+                                </Button>
                            ) : <div></div>}
                            <div className="flex gap-2 justify-end">
                                 <Button type="button" variant="secondary" onClick={() => {setIsEditDialogOpen(false); setEditingField(null)}}>Batal</Button>
