@@ -16,16 +16,17 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { onSnapshot, doc } from "firebase/firestore";
+import { onSnapshot, doc, query, collection, where } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Staff } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 
 const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
     { href: "/bendahara/dues", icon: Landmark, label: 'Iuran', id: 'dues' },
     { href: "/bendahara/finance", icon: Wallet, label: 'Keuangan', id: 'finance' },
     { href: "/bendahara/tools", icon: Wrench, label: 'Lainnya', id: 'tools' },
-    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile' },
+    { href: "/bendahara/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', badgeKey: 'unreadNotifications' },
 ];
 
 function LoadingSkeleton() {
@@ -52,6 +53,7 @@ export default function BendaharaLayout({
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
   const [staffInfo, setStaffInfo] = useState<Staff | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     setIsClient(true);
@@ -81,7 +83,14 @@ export default function BendaharaLayout({
                 router.replace('/auth/staff-login');
             }
         });
-        return () => unsubStaff();
+        
+        const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', storedStaffInfo.id), where('read', '==', false));
+        const unsubNotifs = onSnapshot(notifsQuery, (snap) => setUnreadNotifications(snap.size));
+
+        return () => {
+            unsubStaff();
+            unsubNotifs();
+        };
     } else {
         router.replace('/auth/staff-login');
         return;
@@ -92,6 +101,16 @@ export default function BendaharaLayout({
   if (!isClient || !staffInfo) {
       return <LoadingSkeleton />;
   }
+  
+  const getBadgeCount = (badgeKey?: string) => {
+    if (badgeKey === 'unreadNotifications') return unreadNotifications;
+    return 0;
+  }
+  
+  const navItems = navItemsList.map(item => ({
+      ...item,
+      badge: getBadgeCount(item.badgeKey),
+  }));
 
   return (
     <div className="flex h-screen flex-col bg-muted/40">
@@ -117,7 +136,7 @@ export default function BendaharaLayout({
       </main>
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
             <div className="grid h-16 grid-cols-5 items-center justify-center gap-2 px-2">
-                {navItemsList.map(item => (
+                {navItems.map(item => (
                     <Link key={item.href} href={item.href} passHref>
                         <Button variant="ghost" className={cn(
                             "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
@@ -125,7 +144,12 @@ export default function BendaharaLayout({
                             ? "text-primary bg-primary/10" 
                             : "text-muted-foreground"
                             )}>
-                            <item.icon className="h-5 w-5" />
+                            <div className="relative">
+                                <item.icon className="h-5 w-5" />
+                                {item.badge > 0 && (
+                                    <Badge className="absolute -top-2 -right-2 h-4 w-4 justify-center rounded-full p-0 text-xs">{item.badge}</Badge>
+                                )}
+                            </div>
                             <span className="truncate">{item.label}</span>
                         </Button>
                     </Link>

@@ -42,7 +42,6 @@ const getInitialMenuState = (role: 'petugas' | 'bendahara'): Omit<MenuConfig, 'v
 
 const toolPageItems = [
     { href: "/admin/users", icon: UsersIcon, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
-    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan Warga', id: 'reports', roles: ['admin'] },
     { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
     { href: "/admin/attendance", icon: ClipboardList, label: 'Kehadiran', id: 'attendance', roles: ['admin'] },
     { href: "/admin/dues", icon: Landmark, label: 'Iuran', id: 'dues', roles: ['admin', 'bendahara'] },

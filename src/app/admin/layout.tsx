@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
-    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan', id: 'reports', roles: ['admin'] },
+    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan', id: 'reports', roles: ['admin'], badgeKey: 'newReports' },
     { href: "/admin/schedule", icon: Calendar, label: 'Jadwal', id: 'schedule', roles: ['admin'], badgeKey: 'newReports' },
     { href: "/admin/tools", icon: Wrench, label: 'Alat', id: 'tools', roles: ['admin', 'bendahara'] },
-    { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
+    { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'], badgeKey: 'unreadNotifications' },
 ];
 
 export default function AdminLayout({
@@ -38,7 +38,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [adminInfo, setAdminInfo] = useState<Staff | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0 });
+  const [badgeCounts, setBadgeCounts] = useState({ newReports: 0, unreadNotifications: 0 });
 
   const getBadgeCount = (badgeKey?: string) => {
     if (!badgeKey) return 0;
@@ -80,9 +80,13 @@ export default function AdminLayout({
         const reportsQuery = query(collection(db, 'reports'), where('status', '==', 'new'));
         const unsubReports = onSnapshot(reportsQuery, (snap) => setBadgeCounts(prev => ({...prev, newReports: snap.size})));
         
+        const notifsQuery = query(collection(db, 'notifications'), where('userId', '==', storedStaffInfo.id), where('read', '==', false));
+        const unsubNotifs = onSnapshot(notifsQuery, (snap) => setBadgeCounts(prev => ({...prev, unreadNotifications: snap.size})));
+
         return () => {
           unsubStaff();
           unsubReports();
+          unsubNotifs();
         }
     } else {
         router.replace('/auth/staff-login');
