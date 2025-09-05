@@ -18,7 +18,7 @@ import type { AppUser, PatrolLog } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings } from 'lucide-react';
+import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone } from 'lucide-react';
 import { usePathname } from "next/navigation";
 
 
@@ -26,7 +26,7 @@ const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
     { href: "/profile", icon: UserCircle, label: "Profil" },
     { href: "/chat", icon: MessageSquare, label: "Pesan" },
-    { href: "/settings", icon: Settings, label: "Pengaturan" },
+    { href: "/announcements", icon: Megaphone, label: "Pengumuman" },
 ]
 
 export default function MainDashboardView() {
