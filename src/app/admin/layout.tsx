@@ -43,21 +43,6 @@ const navItemsList = [
     { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
 ];
 
-// Items that will appear on the tools page
-const toolPageItems = [
-    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan', id: 'reports', badgeKey: 'newReports', roles: ['admin'] },
-    { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
-    { href: "/admin/attendance", icon: ClipboardList, label: 'Kehadiran', id: 'attendance', roles: ['admin'] },
-    { href: "/admin/dues", icon: Landmark, label: 'Iuran', id: 'dues', roles: ['admin', 'bendahara'] },
-    { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara'] },
-    { href: "/admin/honor-saya", icon: Wallet, label: 'Honor Saya', id: 'honor-saya', roles: ['admin', 'bendahara'] },
-    { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'bendahara'] },
-    { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin'] },
-    { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin'] },
-    { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin'] },
-]
-
-
 export default function AdminLayout({
   children,
 }: {
@@ -120,11 +105,23 @@ export default function AdminLayout({
   
   useEffect(() => {
     const segments = pathname.split('/').filter(Boolean);
-    const detailPage = segments.length > 2;
+    const detailPage = segments.length > 2 && segments[1] !== 'tools';
     setIsDetailPage(detailPage);
     
+    const allNavItems = [...navItems, 
+      // Manually add tool page items for title detection
+      { href: "/admin/reports", label: 'Laporan Warga' },
+      { href: "/admin/announcements", label: 'Pengumuman' },
+      { href: "/admin/attendance", label: 'Kehadiran' },
+      { href: "/admin/dues", label: 'Iuran' },
+      { href: "/admin/honor", label: 'Honorarium' },
+      { href: "/admin/honor-saya", label: 'Honor Saya' },
+      { href: "/admin/finance", label: 'Keuangan' },
+      { href: "/admin/activity-log", label: 'Log Admin' },
+      { href: "/admin/emergency-contacts", label: 'Kontak Darurat' },
+      { href: "/admin/notifications", label: 'Notifikasi' },
+    ];
     let newPageTitle = "Dasbor Admin";
-    const allNavItems = [...navItems, ...toolPageItems];
     const activeItem = allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/admin');
 
     if (activeItem) {
@@ -163,24 +160,28 @@ export default function AdminLayout({
         <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fade-in-up">
             {children}
         </main>
-        <nav className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-5 border-t bg-background/95 backdrop-blur-sm">
-            {navItems.map(item => (
-                <Link key={item.href} href={item.href} passHref>
-                    <Button variant="ghost" className={cn(
-                        "flex h-full w-full flex-col items-center justify-center gap-1 rounded-none p-2 text-xs",
-                        pathname.startsWith(item.href) && item.href !== '/admin' ? "text-primary bg-primary/10" : pathname === '/admin' && item.href === '/admin' ? "text-primary bg-primary/10" : "text-muted-foreground",
-                        pathname.startsWith('/admin/reports') && item.href === '/admin/schedule' && 'text-primary bg-primary/10' // Highlight 'Jadwal' for 'Laporan'
-                    )}>
-                        <div className="relative">
-                            <item.icon className="h-5 w-5" />
-                            {item.badge > 0 && (
-                                <Badge className="absolute -top-2 -right-2 h-4 w-4 justify-center rounded-full p-0 text-xs">{item.badge}</Badge>
-                            )}
-                        </div>
-                        <span className="truncate">{item.label}</span>
-                    </Button>
-                </Link>
-            ))}
+         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
+            <div className="grid h-16 grid-cols-5 items-center justify-center gap-2 px-2">
+                {navItems.map(item => (
+                    <Link key={item.href} href={item.href} passHref>
+                        <Button variant="ghost" className={cn(
+                            "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                            (pathname.startsWith(item.href) && item.href !== '/admin') || (pathname === '/admin' && item.href === '/admin') 
+                            ? "text-primary bg-primary/10" 
+                            : "text-muted-foreground",
+                             (pathname.startsWith('/admin/reports') && item.href === '/admin/schedule') && 'text-primary bg-primary/10' // Highlight 'Jadwal' for 'Laporan'
+                            )}>
+                            <div className="relative">
+                                <item.icon className="h-5 w-5" />
+                                {item.badge > 0 && (
+                                    <Badge className="absolute -top-2 -right-2 h-4 w-4 justify-center rounded-full p-0 text-xs">{item.badge}</Badge>
+                                )}
+                            </div>
+                            <span className="truncate">{item.label}</span>
+                        </Button>
+                    </Link>
+                ))}
+            </div>
         </nav>
     </div>
   );

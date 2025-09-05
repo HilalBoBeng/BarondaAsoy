@@ -31,33 +31,33 @@ export default function FloatingChatButton() {
 
     const chatsQuery = query(collection(db, 'chats'), where('users', 'array-contains', user.uid));
 
-    const unsubscribe = onSnapshot(chatsQuery, (chatsSnapshot) => {
+    const unsubscribe = onSnapshot(chatsQuery, async (chatsSnapshot) => {
       let totalUnread = 0;
-      const promises: Promise<void>[] = [];
 
-      if (chatsSnapshot.empty) {
-        setUnreadCount(0);
-        return;
-      }
-      
-      chatsSnapshot.forEach(chatDoc => {
-        // Fetch all messages and filter client-side to avoid composite index
-        const messagesQuery = query(collection(db, 'chats', chatDoc.id, 'messages'));
+      for (const chatDoc of chatsSnapshot.docs) {
+        const messagesQuery = query(
+          collection(db, 'chats', chatDoc.id, 'messages'),
+          where('senderId', '!=', user.uid),
+          where('isRead', '==', false)
+        );
         
-        const promise = getDocs(messagesQuery).then(messagesSnapshot => {
-            messagesSnapshot.forEach(msgDoc => {
-                const msgData = msgDoc.data() as Message;
-                if (msgData.senderId !== user.uid && !msgData.isRead) {
-                    totalUnread++;
-                }
-            });
-        });
-        promises.push(promise);
-      });
-
-      Promise.all(promises).then(() => {
-        setUnreadCount(totalUnread);
-      });
+        try {
+          // This query might still require an index, but it's simpler.
+          // The best approach is to store unread counts on the chat document itself.
+          // For now, let's try to fetch and count.
+          const messagesSnapshot = await getDocs(messagesQuery);
+          totalUnread += messagesSnapshot.size;
+        } catch (error) {
+           // Fallback if index is missing: fetch and filter on client
+           const allMessagesSnapshot = await getDocs(collection(db, 'chats', chatDoc.id, 'messages'));
+           const unreadMessages = allMessagesSnapshot.docs.filter(doc => {
+               const data = doc.data();
+               return data.senderId !== user?.uid && !data.isRead;
+           });
+           totalUnread += unreadMessages.length;
+        }
+      }
+      setUnreadCount(totalUnread);
     });
 
     return () => unsubscribe();
@@ -66,7 +66,6 @@ export default function FloatingChatButton() {
   if (!user || unreadCount === 0) {
     return null;
   }
-
 
   return (
     <Link href="/chat">

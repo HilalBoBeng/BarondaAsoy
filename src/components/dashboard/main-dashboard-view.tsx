@@ -130,7 +130,7 @@ export default function MainDashboardView() {
                     <Announcements userInfo={userInfo} />
                     <Schedule />
                     <ReportActivity user={user} userInfo={userInfo} />
-                    <ReportHistory />
+                    <ReportHistory user={user} />
                     <EmergencyContacts />
                 </div>
             </div>

@@ -336,19 +336,21 @@ export default function PetugasLayout({
           {children}
         </div>
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 items-center justify-center gap-1 border-t bg-background/95 p-1 backdrop-blur-sm">
-          {navItemsList.slice(0, 5).map(item => (
-              <Link key={item.href} href={item.href} passHref>
-                   <Button variant="ghost" className={cn(
-                      "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
-                      pathname.startsWith(item.href) && item.href !== '/petugas' ? "text-primary bg-primary/10" : pathname === '/petugas' && item.href === '/petugas' ? "text-primary bg-primary/10" : "text-muted-foreground"
-                   )}>
-                      <item.icon className="h-5 w-5" />
-                      <span className="truncate">{item.label}</span>
-                  </Button>
-              </Link>
-          ))}
-      </nav>
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
+            <div className="grid h-16 grid-cols-5 items-center justify-center gap-2 px-2">
+                {navItems.slice(0, 5).map(item => (
+                    <Link key={item.id} href={item.href} passHref>
+                        <Button variant="ghost" className={cn(
+                            "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
+                            pathname.startsWith(item.href) && item.href !== '/petugas' ? "text-primary bg-primary/10" : pathname === '/petugas' && item.href === '/petugas' ? "text-primary bg-primary/10" : "text-muted-foreground"
+                            )}>
+                            <item.icon className="h-5 w-5" />
+                            <span className="truncate">{item.label}</span>
+                        </Button>
+                    </Link>
+                ))}
+            </div>
+        </nav>
       <Dialog open={false}>
         <DialogContent>
             <DialogHeader>
