@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, setDoc, collection, query, where, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MonitorOff, Settings, Users as UsersIcon, Phone, FileText, Landmark, Banknote, Wallet, History, Bell, Image as ImageIcon, Speaker, MenuSquare } from 'lucide-react';
+import { Loader2, MonitorOff, Settings, Users as UsersIcon, Phone, FileText, Landmark, Banknote, Wallet, History, Bell, Speaker, MenuSquare, ChevronRight } from 'lucide-react';
 import type { Staff } from '@/lib/types';
 import Link from 'next/link';
 import { createLog } from '@/lib/utils';
@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 
 const toolPageItems = [
     { href: "/admin/users", icon: UsersIcon, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
-    { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
+    { href: "/admin/announcements", icon: Speaker, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
     { href: "/admin/attendance", icon: Landmark, label: 'Kehadiran', id: 'attendance', roles: ['admin'] },
     { href: "/admin/dues", icon: Landmark, label: 'Iuran', id: 'dues', roles: ['admin', 'bendahara'] },
     { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara'] },
@@ -130,25 +130,33 @@ export default function ToolsAdminPage() {
   return (
     <div className="space-y-6">
        <h1 className="text-xl font-bold">Alat & Pengaturan</h1>
+        
         <Card>
             <CardHeader>
                 <CardTitle>Menu Alat</CardTitle>
                 <CardDescription>Akses cepat ke semua fitur manajemen.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <CardContent className="p-0">
+                <div className="divide-y">
                  {toolPageItems
                     .filter(item => item.roles.includes(currentAdmin?.role || ''))
                     .map(item => (
-                    <Link key={item.href} href={item.href} className="block">
-                        <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4 relative">
-                            {item.id === 'notifications' && unreadNotifications > 0 && (
-                                <Badge className="absolute top-2 right-2">{unreadNotifications}</Badge>
-                            )}
-                            <item.icon className="h-8 w-8 text-primary mb-2" />
-                            <p className="text-sm font-semibold">{item.label}</p>
-                        </Card>
+                    <Link key={item.href} href={item.href} className="block hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-4">
+                                <item.icon className="h-5 w-5 text-primary" />
+                                <p className="font-medium">{item.label}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {item.id === 'notifications' && unreadNotifications > 0 && (
+                                    <Badge>{unreadNotifications}</Badge>
+                                )}
+                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                        </div>
                     </Link>
                 ))}
+                </div>
             </CardContent>
         </Card>
 

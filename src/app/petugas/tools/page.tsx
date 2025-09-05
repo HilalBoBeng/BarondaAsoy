@@ -3,9 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, FileText, Phone, Megaphone, Bell, Banknote, User as UserIcon, Wrench } from 'lucide-react';
+import { FileText, Phone, Megaphone, Bell, Banknote, ChevronRight } from 'lucide-react';
 import type { Staff } from '@/lib/types';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -45,18 +44,25 @@ export default function PetugasToolsPage() {
                 <CardTitle>Menu Lainnya</CardTitle>
                 <CardDescription>Akses cepat ke fitur-fitur tambahan.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                 {toolPageItems.map(item => (
-                    <Link key={item.href} href={item.href} className="block">
-                        <Card className="h-full hover:bg-muted transition-colors text-center flex flex-col items-center justify-center p-4 relative">
-                            {item.id === 'notifications' && unreadNotifications > 0 && (
-                                <Badge className="absolute top-2 right-2">{unreadNotifications}</Badge>
-                            )}
-                            <item.icon className="h-8 w-8 text-primary mb-2" />
-                            <p className="text-sm font-semibold">{item.label}</p>
-                        </Card>
-                    </Link>
-                ))}
+            <CardContent className="p-0">
+                <div className="divide-y">
+                     {toolPageItems.map(item => (
+                        <Link key={item.href} href={item.href} className="block hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center justify-between p-4">
+                                <div className="flex items-center gap-4">
+                                    <item.icon className="h-5 w-5 text-primary" />
+                                    <p className="font-medium">{item.label}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                     {item.id === 'notifications' && unreadNotifications > 0 && (
+                                        <Badge>{unreadNotifications}</Badge>
+                                    )}
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
             </CardContent>
         </Card>
     </div>
