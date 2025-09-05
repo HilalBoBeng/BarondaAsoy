@@ -146,12 +146,10 @@ export default function ReportHistory() {
         return (
             <Card>
                 <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
-                <CardContent className="p-6">
-                    <div className="space-y-4">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="h-24 w-full" />
-                        ))}
-                    </div>
+                <CardContent className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                    ))}
                 </CardContent>
             </Card>
         )
@@ -173,8 +171,8 @@ export default function ReportHistory() {
                 <div className="space-y-4">
                 {paginatedReports.map((report) => (
                     <Card key={report.id} className="overflow-hidden">
-                        <CardContent className="p-4 relative">
-                            <div className="flex justify-between items-start mb-2 gap-2">
+                        <CardContent className="p-4">
+                             <div className="relative flex justify-between items-start mb-2 gap-2">
                                 <div className="flex-grow">
                                     <p className="text-sm text-foreground/90 break-words pr-4">
                                         {report.reportText}
@@ -183,7 +181,7 @@ export default function ReportHistory() {
                                         {formatDistanceToNow(new Date(report.createdAt as Date), { addSuffix: true, locale: id })}
                                     </p>
                                 </div>
-                                <div className="absolute top-4 right-4 flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                      <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
