@@ -3,18 +3,20 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase/client';
-import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc, Timestamp, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, serverTimestamp, orderBy, query, updateDoc, Timestamp, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Send, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, Check, CheckCheck, MoreVertical, Trash } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import type { Message, AppUser } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
+import { id } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 interface Chat {
@@ -23,6 +25,7 @@ interface Chat {
   userNames: { [key: string]: string };
   userPhotos: { [key: string]: string };
   typing?: { [key: string]: boolean };
+  lastActive?: { [key: string]: Timestamp };
 }
 
 export default function ChatPage() {
@@ -53,6 +56,12 @@ export default function ChatPage() {
             return;
         }
         setChatInfo(chatData);
+
+        // Update user's last active timestamp
+        updateDoc(chatDocRef, {
+          [`lastActive.${currentUser.uid}`]: serverTimestamp(),
+        });
+
       } else {
         notFound();
       }
@@ -70,6 +79,14 @@ export default function ChatPage() {
       }
 
     });
+    
+     const handleVisibilityChange = () => {
+        if (document.hidden) {
+            updateDoc(chatDocRef, { [`typing.${currentUser.uid}`]: false });
+        }
+     }
+     document.addEventListener("visibilitychange", handleVisibilityChange);
+
 
     return () => {
       unsubChat();
@@ -77,6 +94,7 @@ export default function ChatPage() {
        if (currentUser) {
           updateDoc(chatDocRef, { [`typing.${currentUser.uid}`]: false });
        }
+       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [chatId, currentUser, router]);
 
@@ -106,6 +124,12 @@ export default function ChatPage() {
         typingTimeoutRef.current = null;
     }, 1500);
   };
+  
+  const handleDeleteMessage = async (messageId: string) => {
+     if (!chatId) return;
+     const messageRef = doc(db, 'chats', chatId as string, 'messages', messageId);
+     await deleteDoc(messageRef);
+  }
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +166,22 @@ export default function ChatPage() {
   const otherUserName = otherUser ? chatInfo?.userNames[otherUser] : 'Warga';
   const otherUserPhoto = otherUser ? chatInfo?.userPhotos[otherUser] : '';
   const isOtherUserTyping = otherUser ? chatInfo?.typing?.[otherUser] : false;
+  const otherUserLastActive = otherUser && chatInfo?.lastActive?.[otherUser] ? (chatInfo.lastActive[otherUser] as Timestamp).toDate() : null;
+
+  const renderStatus = () => {
+    if (isOtherUserTyping) {
+        return <p className="text-xs text-primary animate-pulse">Sedang mengetik...</p>;
+    }
+    if (otherUserLastActive) {
+        const now = new Date();
+        const diffSeconds = (now.getTime() - otherUserLastActive.getTime()) / 1000;
+        if (diffSeconds < 60) {
+             return <p className="text-xs text-muted-foreground">Aktif</p>;
+        }
+        return <p className="text-xs text-muted-foreground">Dilihat {formatDistanceToNowStrict(otherUserLastActive, { addSuffix: true, locale: id })}</p>;
+    }
+    return <p className="text-xs text-muted-foreground">Offline</p>;
+  };
 
 
   if (loading) {
@@ -173,27 +213,39 @@ export default function ChatPage() {
             </Avatar>
             <div className="flex flex-col">
                 <h2 className="font-semibold">{otherUserName}</h2>
-                {isOtherUserTyping && (
-                  <p className="text-xs text-primary animate-pulse">Sedang mengetik...</p>
-                )}
+                {renderStatus()}
             </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 flex flex-col">
             <div className="space-y-4">
               {messages.map(msg => (
-                  <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start')}>
-                      {msg.senderId !== currentUser?.uid && (
+                  <div key={msg.id} className={cn("flex items-end gap-2 group", msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start')}>
+                     {msg.senderId !== currentUser?.uid && (
                           <Avatar className="h-8 w-8">
                               <AvatarImage src={otherUserPhoto} />
                               <AvatarFallback>{otherUserName?.charAt(0)}</AvatarFallback>
                           </Avatar>
                       )}
                       <div className={cn(
-                          "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col",
+                          "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words flex flex-col relative",
                           msg.senderId === currentUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-background shadow-sm'
                       )}>
-                          <p>{msg.text}</p>
+                           {msg.senderId === currentUser?.uid && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                         <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/20">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => handleDeleteMessage(msg.id)} className="text-destructive focus:text-destructive">
+                                            <Trash className="mr-2 h-4 w-4"/> Hapus
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                           )}
+                          <p className="pr-4">{msg.text}</p>
                           <div className="flex items-center gap-1.5 self-end mt-1">
                               <span className="text-xs opacity-70">
                                   {msg.timestamp ? format((msg.timestamp as Timestamp).toDate(), 'HH:mm') : '...'}

@@ -41,14 +41,16 @@ export default function FloatingChatButton() {
       }
       
       chatsSnapshot.forEach(chatDoc => {
-        const messagesQuery = query(
-          collection(db, 'chats', chatDoc.id, 'messages'),
-          where('senderId', '!=', user.uid),
-          where('isRead', '==', false)
-        );
+        // Fetch all messages and filter client-side to avoid composite index
+        const messagesQuery = query(collection(db, 'chats', chatDoc.id, 'messages'));
         
         const promise = getDocs(messagesQuery).then(messagesSnapshot => {
-          totalUnread += messagesSnapshot.size;
+            messagesSnapshot.forEach(msgDoc => {
+                const msgData = msgDoc.data() as Message;
+                if (msgData.senderId !== user.uid && !msgData.isRead) {
+                    totalUnread++;
+                }
+            });
         });
         promises.push(promise);
       });
