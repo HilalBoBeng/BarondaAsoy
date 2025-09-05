@@ -122,8 +122,9 @@ export default function ConversationsPage() {
                                                 {convo.lastMessage ? `${convo.lastMessage.senderId === currentUser?.uid ? 'Anda: ' : ''}${convo.lastMessage.text}` : 'Belum ada pesan.'}
                                             </p>
                                             {unread > 0 && (
-                                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                                                    {unread}
+                                                <span className="relative flex h-5 w-5">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-5 w-5 items-center justify-center bg-primary text-xs font-bold text-primary-foreground">{unread > 9 ? '9+' : unread}</span>
                                                 </span>
                                             )}
                                         </div>
