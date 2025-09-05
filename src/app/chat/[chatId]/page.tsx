@@ -180,7 +180,7 @@ export default function ChatPage() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 flex flex-col">
-            <div className="mt-auto space-y-4">
+            <div className="space-y-4">
               {messages.map(msg => (
                   <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === currentUser?.uid ? 'justify-end' : 'justify-start')}>
                       {msg.senderId !== currentUser?.uid && (
