@@ -19,7 +19,7 @@ import { getAuth, signOut, type User } from "firebase/auth";
 import { app, db } from "@/lib/firebase/client";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, getDocs, limit, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, onSnapshot, orderBy, Timestamp, doc, updateDoc } from "firebase/firestore";
 import type { AppUser, Notification } from "@/lib/types";
 import { Input } from "../ui/input";
 import { cn } from "@/lib/utils";
@@ -58,12 +58,14 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
         );
         const unsub = onSnapshot(notifsQuery, (snapshot) => {
             const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
+            
             // Sort client-side to avoid composite index
             notifsData.sort((a, b) => {
               const timeA = (a.createdAt as Timestamp)?.toMillis() || 0;
               const timeB = (b.createdAt as Timestamp)?.toMillis() || 0;
               return timeB - timeA;
             });
+
             setNotifications(notifsData);
             setUnreadCount(notifsData.filter(n => !n.read).length);
         });
@@ -118,8 +120,12 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
      setIsNotificationsOpen(false);
+     if (!notification.read) {
+        const notifRef = doc(db, 'notifications', notification.id);
+        await updateDoc(notifRef, { read: true });
+     }
      if (notification.link) {
          router.push(notification.link);
      }
@@ -203,10 +209,11 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
           </Button>
      </div>
 
-     {isSearchOpen && searchQuery && !isSearching && (
-        <Card className="absolute top-16 left-0 sm:left-auto sm:right-4 w-full sm:max-w-sm sm:w-80 z-40 shadow-lg rounded-t-none sm:rounded-t-lg">
+     {isSearchOpen && searchQuery && (
+        <Card className="absolute top-16 left-0 right-0 mx-auto sm:left-auto sm:right-4 w-[95%] sm:max-w-sm sm:w-80 z-40 shadow-lg sm:rounded-t-lg">
             <div className="p-2 max-h-[60vh] overflow-y-auto">
-                {searchResults.length > 0 ? (
+                {isSearching ? <div className="p-4 text-center text-sm text-muted-foreground">Mencari...</div> 
+                : searchResults.length > 0 ? (
                     searchResults.map(foundUser => (
                         <Link key={foundUser.uid} href={`/users/${foundUser.uid}`} onClick={() => setIsSearchOpen(false)} className="block">
                             <div className="flex items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-muted">
@@ -238,7 +245,7 @@ export function UserNav({ user, userInfo }: { user: User | null; userInfo: AppUs
                 notifications.map(notif => (
                   <div key={notif.id} onClick={() => handleNotificationClick(notif)}
                        className={cn("p-3 mb-2 border-l-4 rounded-r-md cursor-pointer hover:bg-muted/50",
-                       notif.read ? 'border-transparent' : 'border-primary bg-muted/80'
+                       notif.read ? 'border-transparent' : 'border-primary bg-primary/10'
                        )}>
                       <p className="font-semibold text-sm">{notif.title}</p>
                       <p className="text-xs text-muted-foreground truncate">{notif.message}</p>

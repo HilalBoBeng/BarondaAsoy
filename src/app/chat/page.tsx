@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,8 +42,7 @@ export default function ConversationsPage() {
 
     const q = query(
       collection(db, 'chats'),
-      where('users', 'array-contains', currentUser.uid),
-      orderBy('lastMessage.timestamp', 'desc')
+      where('users', 'array-contains', currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -51,6 +50,14 @@ export default function ConversationsPage() {
         id: doc.id,
         ...doc.data()
       } as Conversation));
+
+      // Sort client-side to avoid composite index
+      convos.sort((a, b) => {
+        const timeA = (a.lastMessage?.timestamp as Timestamp)?.toMillis() || 0;
+        const timeB = (b.lastMessage?.timestamp as Timestamp)?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
       setConversations(convos);
       setLoading(false);
     });
@@ -71,7 +78,7 @@ export default function ConversationsPage() {
     <div className="flex min-h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <Link href="/" className="font-bold text-primary">Baronda</Link>
-             <UserNav />
+             <UserNav user={currentUser} userInfo={null} />
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="container mx-auto max-w-2xl">
@@ -105,7 +112,7 @@ export default function ConversationsPage() {
                                                 <div className="flex-1 overflow-hidden">
                                                     <div className="flex justify-between">
                                                         <p className="font-semibold truncate">{otherUser.name}</p>
-                                                        {convo.lastMessage && (
+                                                        {convo.lastMessage && convo.lastMessage.timestamp && (
                                                              <p className="text-xs text-muted-foreground whitespace-nowrap">
                                                                 {formatDistanceToNow(convo.lastMessage.timestamp.toDate(), { addSuffix: true, locale: id })}
                                                             </p>
