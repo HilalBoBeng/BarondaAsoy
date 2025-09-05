@@ -19,6 +19,8 @@ import { id } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { Home, Shield, ScrollText, UserCircle, Bell, MessageSquare, Settings, Megaphone } from 'lucide-react';
 import { usePathname } from "next/navigation";
+import { UserNav } from './user-nav';
+import Announcements from './announcements';
 
 
 const navItems = [
@@ -106,12 +108,15 @@ export default function MainDashboardView() {
     <div className="flex min-h-screen flex-col bg-muted/40">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
             <h1 className="text-xl font-bold text-primary">Baronda</h1>
-             <Link href="/announcements" className="flex items-center gap-2 text-sm font-medium text-primary">
-                <Megaphone className="h-5 w-5" />
-            </Link>
+             <div className="flex items-center gap-1">
+                <Link href="/announcements" className="flex items-center gap-2 text-sm font-medium text-primary">
+                    <Button variant="ghost" size="icon"><Megaphone className="h-5 w-5" /></Button>
+                </Link>
+                <UserNav user={user} userInfo={userInfo} />
+             </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
             <div className="mx-auto w-full max-w-screen-2xl space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
@@ -132,6 +137,7 @@ export default function MainDashboardView() {
                     <EmergencyContacts />
                 </div>
             </div>
+            <Announcements />
         </main>
 
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
