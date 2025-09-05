@@ -45,8 +45,7 @@ export default function PatrolLogPage() {
         if (info.name) {
             const logsQuery = query(
                 collection(db, "patrol_logs"),
-                where("officerName", "==", info.name),
-                orderBy("createdAt", "desc")
+                where("officerName", "==", info.name)
             );
             const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
                 const logsData = snapshot.docs.map(d => ({ 
@@ -54,6 +53,7 @@ export default function PatrolLogPage() {
                     ...d.data(),
                     createdAt: (d.data().createdAt as Timestamp).toDate(),
                 } as PatrolLog));
+                logsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
                 setLogs(logsData);
                 setLoadingLogs(false);
             });
