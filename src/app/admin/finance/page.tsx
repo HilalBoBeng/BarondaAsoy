@@ -171,6 +171,8 @@ export default function FinancePage() {
     link.click();
     document.body.removeChild(link);
   };
+  
+  const canAddTransaction = adminInfo?.role === 'bendahara';
 
   return (
     <Card>
@@ -181,7 +183,9 @@ export default function FinancePage() {
               <CardDescription>Lacak semua pemasukan dan pengeluaran dana operasional.</CardDescription>
             </div>
             <div className="flex gap-2">
-                <Button onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Transaksi</Button>
+                {canAddTransaction && (
+                    <Button onClick={() => setIsDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Transaksi</Button>
+                )}
                 <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" /> Ekspor</Button>
             </div>
         </div>

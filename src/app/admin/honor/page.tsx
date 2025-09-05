@@ -176,7 +176,7 @@ export default function HonorariumAdminPage() {
     }
   }
   
-  const canPerformActions = adminInfo?.role === 'super_admin';
+  const canPerformActions = adminInfo?.role === 'admin' || adminInfo?.role === 'bendahara';
 
   return (
     <>

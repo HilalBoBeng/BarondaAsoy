@@ -40,20 +40,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Staff } from "@/lib/types";
 
 const navItemsList = [
-    { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'super_admin'] },
-    { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'super_admin'] },
-    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan Masuk', id: 'reports', badgeKey: 'newReports', roles: ['admin', 'super_admin'] },
-    { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin', 'super_admin'] },
-    { href: "/admin/users", icon: Users, label: 'Manajemen Pengguna', id: 'users', roles: ['admin', 'super_admin'] },
-    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal Patroli', id: 'schedule', roles: ['admin', 'super_admin'] },
-    { href: "/admin/attendance", icon: ClipboardList, label: 'Daftar Hadir', id: 'attendance', roles: ['admin', 'super_admin'] },
-    { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['admin', 'super_admin'] },
-    { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'super_admin'] },
-    { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'super_admin'] },
-    { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin', 'super_admin'] },
-    { href: "/admin/tools", icon: Wrench, label: 'Lainnya', id: 'tools', roles: ['admin', 'super_admin'] },
-    { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin', 'super_admin'] },
-    { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin', 'super_admin'] },
+    { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
+    { href: "/admin/profile", icon: UserIcon, label: 'Profil Saya', id: 'profile', roles: ['admin', 'bendahara'] },
+    { href: "/admin/reports", icon: ShieldAlert, label: 'Laporan Masuk', id: 'reports', badgeKey: 'newReports', roles: ['admin'] },
+    { href: "/admin/announcements", icon: FileText, label: 'Pengumuman', id: 'announcements', roles: ['admin'] },
+    { href: "/admin/users", icon: Users, label: 'Manajemen Pengguna', id: 'users', roles: ['admin'] },
+    { href: "/admin/schedule", icon: Calendar, label: 'Jadwal Patroli', id: 'schedule', roles: ['admin'] },
+    { href: "/admin/attendance", icon: ClipboardList, label: 'Daftar Hadir', id: 'attendance', roles: ['admin'] },
+    { href: "/admin/dues", icon: Landmark, label: 'Iuran Warga', id: 'dues', roles: ['admin', 'bendahara'] },
+    { href: "/admin/honor", icon: Banknote, label: 'Honorarium', id: 'honor', roles: ['admin', 'bendahara'] },
+    { href: "/admin/finance", icon: Wallet, label: 'Keuangan', id: 'finance', roles: ['admin', 'bendahara'] },
+    { href: "/admin/activity-log", icon: History, label: 'Log Admin', id: 'activityLog', roles: ['admin'] },
+    { href: "/admin/tools", icon: Wrench, label: 'Lainnya', id: 'tools', roles: ['admin'] },
+    { href: "/admin/emergency-contacts", icon: Phone, label: 'Kontak Darurat', id: 'emergencyContacts', roles: ['admin'] },
+    { href: "/admin/notifications", icon: Bell, label: 'Notifikasi', id: 'notifications', roles: ['admin'] },
 ];
 
 
@@ -91,21 +91,13 @@ export default function AdminLayout({
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     
-    const validRoles = ['admin', 'super_admin'];
+    const validRoles = ['admin', 'bendahara'];
     if (!validRoles.includes(localStorage.getItem('userRole') || '')) {
       router.replace('/auth/staff-login');
       return;
     }
     
-    if (storedStaffInfo.email === 'admin@baronda.or.id') {
-        const superAdminData = {
-            id: 'super_admin',
-            name: 'Admin Utama',
-            email: 'admin@baronda.or.id',
-            role: 'super_admin',
-        } as Staff;
-        setAdminInfo(superAdminData);
-    } else if (storedStaffInfo.id) {
+    if (storedStaffInfo.id) {
         const staffDocRef = doc(db, "staff", storedStaffInfo.id);
         const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -176,9 +168,8 @@ export default function AdminLayout({
     }, silent ? 0 : 1500); 
   };
   
-  const getRoleDisplayName = (role?: 'admin' | 'super_admin' | 'bendahara' | 'petugas') => {
+  const getRoleDisplayName = (role?: 'admin' | 'bendahara' | 'petugas') => {
       switch (role) {
-          case 'super_admin': return 'Super Admin';
           case 'admin': return 'Administrator';
           case 'bendahara': return 'Bendahara';
           case 'petugas': return 'Petugas';
@@ -213,7 +204,8 @@ export default function AdminLayout({
             <p className="text-sm text-muted-foreground truncate">{adminInfo.email}</p>
             <Badge variant="secondary" className={cn(
                 "mt-2 w-fit", 
-                adminInfo.role === 'super_admin' ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-primary/80 text-primary-foreground hover:bg-primary/90"
+                adminInfo.role === 'admin' ? "bg-primary/80 text-primary-foreground hover:bg-primary/90" : 
+                "bg-indigo-500 text-white hover:bg-indigo-600"
                 )}>
               {getRoleDisplayName(adminInfo.role)}
             </Badge>

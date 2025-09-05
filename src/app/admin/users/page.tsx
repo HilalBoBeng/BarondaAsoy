@@ -76,11 +76,7 @@ export default function UsersAdminPage() {
     
     const info = JSON.parse(localStorage.getItem('staffInfo') || '{}');
     if (info) {
-        if (info.email === 'admin@baronda.or.id') {
-             setCurrentAdmin({ ...info, id: 'super_admin' });
-        } else {
-            setCurrentAdmin(info);
-        }
+        setCurrentAdmin(info);
     }
 
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
@@ -214,7 +210,6 @@ export default function UsersAdminPage() {
   }
 
   const getStaffStatus = (staff: Staff) => {
-    if (staff.role === 'super_admin') return { text: 'Super Admin', className: 'bg-purple-600 text-white hover:bg-purple-700' };
     if (staff.role === 'admin') return { text: 'Admin', className: 'bg-primary/80 text-primary-foreground hover:bg-primary/90' };
     if (staff.role === 'bendahara') return { text: 'Bendahara', className: 'bg-indigo-500 text-white hover:bg-indigo-600' };
     if (staff.status === 'suspended') return { text: 'Ditangguhkan', className: 'bg-yellow-100 text-yellow-800' };
@@ -415,10 +410,10 @@ export default function UsersAdminPage() {
                                       </Button>
                                   ) : (
                                       <>
-                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'super_admin' || (selectedUserForDetail as Staff)?.role === 'admin'}>
+                                          <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => openActionDialog(selectedUserForDetail, 'suspend')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
                                             <ShieldAlert className="mr-2 h-4 w-4"/> Tangguhkan
                                           </Button>
-                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'super_admin' || (selectedUserForDetail as Staff)?.role === 'admin'}>
+                                          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => openActionDialog(selectedUserForDetail, 'block')} disabled={(selectedUserForDetail as Staff)?.role === 'admin'}>
                                             <ShieldX className="mr-2 h-4 w-4"/> Blokir
                                           </Button>
                                       </>
@@ -426,7 +421,7 @@ export default function UsersAdminPage() {
                               </div>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id || (selectedUserForDetail as Staff)?.role === 'super_admin'}>
+                                      <Button variant="outline" className="w-full mt-2 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={(selectedUserForDetail as Staff)?.id === currentAdmin?.id || (selectedUserForDetail as Staff)?.role === 'admin'}>
                                         <Trash className="mr-2 h-4 w-4"/> Hapus Akun Ini
                                       </Button>
                                   </AlertDialogTrigger>

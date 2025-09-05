@@ -67,10 +67,8 @@ export default function StaffLoginPage() {
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
-    if (userRole === 'admin' || userRole === 'super_admin') {
+    if (userRole === 'admin' || userRole === 'bendahara') {
       router.replace('/admin');
-    } else if (userRole === 'bendahara') {
-      router.replace('/bendahara');
     } else if (userRole === 'petugas') {
       router.replace('/petugas');
     }
@@ -101,17 +99,6 @@ export default function StaffLoginPage() {
     setIsSubmitting(true);
     setSuspensionInfo(null);
     await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Admin login check
-    if (data.accessCode === "Admin123") {
-        localStorage.setItem('userRole', 'super_admin');
-        const adminInfo = { name: "Admin Utama", email: "admin@baronda.or.id", role: 'super_admin' };
-        localStorage.setItem('staffInfo', JSON.stringify(adminInfo));
-        toast({ title: "Berhasil", description: "Selamat datang, Admin!" });
-        router.push("/admin");
-        setIsSubmitting(false);
-        return;
-    }
 
     try {
         const staffQuery = query(
@@ -147,10 +134,8 @@ export default function StaffLoginPage() {
         localStorage.setItem('staffInfo', JSON.stringify({ name: staffData.name, id: staffDoc.id, email: staffData.email, role: role }));
 
         toast({ title: "Berhasil", description: `Selamat datang, ${staffData.name}!` });
-        if (role === 'admin' || role === 'super_admin') {
+        if (role === 'admin' || role === 'bendahara') {
             router.push("/admin");
-        } else if (role === 'bendahara') {
-            router.push("/bendahara");
         } else {
             router.push("/petugas");
         }

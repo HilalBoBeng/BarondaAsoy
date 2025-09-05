@@ -331,7 +331,7 @@ export default function ToolsAdminPage() {
   }
 
   const handleDeleteAdmin = async (adminId: string) => {
-      if (!isSuperAdmin) return;
+      if (currentAdmin?.role !== 'admin') return;
       try {
           await deleteDoc(doc(db, 'staff', adminId));
           toast({ title: 'Berhasil', description: 'Admin telah dihapus.' });
@@ -341,7 +341,7 @@ export default function ToolsAdminPage() {
       }
   }
 
-  const isSuperAdmin = currentAdmin?.role === 'super_admin';
+  const isAdmin = currentAdmin?.role === 'admin';
 
   const showUserDetail = (user: Staff) => {
       setSelectedUserForDetail(user);
@@ -479,7 +479,7 @@ export default function ToolsAdminPage() {
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-             {isSuperAdmin && (
+             {isAdmin && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Manajemen Tim</CardTitle>
@@ -527,7 +527,7 @@ export default function ToolsAdminPage() {
                                                     <Button variant="ghost" size="icon" onClick={() => showUserDetail(admin)}>
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
-                                                     {isSuperAdmin && currentAdmin?.id !== admin.id && (
+                                                     {isAdmin && currentAdmin?.id !== admin.id && (
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
                                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
