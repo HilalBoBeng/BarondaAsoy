@@ -134,9 +134,12 @@ export default function RootLayout({
             {`
               window.OneSignalDeferred = window.OneSignalDeferred || [];
               OneSignalDeferred.push(async function(OneSignal) {
-                await OneSignal.init({
-                  appId: "3c3eb6bb-f00e-4516-a7e6-965a538548f8",
-                });
+                const allowedHostnames = ['www.bobeng.icu', 'bobeng.icu'];
+                if (allowedHostnames.includes(window.location.hostname)) {
+                  await OneSignal.init({
+                    appId: "3c3eb6bb-f00e-4516-a7e6-965a538548f8",
+                  });
+                }
               });
             `}
           </Script>
