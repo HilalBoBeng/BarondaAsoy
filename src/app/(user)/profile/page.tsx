@@ -17,7 +17,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -26,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-import { KeyRound, User, Phone, MapPin, Lock, Pencil, Camera, LogOut, AlignLeft } from "lucide-react";
+import { KeyRound, User, Phone, MapPin, Lock, Pencil, Camera, LogOut, AlignLeft, Trash2 } from "lucide-react";
 import Image from 'next/image';
 
 const profileEditSchema = z.object({
@@ -156,6 +158,21 @@ export default function ProfilePage() {
         if (url) {
             setZoomedImageUrl(url);
             setIsZoomModalOpen(true);
+        }
+    };
+
+    const handleDeletePhoto = async () => {
+        if (!userInfo) return;
+        setIsSubmitting(true);
+        try {
+            const userRef = doc(db, 'users', userInfo.uid);
+            await updateDoc(userRef, { photoURL: null });
+            toast({ title: 'Berhasil', description: 'Foto profil telah dihapus.' });
+            setIsZoomModalOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus foto profil.' });
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
@@ -321,6 +338,29 @@ export default function ProfilePage() {
                 <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
                     <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <Image src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" width={500} height={500} objectFit="contain" />
+                    <DialogFooter className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Hapus Foto
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini tidak dapat dibatalkan. Foto profil Anda akan dihapus.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeletePhoto} disabled={isSubmitting}>
+                                        Ya, Hapus
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

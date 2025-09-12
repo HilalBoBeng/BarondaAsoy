@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { KeyRound, User, Phone, MapPin, Lock, Pencil, Camera, Trash, LogOut } from "lucide-react";
+import { KeyRound, User, Phone, MapPin, Lock, Pencil, Camera, Trash, LogOut, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Staff } from "@/lib/types";
@@ -22,7 +22,8 @@ import { isBefore, addDays, formatDistanceToNow, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { updateStaffAccessCode } from '@/ai/flows/update-staff-access-code';
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerClose } from "@/components/ui/drawer";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -213,6 +214,21 @@ export default function BendaharaProfilePage() {
         if (url) {
             setZoomedImageUrl(url);
             setIsZoomModalOpen(true);
+        }
+    };
+
+    const handleDeletePhoto = async () => {
+        if (!staffInfo) return;
+        setIsSubmitting(true);
+        try {
+            const userRef = doc(db, 'staff', staffInfo.id);
+            await updateDoc(userRef, { photoURL: null });
+            toast({ title: 'Berhasil', description: 'Foto profil telah dihapus.' });
+            setIsZoomModalOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Gagal menghapus foto profil.' });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -464,6 +480,29 @@ export default function BendaharaProfilePage() {
                 <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
                     <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
                     <Image src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" width={500} height={500} objectFit="contain" />
+                     <DialogFooter className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Hapus Foto
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus Foto Profil?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini tidak dapat dibatalkan. Foto profil Anda akan dihapus.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeletePhoto} disabled={isSubmitting}>
+                                        Ya, Hapus
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
