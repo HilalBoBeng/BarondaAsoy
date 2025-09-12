@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin, ShieldBan } from 'lucide-react';
+import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin, ShieldBan, Info } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { db, app } from '@/lib/firebase/client';
@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { Input } from '../ui/input';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const reportSchema = z.object({
   reporterName: z.string().min(1, "Nama pelapor tidak boleh kosong."),
@@ -200,30 +201,40 @@ export default function ReportActivity() {
               render={({ field }) => (
                 <FormItem className="space-y-3">
                   <FormLabel>Visibilitas Laporan</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex space-x-4"
-                    >
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="public" />
-                        </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2">
-                          <Globe className="h-4 w-4" /> Publik
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="private" />
-                        </FormControl>
-                        <FormLabel className="font-normal flex items-center gap-2">
-                           <Eye className="h-4 w-4" /> Privat
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
+                   <TooltipProvider>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex space-x-4"
+                        >
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="public" />
+                            </FormControl>
+                            <FormLabel className="font-normal flex items-center gap-1">
+                              <Globe className="h-4 w-4" /> Publik
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Laporan Anda akan dapat dilihat oleh semua warga di riwayat laporan publik.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="private" />
+                            </FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2">
+                               <Eye className="h-4 w-4" /> Privat
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                   </TooltipProvider>
                   <FormMessage />
                 </FormItem>
               )}

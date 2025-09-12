@@ -120,7 +120,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 </div>
             </header>
 
-            <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pb-20 animate-fade-in-up">
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20 animate-fade-in-up">
                 <div className="mx-auto w-full max-w-screen-2xl">
                     {children}
                 </div>

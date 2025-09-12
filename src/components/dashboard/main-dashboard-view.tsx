@@ -23,13 +23,6 @@ import { UserNav } from './user-nav';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '../ui/drawer';
 
-const navItems = [
-    { href: "/", icon: Home, label: "Beranda" },
-    { href: "/report", icon: Shield, label: "Laporan" },
-    { href: "/profile", icon: UserCircle, label: "Profil" },
-    { href: "/settings", icon: Settings, label: "Pengaturan" },
-]
-
 export default function MainDashboardView() {
   const [user, setUser] = useState<User | null>(null);
   const [userInfo, setUserInfo] = useState<AppUser | null>(null);
@@ -41,7 +34,6 @@ export default function MainDashboardView() {
   const [currentPage, setCurrentPage] = useState(1);
   const announcementsPerPage = 7;
   
-  const pathname = usePathname();
   const auth = getAuth(app);
   
   useEffect(() => {
@@ -113,109 +105,62 @@ export default function MainDashboardView() {
 
   if (loading) {
     return (
-      <div className={cn("flex min-h-screen flex-col items-center justify-center bg-background")}>
-          <Image 
-              src="https://iili.io/KJ4aGxp.png" 
-              alt="Loading Logo" 
-              width={120} 
-              height={120} 
-              className="animate-logo-pulse"
-              priority
-          />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64 mb-2" />
+        <div className="space-y-6">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/40">
-        <WelcomeAnnouncement />
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
-            <div className="flex items-center gap-2 text-left">
-              <Image 
-                src="https://iili.io/KJ4aGxp.png" 
-                alt="Logo" 
-                width={32} 
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-              <div className="flex flex-col">
-                  <span className="text-base font-bold text-primary leading-tight">Baronda</span>
-                  <p className="text-xs text-muted-foreground leading-tight">Kelurahan Kilongan</p>
-              </div>
-            </div>
-             <div className="flex items-center gap-1">
-                <UserNav user={user} userInfo={userInfo} />
-             </div>
-        </header>
+    <div className="space-y-6">
+        <div>
+            <h2 className="text-xl sm:text-2xl font-normal tracking-tight">
+              {greeting}, <span className="font-bold">{user?.displayName || 'Warga'}!</span>
+            </h2>
+        </div>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 animate-fade-in-up">
-            <div className="mx-auto w-full max-w-screen-2xl space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        {loading ? (
-                             <Skeleton className="h-8 w-64 mb-2" />
-                        ) : (
-                             <h2 className="text-xl sm:text-2xl font-normal tracking-tight">
-                                {greeting}, <span className="font-bold">{user?.displayName || 'Warga'}!</span>
-                            </h2>
-                        )}
-                    </div>
-                </div>
-
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Pengumuman Terbaru</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             {loadingAnnouncements ? (
-                                Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full mb-2" />)
-                            ) : currentAnnouncements.length > 0 ? (
-                                currentAnnouncements.map((ann) => (
-                                    <div key={ann.id} className="border-b last:border-b-0 py-3 cursor-pointer" onClick={() => setSelectedAnnouncement(ann)}>
-                                        <p className="font-semibold text-sm">{ann.title}</p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center text-muted-foreground py-4">
-                                    Tidak ada pengumuman.
-                                </div>
-                            )}
-                        </CardContent>
-                         {announcements.length > announcementsPerPage && (
-                            <CardFooter className="flex justify-end space-x-2">
-                                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>
-                                    Sebelumnya
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
-                                    Berikutnya
-                                </Button>
-                            </CardFooter>
-                        )}
-                    </Card>
-                    <Schedule />
-                    <ReportHistory />
-                    <EmergencyContacts />
-                </div>
-            </div>
-        </main>
-
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm">
-            <div className="grid h-16 grid-cols-4 items-center justify-center gap-2 px-2">
-                {navItems.map(item => (
-                    <Link key={item.href} href={item.href} passHref>
-                        <Button variant="ghost" className={cn(
-                            "flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs",
-                            pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
-                            )}>
-                            <item.icon className="h-5 w-5" />
-                            <span>{item.label}</span>
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Pengumuman Terbaru</CardTitle>
+                </CardHeader>
+                <CardContent>
+                     {loadingAnnouncements ? (
+                        Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full mb-2" />)
+                    ) : currentAnnouncements.length > 0 ? (
+                        currentAnnouncements.map((ann) => (
+                            <div key={ann.id} className="border-b last:border-b-0 py-3 cursor-pointer" onClick={() => setSelectedAnnouncement(ann)}>
+                                <p className="font-semibold text-sm">{ann.title}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center text-muted-foreground py-4">
+                            Tidak ada pengumuman.
+                        </div>
+                    )}
+                </CardContent>
+                 {announcements.length > announcementsPerPage && (
+                    <CardFooter className="flex justify-end space-x-2">
+                        <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>
+                            Sebelumnya
                         </Button>
-                    </Link>
-                ))}
-            </div>
-        </nav>
+                        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
+                            Berikutnya
+                        </Button>
+                    </CardFooter>
+                )}
+            </Card>
+            <Schedule />
+            <ReportHistory />
+            <EmergencyContacts />
+        </div>
         
         <Drawer open={!!selectedAnnouncement} onOpenChange={(open) => !open && setSelectedAnnouncement(null)}>
             <DrawerContent>
