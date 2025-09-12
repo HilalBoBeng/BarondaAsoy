@@ -15,6 +15,7 @@ import { id } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { getAuth, type User } from 'firebase/auth';
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose } from '@/components/ui/drawer';
 
 
 const REPORTS_PER_PAGE = 5;
@@ -121,7 +122,6 @@ export default function MyReportHistory() {
 
 
     const handleDelete = async (reportId: string) => {
-      if (window.confirm("Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.")) {
         try {
             await deleteDoc(doc(db, "reports", reportId));
             toast({ title: 'Berhasil', description: 'Laporan Anda telah dihapus.' });
@@ -130,7 +130,6 @@ export default function MyReportHistory() {
             console.error("Error deleting report:", error);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Tidak dapat menghapus laporan.' });
         }
-      }
     };
 
     const ReportSkeleton = () => (
@@ -196,14 +195,38 @@ export default function MyReportHistory() {
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
                                     {report.userId === user?.uid && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                            onClick={() => handleDelete(report.id)}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                        <Drawer>
+                                            <DrawerTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </DrawerTrigger>
+                                            <DrawerContent>
+                                                <DrawerHeader className="text-center">
+                                                    <DrawerTitle>Hapus Laporan?</DrawerTitle>
+                                                    <DrawerDescription>
+                                                        Tindakan ini tidak dapat dibatalkan. Laporan Anda akan dihapus secara permanen.
+                                                    </DrawerDescription>
+                                                </DrawerHeader>
+                                                <DrawerFooter className="flex-col-reverse">
+                                                     <DrawerClose asChild>
+                                                        <Button variant="secondary">Batal</Button>
+                                                    </DrawerClose>
+                                                    <DrawerClose asChild>
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={() => handleDelete(report.id)}
+                                                        >
+                                                            Ya, Hapus Laporan
+                                                        </Button>
+                                                    </DrawerClose>
+                                                </DrawerFooter>
+                                            </DrawerContent>
+                                        </Drawer>
                                     )}
                                 </div>
                             </div>
@@ -247,4 +270,3 @@ export default function MyReportHistory() {
         </Card>
     );
 }
-
