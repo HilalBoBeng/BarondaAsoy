@@ -12,6 +12,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MonitorSmartphone, Smartphone } from "lucide-react";
+import Script from "next/script";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -128,6 +129,17 @@ export default function RootLayout({
            <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
           <link rel="icon" href="https://iili.io/KJ4aGxp.png" type="image/png" />
           <meta name="theme-color" content="#2C3E50" />
+          <Script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer />
+          <Script id="onesignal-init" strategy="afterInteractive">
+            {`
+              window.OneSignalDeferred = window.OneSignalDeferred || [];
+              OneSignalDeferred.push(async function(OneSignal) {
+                await OneSignal.init({
+                  appId: "3c3eb6bb-f00e-4516-a7e6-965a538548f8",
+                });
+              });
+            `}
+          </Script>
       </head>
       <body className={`${ptSans.className} antialiased bg-background overflow-x-hidden no-scrollbar`}>
         {children}

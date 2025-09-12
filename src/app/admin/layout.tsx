@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Staff } from "@/lib/types";
 import { cn, useInactivityTimeout } from "@/lib/utils";
 import { getAuth } from "firebase/auth";
+import OneSignal from "react-onesignal";
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
@@ -91,15 +92,22 @@ export default function AdminLayout({
     
     const staffDocRef = doc(db, "staff", storedStaffInfo.id);
 
-    const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+    const unsubStaff = onSnapshot(staffDocRef, async (docSnap) => {
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
              if (!['admin', 'bendahara'].includes(staffData.role as string)) {
+                OneSignal.logout();
                 router.replace('/auth/staff-login');
                 return;
             }
             setAdminInfo(staffData);
+            try {
+              await OneSignal.login(staffData.id);
+            } catch (e) {
+              console.error("OneSignal login error:", e);
+            }
         } else {
+            OneSignal.logout();
             router.replace('/auth/staff-login');
         }
     });

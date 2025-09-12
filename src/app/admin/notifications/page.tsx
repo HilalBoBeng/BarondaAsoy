@@ -25,12 +25,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Image from 'next/image';
+import { sendPushNotification } from '@/lib/onesignal';
+import { Switch } from '@/components/ui/switch';
 
 
 const notificationSchema = z.object({
   recipientIds: z.array(z.string()).min(1, "Minimal satu penerima harus dipilih."),
   title: z.string().min(1, "Judul tidak boleh kosong.").max(50, "Judul tidak boleh lebih dari 50 karakter."),
   message: z.string().min(1, "Pesan tidak boleh kosong.").max(1200, "Pesan tidak boleh lebih dari 1200 karakter."),
+  sendPush: z.boolean().default(false),
 });
 
 type NotificationFormValues = z.infer<typeof notificationSchema>;
@@ -56,7 +59,7 @@ export default function NotificationsAdminPage() {
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
-    defaultValues: { recipientIds: [], title: '', message: '' },
+    defaultValues: { recipientIds: [], title: '', message: '', sendPush: false },
   });
 
   const fetchRecipients = async () => {
@@ -176,13 +179,26 @@ export default function NotificationsAdminPage() {
         });
         await batch.commit();
 
-        toast({ title: "Berhasil", description: `Pemberitahuan berhasil dikirim ke ${values.recipientIds.length} penerima.` });
+        toast({ title: "Berhasil", description: `Notifikasi dalam aplikasi berhasil dikirim.` });
+        
+        if (values.sendPush) {
+            const pushResult = await sendPushNotification({
+                headings: { en: values.title },
+                contents: { en: values.message.substring(0, 100) },
+                userIds: values.recipientIds,
+            });
+            if (pushResult.success) {
+                toast({ title: "Berhasil", description: "Notifikasi push berhasil dikirim." });
+            } else {
+                throw new Error(pushResult.message);
+            }
+        }
       
-        form.reset({ recipientIds: [], title: '', message: '' });
+        form.reset({ recipientIds: [], title: '', message: '', sendPush: false });
         setIsDialogOpen(false);
         await fetchNotifications(1); // Refresh list
     } catch (error) {
-      toast({ variant: 'destructive', title: "Gagal", description: "Terjadi kesalahan saat mengirim pemberitahuan." });
+      toast({ variant: 'destructive', title: "Gagal", description: `Terjadi kesalahan saat mengirim pemberitahuan: ${error instanceof Error ? error.message : String(error)}` });
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -459,6 +475,26 @@ export default function NotificationsAdminPage() {
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+                <FormField
+                    control={form.control}
+                    name="sendPush"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                            <FormLabel>Kirim Notifikasi Push</FormLabel>
+                            <FormDescription>
+                            Kirim juga sebagai notifikasi push ke perangkat.
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
                 />
                 </DrawerBody>
                 <DrawerFooter>

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import type { Staff } from "@/lib/types";
 import { getAuth } from "firebase/auth";
+import OneSignal from "react-onesignal";
 
 const navItemsList = [
     { id: 'dashboard', href: "/petugas", icon: Home, label: "Dasbor" },
@@ -88,7 +89,7 @@ export default function PetugasLayout({
 
     if (storedStaffInfo.id) {
         const staffDocRef = doc(db, "staff", storedStaffInfo.id);
-        const unsubStaff = onSnapshot(staffDocRef, (docSnap) => {
+        const unsubStaff = onSnapshot(staffDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                 if (staffData.role !== 'petugas') {
@@ -96,7 +97,13 @@ export default function PetugasLayout({
                     return;
                 }
                 setStaffInfo(staffData);
+                 try {
+                  await OneSignal.login(staffData.id);
+                } catch (e) {
+                  console.error("OneSignal login error:", e);
+                }
             } else {
+                OneSignal.logout();
                 router.replace('/auth/staff-login');
             }
         });
