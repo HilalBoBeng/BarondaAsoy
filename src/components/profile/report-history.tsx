@@ -61,9 +61,7 @@ export default function ReportHistory() {
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('visibility', '==', 'public'),
-                orderBy('createdAt', 'desc'),
-                limit(50)
+                where('visibility', '==', 'public')
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -79,6 +77,9 @@ export default function ReportHistory() {
                      replies: repliesArray
                  } as Report;
             });
+            
+            // Sort client-side after fetching
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
             setAllReports(reportsData);
 
