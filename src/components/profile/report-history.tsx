@@ -39,7 +39,7 @@ const ReplyCard = ({ reply }: { reply: Reply }) => (
     </Card>
 );
 
-export default function MyReportHistory() {
+export default function ReportHistory() {
     const [allReports, setAllReports] = useState<Report[]>([]);
     const [paginatedReports, setPaginatedReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
@@ -57,17 +57,13 @@ export default function MyReportHistory() {
     }, [auth]);
 
     const fetchReports = useCallback(async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        };
-
         setLoading(true);
         try {
             const reportsQuery = query(
                 collection(db, 'reports'), 
-                where('userId', '==', user.uid),
-                orderBy('createdAt', 'desc')
+                where('visibility', '==', 'public'),
+                orderBy('createdAt', 'desc'),
+                limit(50)
             );
             
             const snapshot = await getDocs(reportsQuery);
@@ -83,7 +79,7 @@ export default function MyReportHistory() {
                      replies: repliesArray
                  } as Report;
             });
-            
+
             setAllReports(reportsData);
 
         } catch (error) {
@@ -92,7 +88,7 @@ export default function MyReportHistory() {
         } finally {
             setLoading(false);
         }
-    }, [user, toast]);
+    }, [toast]);
     
     useEffect(() => {
         fetchReports();
@@ -134,16 +130,13 @@ export default function MyReportHistory() {
     const ReportSkeleton = () => (
         <Card>
             <CardContent className="p-4">
-                <div className="relative flex justify-between items-start mb-2 gap-2">
+                <div className="flex justify-between items-start mb-2 gap-2">
                     <div className="flex-grow space-y-2">
+                        <Skeleton className="h-4 w-24" />
                         <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-4/5" />
-                        <Skeleton className="h-3 w-1/3" />
+                        <Skeleton className="h-3 w-1/2" />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Skeleton className="h-6 w-20 rounded-full" />
-                        <Skeleton className="h-6 w-6 rounded-md" />
-                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
                 </div>
             </CardContent>
         </Card>
@@ -152,7 +145,7 @@ export default function MyReportHistory() {
     if (loading) {
         return (
             <Card>
-                <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">Riwayat Laporan Publik</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     {Array.from({ length: 3 }).map((_, i) => (
                         <ReportSkeleton key={i} />
@@ -165,9 +158,9 @@ export default function MyReportHistory() {
     if (!loading && paginatedReports.length === 0) {
         return (
              <Card>
-                 <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">Riwayat Laporan Publik</CardTitle></CardHeader>
                 <CardContent className="p-6 text-center text-muted-foreground">
-                    Belum ada laporan yang Anda buat.
+                    Belum ada laporan dari warga.
                 </CardContent>
             </Card>
         );
@@ -175,13 +168,14 @@ export default function MyReportHistory() {
 
     return (
         <Card>
-            <CardHeader><CardTitle className="text-lg">Riwayat Laporan Saya</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Riwayat Laporan Publik</CardTitle></CardHeader>
             <CardContent className="space-y-4">
                 {paginatedReports.map((report) => (
                     <Card key={report.id} className="overflow-hidden">
                         <CardContent className="p-4">
-                             <div className="relative flex justify-between items-start mb-2 gap-2">
+                            <div className="flex justify-between items-start mb-2 gap-2">
                                 <div className="flex-grow">
+                                    <p className="text-xs font-bold">{report.reporterName}</p>
                                     <p className="text-sm text-foreground/90 break-words pr-4">
                                         {report.reportText}
                                     </p>
@@ -193,33 +187,16 @@ export default function MyReportHistory() {
                                      <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
-                                    {report.userId === user?.uid && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                            onClick={() => handleDelete(report.id)}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    )}
                                 </div>
                             </div>
-                        </CardContent>
-                        
-                        <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
                             {report.replies && report.replies.length > 0 && (
-                                <div className="w-full">
-                                    <h4 className="text-xs font-semibold flex items-center gap-1 mb-2">
-                                        <MessageSquare className="h-3 w-3" />
-                                        Balasan:
-                                    </h4>
-                                    {report.replies.map((reply, index) => (
-                                        <ReplyCard key={index} reply={reply} />
-                                    ))}
-                                </div>
-                            )}
-                        </CardFooter>
+                            <div className="w-full mt-2">
+                                {report.replies.map((reply, index) => (
+                                    <ReplyCard key={index} reply={reply} />
+                                ))}
+                            </div>
+                        )}
+                        </CardContent>
                     </Card>
                 ))}
                 <div className="flex items-center justify-end space-x-2 pt-4">
@@ -245,4 +222,3 @@ export default function MyReportHistory() {
         </Card>
     );
 }
-
