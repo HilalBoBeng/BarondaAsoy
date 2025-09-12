@@ -252,6 +252,13 @@ export default function AdminProfilePage() {
         }
     };
 
+    const handleImageZoom = (url?: string | null) => {
+        if (url) {
+            setZoomedImageUrl(url);
+            setIsZoomModalOpen(true);
+        }
+    };
+
     if (!adminInfo) {
         return (
             <div className="space-y-6">
@@ -301,13 +308,6 @@ export default function AdminProfilePage() {
         phone: "Nomor HP / WhatsApp",
         addressDetail: "Alamat",
         photoURL: "Foto Profil"
-    };
-    
-    const handleImageZoom = (url?: string | null) => {
-        if (url) {
-            setZoomedImageUrl(url);
-            setIsZoomModalOpen(true);
-        }
     };
     
     const roleDisplayMap: Record<string, string> = {
@@ -367,7 +367,7 @@ export default function AdminProfilePage() {
                                     <p className="text-xs text-muted-foreground">{fieldLabels[row.field]}</p>
                                     <p className="font-medium">{row.value || 'Belum diisi'}</p>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(row.field)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleEditClick(row.field as FieldName)}>
                                      {canEditField(row.field) ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                 </Button>
                             </div>

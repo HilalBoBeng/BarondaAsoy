@@ -47,6 +47,8 @@ export default function ProfilePage() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldName | null>(null);
     const [isLogoutDrawerOpen, setIsLogoutDrawerOpen] = useState(false);
+    const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+    const [zoomedImageUrl, setZoomedImageUrl] = useState('');
 
     const router = useRouter();
     const { toast } = useToast();
@@ -149,6 +151,13 @@ export default function ProfilePage() {
             router.push('/auth/login');
         });
     }
+
+    const handleImageZoom = (url?: string | null) => {
+        if (url) {
+            setZoomedImageUrl(url);
+            setIsZoomModalOpen(true);
+        }
+    };
     
     if (loading || !userInfo) {
         return (
@@ -183,12 +192,14 @@ export default function ProfilePage() {
                 <CardHeader className="bg-gradient-to-br from-primary/80 to-primary p-6">
                     <div className="flex items-center gap-4">
                         <div className="relative">
-                            <Avatar className="h-20 w-20 border-4 border-background/50">
-                                <AvatarImage src={userInfo.photoURL || undefined} alt={userInfo.displayName || ''} />
-                                <AvatarFallback className="text-3xl bg-background text-primary">
-                                    {userInfo.displayName?.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
+                            <button onClick={() => handleImageZoom(userInfo.photoURL)}>
+                                <Avatar className="h-20 w-20 border-4 border-background/50">
+                                    <AvatarImage src={userInfo.photoURL || undefined} alt={userInfo.displayName || ''} />
+                                    <AvatarFallback className="text-3xl bg-background text-primary">
+                                        {userInfo.displayName?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </button>
                              <Button size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full" onClick={() => handleEditClick("photoURL")}>
                                 <Camera className="h-4 w-4"/>
                             </Button>
@@ -305,6 +316,13 @@ export default function ProfilePage() {
                     <DrawerFooter className="flex-col-reverse"><DrawerClose asChild><Button variant="secondary">Batal</Button></DrawerClose><Button variant="destructive" onClick={handleLogout}>Ya, Keluar</Button></DrawerFooter>
                 </DrawerContent>
             </Drawer>
+
+            <Dialog open={isZoomModalOpen} onOpenChange={setIsZoomModalOpen}>
+                <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full">
+                    <DialogTitle className="sr-only">Foto Profil Diperbesar</DialogTitle>
+                    <Image src={zoomedImageUrl} alt="Zoomed profile" className="w-full h-auto rounded-lg" width={500} height={500} objectFit="contain" />
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
