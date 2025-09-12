@@ -62,7 +62,6 @@ export default function ReportHistory() {
             const reportsQuery = query(
                 collection(db, 'reports'), 
                 where('visibility', '==', 'public'),
-                orderBy('createdAt', 'desc'),
                 limit(50)
             );
             
@@ -79,6 +78,9 @@ export default function ReportHistory() {
                      replies: repliesArray
                  } as Report;
             });
+
+            // Sort on the client-side
+            reportsData.sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime());
 
             setAllReports(reportsData);
 
@@ -187,16 +189,33 @@ export default function ReportHistory() {
                                      <Badge variant={'secondary'} className={cn(statusDisplay[report.status]?.className)}>
                                         {statusDisplay[report.status]?.text || report.status}
                                     </Badge>
+                                    {report.userId === user?.uid && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleDelete(report.id)}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
-                            {report.replies && report.replies.length > 0 && (
-                            <div className="w-full mt-2">
-                                {report.replies.map((reply, index) => (
-                                    <ReplyCard key={index} reply={reply} />
-                                ))}
-                            </div>
-                        )}
                         </CardContent>
+                        
+                        <CardFooter className="flex-col items-start gap-2 p-4 pt-0">
+                            {report.replies && report.replies.length > 0 && (
+                                <div className="w-full">
+                                    <h4 className="text-xs font-semibold flex items-center gap-1 mb-2">
+                                        <MessageSquare className="h-3 w-3" />
+                                        Balasan:
+                                    </h4>
+                                    {report.replies.map((reply, index) => (
+                                        <ReplyCard key={index} reply={reply} />
+                                    ))}
+                                </div>
+                            )}
+                        </CardFooter>
                     </Card>
                 ))}
                 <div className="flex items-center justify-end space-x-2 pt-4">
