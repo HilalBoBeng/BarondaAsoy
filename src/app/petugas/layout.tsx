@@ -81,8 +81,22 @@ export default function PetugasLayout({
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-    const OneSignal = (window as any).OneSignal;
+    const OneSignal = (window as any).OneSignal || [];
     
+    const handleOneSignalLogin = async (userId: string) => {
+        if (OneSignal.isInitialized) {
+            try {
+                await OneSignal.login(userId);
+            } catch (e) {
+                console.error("OneSignal login error:", e);
+            }
+        } else {
+             OneSignal.push(() => {
+                OneSignal.login(userId).catch((e: any) => console.error("OneSignal deferred login error:", e));
+             });
+        }
+    };
+
     if (localStorage.getItem('userRole') !== 'petugas') {
       router.replace('/auth/staff-login');
       return;
@@ -94,18 +108,12 @@ export default function PetugasLayout({
             if (docSnap.exists()) {
                 const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
                 if (staffData.role !== 'petugas') {
-                    if(OneSignal) OneSignal.logout();
                     router.replace('/auth/staff-login');
                     return;
                 }
                 setStaffInfo(staffData);
-                 try {
-                  if(OneSignal) await OneSignal.login(staffData.id);
-                } catch (e) {
-                  console.error("OneSignal login error:", e);
-                }
+                handleOneSignalLogin(staffData.id);
             } else {
-                if(OneSignal) OneSignal.logout();
                 router.replace('/auth/staff-login');
             }
         });

@@ -84,7 +84,21 @@ export default function AdminLayout({
 
   useEffect(() => {
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
-    const OneSignal = (window as any).OneSignal;
+    const OneSignal = (window as any).OneSignal || [];
+
+    const handleOneSignalLogin = async (userId: string) => {
+        if (OneSignal.isInitialized) {
+            try {
+                await OneSignal.login(userId);
+            } catch (e) {
+                console.error("OneSignal login error:", e);
+            }
+        } else {
+             OneSignal.push(() => {
+                OneSignal.login(userId).catch((e: any) => console.error("OneSignal deferred login error:", e));
+             });
+        }
+    };
     
     if (!storedStaffInfo.id || !['admin', 'bendahara'].includes(localStorage.getItem('userRole') as string)) {
       router.replace('/auth/staff-login');
@@ -97,18 +111,12 @@ export default function AdminLayout({
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
              if (!['admin', 'bendahara'].includes(staffData.role as string)) {
-                if(OneSignal) OneSignal.logout();
                 router.replace('/auth/staff-login');
                 return;
             }
             setAdminInfo(staffData);
-            try {
-              if(OneSignal) await OneSignal.login(staffData.id);
-            } catch (e) {
-              console.error("OneSignal login error:", e);
-            }
+            handleOneSignalLogin(staffData.id);
         } else {
-            if(OneSignal) OneSignal.logout();
             router.replace('/auth/staff-login');
         }
     });

@@ -20,7 +20,7 @@ import { doc, getDoc, Timestamp } from "firebase/firestore";
 import type { AppUser } from "@/lib/types";
 import { formatDistanceToNow, intervalToDuration } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 
 const loginSchema = z.object({
@@ -223,8 +223,8 @@ function LoginForm() {
       </div>
 
       <Dialog open={!!suspensionInfo} onOpenChange={() => setSuspensionInfo(null)}>
-        <DialogContent className="sm:max-w-md text-center">
-            <DialogHeader className="items-center">
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader className="text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 mb-2">
                 <ShieldAlert className="h-7 w-7 text-destructive" />
               </div>
@@ -235,6 +235,7 @@ function LoginForm() {
                   Akses Anda ke aplikasi telah {suspensionInfo?.isBlocked ? 'diblokir secara permanen' : 'ditangguhkan sementara'} oleh admin.
               </DialogDescription>
             </DialogHeader>
+           <DialogClose />
            <div className="space-y-4 py-4 text-sm">
                 <div className="space-y-2 rounded-md border p-4 text-left">
                     <div className="flex items-center gap-2">

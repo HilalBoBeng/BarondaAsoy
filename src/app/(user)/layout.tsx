@@ -49,18 +49,33 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const OneSignal = (window as any).OneSignal;
+        const OneSignal = (window as any).OneSignal || [];
+        const handleOneSignalLogin = async (userId: string) => {
+            if (OneSignal.isInitialized) {
+                try {
+                    await OneSignal.login(userId);
+                } catch (e) {
+                    console.error("OneSignal login error:", e);
+                }
+            } else {
+                 OneSignal.push(() => {
+                    OneSignal.login(userId).catch((e: any) => console.error("OneSignal deferred login error:", e));
+                 });
+            }
+        };
+
+        const handleOneSignalLogout = () => {
+             if (OneSignal.isInitialized) {
+                OneSignal.logout();
+            }
+        };
+
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                handleOneSignalLogin(currentUser.uid);
+
                 const userDocRef = doc(db, 'users', currentUser.uid);
-
-                try {
-                  if (OneSignal) await OneSignal.login(currentUser.uid);
-                } catch (e) {
-                  console.error("OneSignal login error:", e);
-                }
-
                 const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
                     if (userDocSnap.exists()) {
                         setUserInfo({ uid: currentUser.uid, ...userDocSnap.data() } as AppUser);
@@ -71,7 +86,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 });
                 return () => unsubscribeUser();
             } else {
-                if(OneSignal) OneSignal.logout();
+                handleOneSignalLogout();
                 router.push('/auth/login');
                 setLoading(false);
             }
