@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Staff } from "@/lib/types";
 import { cn, useInactivityTimeout } from "@/lib/utils";
 import { getAuth } from "firebase/auth";
-import OneSignal from "react-onesignal";
+
 
 const navItemsList = [
     { href: "/admin", icon: Home, label: 'Dasbor', id: 'dashboard', roles: ['admin', 'bendahara'] },
@@ -84,6 +84,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    const OneSignal = (window as any).OneSignal;
     
     if (!storedStaffInfo.id || !['admin', 'bendahara'].includes(localStorage.getItem('userRole') as string)) {
       router.replace('/auth/staff-login');
@@ -96,18 +97,18 @@ export default function AdminLayout({
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
              if (!['admin', 'bendahara'].includes(staffData.role as string)) {
-                OneSignal.logout();
+                if(OneSignal) OneSignal.logout();
                 router.replace('/auth/staff-login');
                 return;
             }
             setAdminInfo(staffData);
             try {
-              await OneSignal.login(staffData.id);
+              if(OneSignal) await OneSignal.login(staffData.id);
             } catch (e) {
               console.error("OneSignal login error:", e);
             }
         } else {
-            OneSignal.logout();
+            if(OneSignal) OneSignal.logout();
             router.replace('/auth/staff-login');
         }
     });

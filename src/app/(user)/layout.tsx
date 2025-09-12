@@ -15,7 +15,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserNav } from "@/components/dashboard/user-nav";
 import WelcomeAnnouncement from "@/components/dashboard/welcome-announcement";
-import OneSignal from "react-onesignal";
+
 
 const navItems = [
     { href: "/", icon: Home, label: "Beranda" },
@@ -49,13 +49,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const OneSignal = (window as any).OneSignal;
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 const userDocRef = doc(db, 'users', currentUser.uid);
 
                 try {
-                  await OneSignal.login(currentUser.uid);
+                  if (OneSignal) await OneSignal.login(currentUser.uid);
                 } catch (e) {
                   console.error("OneSignal login error:", e);
                 }
@@ -70,7 +71,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 });
                 return () => unsubscribeUser();
             } else {
-                OneSignal.logout();
+                if(OneSignal) OneSignal.logout();
                 router.push('/auth/login');
                 setLoading(false);
             }

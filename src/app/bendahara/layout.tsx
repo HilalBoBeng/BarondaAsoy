@@ -21,7 +21,7 @@ import { db } from "@/lib/firebase/client";
 import type { Staff } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { getAuth } from "firebase/auth";
-import OneSignal from "react-onesignal";
+
 
 const navItemsList = [
     { href: "/bendahara", icon: Home, label: 'Dasbor', id: 'dashboard' },
@@ -70,6 +70,7 @@ export default function BendaharaLayout({
   useEffect(() => {
     setIsClient(true);
     const storedStaffInfo = JSON.parse(localStorage.getItem('staffInfo') || '{}');
+    const OneSignal = (window as any).OneSignal;
     
     if (!storedStaffInfo.id || localStorage.getItem('userRole') !== 'bendahara') {
       router.replace('/auth/staff-login');
@@ -81,18 +82,18 @@ export default function BendaharaLayout({
         if (docSnap.exists()) {
             const staffData = { id: docSnap.id, ...docSnap.data() } as Staff;
             if (staffData.role !== 'bendahara') {
-                OneSignal.logout();
+                if(OneSignal) OneSignal.logout();
                 router.replace('/auth/staff-login');
                 return;
             }
             setStaffInfo(staffData);
              try {
-              await OneSignal.login(staffData.id);
+              if(OneSignal) await OneSignal.login(staffData.id);
             } catch (e) {
               console.error("OneSignal login error:", e);
             }
         } else {
-            OneSignal.logout();
+            if(OneSignal) OneSignal.logout();
             router.replace('/auth/staff-login');
         }
     });
