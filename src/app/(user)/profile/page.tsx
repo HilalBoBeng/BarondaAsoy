@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuth, signOut } from "firebase/auth";
 import { db, app } from "@/lib/firebase/client";
@@ -68,7 +68,7 @@ export default function ProfilePage() {
                     setLoading(false);
                 });
 
-                const duesQuery = query(collection(db, 'dues'), where('userId', '==', user.uid), orderBy('paymentDate', 'desc'));
+                const duesQuery = query(collection(db, 'dues'), where('userId', '==', user.uid));
                 const unsubDues = onSnapshot(duesQuery, (snapshot) => {
                     const payments = snapshot.docs.map(d => ({id: d.id, ...d.data()}) as DuesPayment);
                     setDuesHistory(payments);
@@ -81,6 +81,15 @@ export default function ProfilePage() {
         });
         return () => unsubscribe();
     }, [auth, router]);
+
+    const sortedDuesHistory = useMemo(() => {
+        return [...duesHistory].sort((a, b) => {
+            const dateA = a.paymentDate instanceof Timestamp ? a.paymentDate.toMillis() : 0;
+            const dateB = b.paymentDate instanceof Timestamp ? b.paymentDate.toMillis() : 0;
+            return dateB - dateA;
+        });
+    }, [duesHistory]);
+
 
     const handleEditClick = (field: FieldName) => {
         if (!userInfo) return;
@@ -221,7 +230,7 @@ export default function ProfilePage() {
                     <CardDescription>Daftar pembayaran iuran yang telah Anda lakukan.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {duesHistory.length > 0 ? (
+                    {sortedDuesHistory.length > 0 ? (
                         <div className="overflow-x-auto">
                            <table className="w-full text-sm">
                              <thead>
@@ -232,7 +241,7 @@ export default function ProfilePage() {
                                </tr>
                              </thead>
                              <tbody>
-                               {duesHistory.map(due => (
+                               {sortedDuesHistory.map(due => (
                                  <tr key={due.id} className="border-t">
                                    <td className="py-2">{due.paymentDate instanceof Timestamp ? format(due.paymentDate.toDate(), "d MMMM yyyy", { locale: id }) : 'N/A'}</td>
                                    <td><Badge variant="secondary">{due.month} {due.year}</Badge></td>
