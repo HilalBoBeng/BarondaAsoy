@@ -201,7 +201,6 @@ export default function ReportActivity() {
               render={({ field }) => (
                 <FormItem className="space-y-3">
                   <FormLabel>Visibilitas Laporan</FormLabel>
-                   <TooltipProvider>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -214,14 +213,6 @@ export default function ReportActivity() {
                             </FormControl>
                             <FormLabel className="font-normal flex items-center gap-1.5">
                               <Globe className="h-4 w-4" /> Publik
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Laporan Anda akan dapat dilihat oleh semua warga.</p>
-                                </TooltipContent>
-                              </Tooltip>
                             </FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-2 space-y-0">
@@ -230,19 +221,10 @@ export default function ReportActivity() {
                             </FormControl>
                             <FormLabel className="font-normal flex items-center gap-1.5">
                                <EyeOff className="h-4 w-4" /> Privat
-                               <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Laporan hanya terlihat oleh Anda dan petugas.</p>
-                                </TooltipContent>
-                              </Tooltip>
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
-                   </TooltipProvider>
                   <FormMessage />
                 </FormItem>
               )}
