@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin, ShieldBan, Info } from 'lucide-react';
+import { Loader2, Send, AlertTriangle, CheckCircle, LogIn, Eye, Globe, MapPin, ShieldBan, Info, EyeOff } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { db, app } from '@/lib/firebase/client';
@@ -212,14 +212,14 @@ export default function ReportActivity() {
                             <FormControl>
                               <RadioGroupItem value="public" />
                             </FormControl>
-                            <FormLabel className="font-normal flex items-center gap-1">
+                            <FormLabel className="font-normal flex items-center gap-1.5">
                               <Globe className="h-4 w-4" /> Publik
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Laporan Anda akan dapat dilihat oleh semua warga di riwayat laporan publik.</p>
+                                  <p>Laporan Anda akan dapat dilihat oleh semua warga.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </FormLabel>
@@ -228,8 +228,16 @@ export default function ReportActivity() {
                             <FormControl>
                               <RadioGroupItem value="private" />
                             </FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2">
-                               <Eye className="h-4 w-4" /> Privat
+                            <FormLabel className="font-normal flex items-center gap-1.5">
+                               <EyeOff className="h-4 w-4" /> Privat
+                               <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Laporan hanya terlihat oleh Anda dan petugas.</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>
